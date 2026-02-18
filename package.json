@@ -1,0 +1,41 @@
+{
+    "name": "learnault",
+    "version": "0.1.0",
+    "private": true,
+    "description": "Decentralized learn-to-earn platform on Stellar",
+    "keywords": [
+        "stellar",
+        "education",
+        "blockchain",
+        "learn-to-earn",
+        "soroban"
+    ],
+    "homepage": "https://github.com/toneflix/learnault",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/toneflix/learnault.git"
+    },
+    "license": "MIT",
+    "author": "Learnault Contributors",
+    "scripts": {
+        "dev": "turbo run dev",
+        "build": "turbo run build",
+        "test": "turbo run test",
+        "lint": "turbo run lint",
+        "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+        "clean": "turbo run clean && rm -rf node_modules",
+        "changeset": "changeset",
+        "version-packages": "changeset version",
+        "release": "turbo run build && changeset publish"
+    },
+    "devDependencies": {
+        "@changesets/cli": "^2.26.0",
+        "prettier": "^3.0.0",
+        "turbo": "^1.10.0"
+    },
+    "packageManager": "pnpm@10.0.0",
+    "engines": {
+        "node": ">=20.0.0",
+        "pnpm": ">=10.0.0"
+    }
+}

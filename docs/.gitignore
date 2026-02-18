@@ -1,0 +1,9 @@
+docs/_site/
+docs/.jekyll-cache/
+docs/.sass-cache/
+docs/_build/
+docs/api/
+docs/generated/
+**/*.html
+**/*.pdf
+!**/*.md
