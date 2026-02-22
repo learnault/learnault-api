@@ -1,10 +1,4 @@
-# Learnault
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
-[![Stellar](https://img.shields.io/badge/Stellar-Built%20on%20SDF-black)](https://stellar.org)
-
-**Learnault** is a decentralized learn-to-earn platform built on the Stellar blockchain that democratizes access to financial literacy and digital skills while creating verifiable, portable credentials for learners worldwide.
+*Learnault** is a decentralized learn-to-earn platform built on the Stellar blockchain that democratizes access to financial literacy and digital skills while creating verifiable, portable credentials for learners worldwide.
 
 ## Vision
 
