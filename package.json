@@ -1,5 +1,5 @@
 {
-    "name": "learnault",
+    "name": "learnault-api",
     "version": "0.1.0",
     "private": true,
     "description": "Decentralized learn-to-earn platform on Stellar",
@@ -10,28 +10,33 @@
         "learn-to-earn",
         "soroban"
     ],
-    "homepage": "https://github.com/toneflix/learnault",
+    "homepage": "https://github.com/learnault/learnault",
     "repository": {
         "type": "git",
-        "url": "https://github.com/toneflix/learnault.git"
+        "url": "https://github.com/learnault/learnault.git"
     },
     "license": "MIT",
     "author": "Learnault Contributors",
     "scripts": {
-        "dev": "turbo run dev",
-        "build": "turbo run build",
-        "test": "turbo run test",
-        "lint": "turbo run lint",
-        "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-        "clean": "turbo run clean && rm -rf node_modules",
-        "changeset": "changeset",
-        "version-packages": "changeset version",
-        "release": "turbo run build && changeset publish"
+        "lint": "eslint .",
+        "test": "vitest",
+        "test:coverage": "vitest --coverage",
+        "test:ci": "vitest run"
+    },
+    "dependencies": {
+        "express": "^5.2.1",
+        "cors": "^2.8.5",
+        "dotenv": "^16.0.3",
+        "@primary/pg": "^8.10.0",
+        "@prisma/client": "^7.4.1"
     },
     "devDependencies": {
-        "@changesets/cli": "^2.26.0",
-        "prettier": "^3.0.0",
-        "turbo": "^1.10.0"
+        "typescript": "^5",
+        "vitest": "^4.0.18",
+        "prisma": "^7.4.1",
+        "@types/express": "^4.17.13",
+        "@types/cors": "^2.8.12",
+        "@types/node": "^22"
     },
     "packageManager": "pnpm@10.0.0",
     "engines": {
