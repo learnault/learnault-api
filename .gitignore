@@ -1,8 +1,14 @@
+# .gitignore
+node_modules/
+dist/
+.env
+
+
 # API specific
 dist/
 build/
 coverage/
-**/*.js.map 
+**/*.js.map
 **/*.d.ts.map
 
 # Prisma
