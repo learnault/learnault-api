@@ -5,7 +5,7 @@ import morgan from "morgan";
 import dotenv from "dotenv";
 
 import routes from "./routes";
-import { errorHandler } from "./middleware/errorHandler";
+import { errorHandler, notFoundHandler } from "./middleware/error.middleware";
 
 dotenv.config();
 
@@ -18,6 +18,15 @@ app.use(morgan("dev"));
 
 app.use("/api", routes);
 
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// 404 handler - must be after all routes
+app.use(notFoundHandler);
+
+// Global error handler - must be last
 app.use(errorHandler);
 
 export default app;
