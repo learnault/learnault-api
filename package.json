@@ -16,8 +16,11 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
     "test": "vitest",
-    "test:coverage": "vitest --coverage",
+    "test:coverage": "vitest run --coverage",
     "test:ci": "vitest run"
   },
   "dependencies": {
@@ -48,8 +51,10 @@
     "typescript-eslint": "^8.56.0",
     "tsx": "^4.7.0",
     "nodemon": "^3.1.14",
+    "prettier": "^3.4.2",
     "supertest": "^7.2.2",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "@vitest/coverage-v8": "^4.0.18"
   },
   "packageManager": "pnpm@10.0.0",
   "engines": {
