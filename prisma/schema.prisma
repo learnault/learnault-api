@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model WebhookEndpoint {
+  id          String            @id @default(uuid())
+  url         String
+  secret      String?
+  description String?
+  isActive    Boolean          @default(true)
+  events      String           // Comma-separated list of events: "module.completed,reward.issued"
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  deliveries  WebhookDelivery[]
+}
+
+model WebhookDelivery {
+  id             String          @id @default(uuid())
+  endpointId     String
+  endpoint       WebhookEndpoint @relation(fields: [endpointId], references: [id])
+  eventType      String
+  payload        String          // JSON string
+  status         String          @default("pending") // pending, success, failed
+  statusCode     Int?
+  responseBody   String?
+  error          String?
+  attemptCount   Int             @default(0)
+  maxAttempts    Int             @default(5)
+  nextAttemptAt  DateTime?       @default(now())
+  lastAttemptAt  DateTime?
+  createdAt      DateTime        @default(now())
+}
