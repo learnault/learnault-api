@@ -23,7 +23,8 @@
     "start": "node dist/server.js",
     "lint": "eslint .",
     "test": "vitest",
-    "test:coverage": "vitest --coverage",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "test:ci": "vitest run"
   },
   "dependencies": {
@@ -48,86 +49,11 @@
     "@types/jsonwebtoken": "^9.0.5",
     "@types/morgan": "^1.9.10",
     "@types/node": "^22.19.13",
+    "@types/supertest": "^7.2.0",
     "eslint": "^10.0.2",
     "nodemon": "^3.1.14",
     "prisma": "^7.4.1",
     "supertest": "^7.2.2",
-    "ts-node": "^10.9.2",
-    "tsx": "^4.7.0",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.56.0",
-    "vitest": "^4.0.18"
-  },
-  "packageManager": "pnpm@10.0.0",
-  "engines": {
-    "node": ">=20.0.0",
-    "pnpm": ">=10.0.0"
-  },
-  "main": "vitest.config.js",
-  "directories": {
-    "doc": "docs",
-    "test": "tests"
-  },
-  "bugs": {
-    "url": "https://github.com/learnault/learnault/issues"
-  }
-}
-{
-  "name": "learnault-api",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Decentralized learn-to-earn platform on Stellar",
-  "keywords": [
-    "stellar",
-    "education",
-    "blockchain",
-    "learn-to-earn",
-    "soroban"
-  ],
-  "homepage": "https://github.com/learnault/learnault",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/learnault/learnault.git"
-  },
-  "license": "MIT",
-  "author": "Learnault Contributors",
-  "scripts": {
-    "dev": "nodemon",
-    "build": "tsc",
-    "start": "node dist/server.js",
-    "lint": "eslint .",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "test:ci": "vitest run"
-  },
-  "dependencies": {
-    "@prisma/client": "^6.3.0",
-    "bcrypt": "^5.1.1",
-    "cors": "^2.8.6",
-    "dotenv": "^16.6.1",
-    "express": "^5.2.1",
-    "helmet": "^8.1.0",
-    "jsonwebtoken": "^9.0.2",
-    "morgan": "^1.10.1",
-    "pg": "^8.11.3",
-    "winston": "^3.19.0"
-  },
-  "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@eslint/markdown": "^7.5.1",
-    "@types/bcrypt": "^5.0.2",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^4.17.25",
-    "@types/jsonwebtoken": "^9.0.5",
-    "@types/morgan": "^1.9.10",
-    "@types/node": "^22.19.13",
-    "eslint": "^10.0.2",
-    "nodemon": "^3.1.14",
-    "supertest": "^7.2.2",
-    "@vitest/coverage-v8": "^4.0.18" 
     "ts-node": "^10.9.2",
     "tsx": "^4.7.0",
     "typescript": "^5.9.3",
