@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { User, UpdateUserData, ChangePasswordData, UpdateWalletData, PublicUserInfo } from '../types/user.types';
+import { ParamsDictionary } from 'express-serve-static-core';
+import { User, UpdateUserData, ChangePasswordData, UpdateWalletData, PublicUserInfo, UserRole, UserStatus } from '../types/user.types';
 
 export class UserController {
   async getCurrentUser(req: Request, res: Response): Promise<void> {
@@ -31,7 +32,7 @@ export class UserController {
     }
   }
 
-  async updateProfile(req: Request, res: Response): Promise<void> {
+  async updateProfile(req: Request<ParamsDictionary, any, UpdateUserData>, res: Response): Promise<void> {
     try {
       const userId = (req as any).user.id;
       const updateData: UpdateUserData = req.body;
@@ -57,7 +58,7 @@ export class UserController {
     }
   }
 
-  async getUserById(req: Request, res: Response): Promise<void> {
+  async getUserById(req: Request<{ id: string }>, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       
@@ -73,6 +74,7 @@ export class UserController {
         firstName: user.firstName,
         lastName: user.lastName,
         avatar: user.avatar,
+        role: user.role,
         createdAt: user.createdAt,
       };
 
@@ -83,7 +85,7 @@ export class UserController {
     }
   }
 
-  async changePassword(req: Request, res: Response): Promise<void> {
+  async changePassword(req: Request<ParamsDictionary, any, ChangePasswordData>, res: Response): Promise<void> {
     try {
       const userId = (req as any).user.id;
       const { currentPassword, newPassword }: ChangePasswordData = req.body;
@@ -109,7 +111,7 @@ export class UserController {
     }
   }
 
-  async updateWalletAddress(req: Request, res: Response): Promise<void> {
+  async updateWalletAddress(req: Request<ParamsDictionary, any, UpdateWalletData>, res: Response): Promise<void> {
     try {
       const userId = (req as any).user.id;
       const { walletAddress }: UpdateWalletData = req.body;
@@ -150,6 +152,8 @@ export class UserController {
       bio: 'Test bio',
       avatar: 'https://example.com/avatar.jpg',
       walletAddress: 'GABC123456789012345678901234567890123456789012345678901234567890',
+      role: UserRole.LEARNER,
+      status: UserStatus.ACTIVE,
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -167,6 +171,8 @@ export class UserController {
       bio: data.bio,
       avatar: data.avatar,
       walletAddress: 'GABC123456789012345678901234567890123456789012345678901234567890',
+      role: UserRole.LEARNER,
+      status: UserStatus.ACTIVE,
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -188,6 +194,8 @@ export class UserController {
       email: 'test@example.com',
       username: 'testuser',
       walletAddress,
+      role: UserRole.LEARNER,
+      status: UserStatus.ACTIVE,
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
