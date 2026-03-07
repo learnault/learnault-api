@@ -1,7 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
-import logger from '../config/logger';
-import { AppError, InternalServerError, NotFoundError } from '../utils/errors';
-import { env } from '../config/env';
+import { AppError, InternalServerError, NotFoundError } from '../utils/errors'
+import { NextFunction, Request, Response } from 'express'
+
+import { env } from '../config/env'
+import logger from '../config/logger'
 
 /**
  * Global error handler middleware
@@ -12,9 +13,8 @@ export const errorHandler = (
   err: Error | AppError,
   req: Request,
   res: Response,
-  next: NextFunction
 ): void => {
-  let error = err;
+  let error = err
 
   logger.error({
     message: err.message,
@@ -22,16 +22,16 @@ export const errorHandler = (
     path: req.path,
     method: req.method,
     timestamp: new Date().toISOString(),
-  });
+  })
 
   if (!(error instanceof AppError)) {
     const message =
-      err instanceof Error ? err.message : 'An unexpected error occurred';
-    error = new InternalServerError(message);
+      err instanceof Error ? err.message : 'An unexpected error occurred'
+    error = new InternalServerError(message)
   }
 
-  const statusCode = (error as AppError).statusCode || 500;
-  const isDevelopment = env.NODE_ENV === 'development';
+  const statusCode = (error as AppError).statusCode || 500
+  const isDevelopment = env.NODE_ENV === 'development'
 
   const errorResponse: any = {
     success: false,
@@ -39,14 +39,14 @@ export const errorHandler = (
       message: (error as AppError).message,
       code: (error as AppError).statusCode || 'INTERNAL_SERVER_ERROR',
     },
-  };
+  }
 
   if (isDevelopment && err.stack) {
-    errorResponse.error.stack = err.stack.split('\n');
+    errorResponse.error.stack = err.stack.split('\n')
   }
 
   if ('errors' in error && (error as any).errors) {
-    errorResponse.error.details = (error as any).errors;
+    errorResponse.error.details = (error as any).errors
   }
 
   if (isDevelopment) {
@@ -54,11 +54,11 @@ export const errorHandler = (
       method: req.method,
       path: req.path,
       headers: req.headers,
-    };
+    }
   }
 
-  res.status(statusCode).json(errorResponse);
-};
+  res.status(statusCode).json(errorResponse)
+}
 
 /**
  * 404 Not Found handler
@@ -69,17 +69,17 @@ export const notFoundHandler = (
   res: Response,
   next: NextFunction
 ): void => {
-  const notFound = new NotFoundError(`Cannot ${req.method} ${req.path}`);
+  const notFound = new NotFoundError(`Cannot ${req.method} ${req.path}`)
 
   logger.warn({
     message: 'Not Found',
     path: req.path,
     method: req.method,
     timestamp: new Date().toISOString(),
-  });
+  })
 
-  next(notFound);
-};
+  next(notFound)
+}
 
 /**
  * Async error wrapper for route handlers
@@ -97,9 +97,9 @@ export const asyncHandler = (
         path: req.path,
         method: req.method,
         timestamp: new Date().toISOString(),
-      });
+      })
 
-      next(error);
-    });
-  };
-};
+      next(error)
+    })
+  }
+}

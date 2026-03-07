@@ -8,8 +8,8 @@ export interface PaginationParams {
 }
 
 export enum SortOrder {
-  ASC = "asc",
-  DESC = "desc",
+  ASC = 'asc',
+  DESC = 'desc',
 }
 
 export interface PaginationMeta {
@@ -59,7 +59,7 @@ export interface LoginResponse {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
-  user: import("./user.types").User;
+  user: import('./user.types').User;
 }
 
 export interface RefreshTokenRequest {

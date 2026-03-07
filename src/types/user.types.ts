@@ -1,16 +1,16 @@
 // ── Enums ──────────────────────────────────────────────────
 
 export enum UserRole {
-  ADMIN = "admin",
-  LEARNER = "learner",
-  INSTRUCTOR = "instructor",
+  ADMIN = 'admin',
+  LEARNER = 'learner',
+  INSTRUCTOR = 'instructor',
 }
 
 export enum UserStatus {
-  ACTIVE = "active",
-  INACTIVE = "inactive",
-  SUSPENDED = "suspended",
-  PENDING_VERIFICATION = "pending_verification",
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  SUSPENDED = 'suspended',
+  PENDING_VERIFICATION = 'pending_verification',
 }
 
 // ── Core models ────────────────────────────────────────────

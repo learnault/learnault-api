@@ -8,15 +8,16 @@
  */
 export function formatCurrency(
   value: number,
-  currency = "USD",
-  locale = "en-US",
+  currency = 'USD',
+  locale = 'en-US',
   decimals = 2
 ): string {
   const formatter = new Intl.NumberFormat(locale, {
-    style: "currency",
+    style: 'currency',
     currency,
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
-  });
-  return formatter.format(value);
+  })
+  
+return formatter.format(value)
 }
