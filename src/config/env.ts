@@ -1,6 +1,6 @@
-import { config } from 'dotenv';
+import { config } from 'dotenv'
 
-config();
+config()
 
 export const env = {
   NODE_ENV: process.env.NODE_ENV || 'development',
@@ -18,4 +18,4 @@ export const env = {
 
   RATE_LIMIT_AUTHENTICATED_WINDOW_MS: parseInt(process.env.RATE_LIMIT_AUTHENTICATED_WINDOW_MS || '900000', 10), // 15 minutes
   RATE_LIMIT_AUTHENTICATED_MAX: parseInt(process.env.RATE_LIMIT_AUTHENTICATED_MAX || '1000', 10),
-};
+}

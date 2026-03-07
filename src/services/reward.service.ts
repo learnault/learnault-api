@@ -1,12 +1,12 @@
-import { StellarService } from "./stellar.service";
+import { StellarService } from './stellar.service'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type ModuleDifficulty =
-  | "beginner"
-  | "intermediate"
-  | "advanced"
-  | "expert";
+  | 'beginner'
+  | 'intermediate'
+  | 'advanced'
+  | 'expert';
 
 export interface Module {
   id: string;
@@ -54,12 +54,12 @@ export const DIFFICULTY_MULTIPLIERS: Record<ModuleDifficulty, number> = {
   intermediate: 1.5,
   advanced: 2.0,
   expert: 3.0,
-};
+}
 
-export const BASE_REWARD_XLM = 5;
-export const STREAK_BONUS_RATE = 0.1; // 10% bonus per streak day
-export const MAX_STREAK_BONUS = 1.0; // cap at 100% of base
-export const REFERRAL_BONUS_XLM = 2; // flat XLM bonus per referral
+export const BASE_REWARD_XLM = 5
+export const STREAK_BONUS_RATE = 0.1 // 10% bonus per streak day
+export const MAX_STREAK_BONUS = 1.0 // cap at 100% of base
+export const REFERRAL_BONUS_XLM = 2 // flat XLM bonus per referral
 
 export interface WithdrawalRequest {
   userId: string;
@@ -105,10 +105,10 @@ const pendingWithdrawals = new Map<string, WithdrawalRequest>();
 // ─── RewardService ────────────────────────────────────────────────────────────
 
 export class RewardService {
-  private stellarService: StellarService;
+  private stellarService: StellarService
 
   constructor(stellarService?: StellarService) {
-    this.stellarService = stellarService ?? new StellarService();
+    this.stellarService = stellarService ?? new StellarService()
   }
 
   // ── Public API ──────────────────────────────────────────────────────────────
@@ -126,12 +126,12 @@ export class RewardService {
     referralBonus: number;
     totalAmount: number;
   } {
-    const baseAmount = this.calculateBaseReward(module);
-    const streakBonus = this.calculateStreakBonus(baseAmount, streakDays);
-    const referralBonus = hasReferral ? REFERRAL_BONUS_XLM : 0;
-    const totalAmount = baseAmount + streakBonus + referralBonus;
+    const baseAmount = this.calculateBaseReward(module)
+    const streakBonus = this.calculateStreakBonus(baseAmount, streakDays)
+    const referralBonus = hasReferral ? REFERRAL_BONUS_XLM : 0
+    const totalAmount = baseAmount + streakBonus + referralBonus
 
-    return { baseAmount, streakBonus, referralBonus, totalAmount };
+    return { baseAmount, streakBonus, referralBonus, totalAmount }
   }
 
   /**
@@ -140,16 +140,16 @@ export class RewardService {
    */
   async claimReward(claim: RewardClaim, module: Module): Promise<RewardResult> {
     // 1. Validate: prevent double-claiming
-    this.assertNotAlreadyClaimed(claim.userId, claim.moduleId);
+    this.assertNotAlreadyClaimed(claim.userId, claim.moduleId)
 
     // 2. Resolve referral code to referrer id
     const referrerId = claim.referralCode
       ? this.resolveReferralCode(claim.referralCode)
-      : undefined;
+      : undefined
 
     // 3. Calculate amounts
     const { baseAmount, streakBonus, referralBonus, totalAmount } =
-      this.calculateReward(module, claim.streakDays ?? 0, !!referrerId);
+      this.calculateReward(module, claim.streakDays ?? 0, !!referrerId)
 
     // 4. Payout via Stellar
     const paymentResult = await this.stellarService.sendPayment({
@@ -161,7 +161,7 @@ export class RewardService {
     const stellarTxHash = paymentResult.hash;
 
     // 5. Mark claimed to prevent duplicates
-    this.markAsClaimed(claim.userId, claim.moduleId);
+    this.markAsClaimed(claim.userId, claim.moduleId)
 
     // 6. Record transaction
     const transactionId = this.recordTransaction({
@@ -171,11 +171,11 @@ export class RewardService {
       type: "module_reward",
       status: "completed",
       stellarTxHash,
-    });
+    })
 
     // 7. Pay referral bonus if applicable (non-blocking)
     if (referrerId && referralBonus > 0) {
-      await this.payReferralBonus(referrerId, claim.moduleId, stellarTxHash);
+      await this.payReferralBonus(referrerId, claim.moduleId, stellarTxHash)
     }
 
     return {
@@ -188,7 +188,7 @@ export class RewardService {
       totalAmount,
       stellarTxHash,
       claimedAt: new Date(),
-    };
+    }
   }
 
   /**
@@ -196,23 +196,23 @@ export class RewardService {
    */
   registerReferralCode(code: string, userId: string): void {
     if (referralCodes.has(code)) {
-      throw new Error(`Referral code "${code}" is already in use`);
+      throw new Error(`Referral code "${code}" is already in use`)
     }
-    referralCodes.set(code, userId);
+    referralCodes.set(code, userId)
   }
 
   /**
    * Check whether a user has already claimed the reward for a module.
    */
   hasAlreadyClaimed(userId: string, moduleId: string): boolean {
-    return claimedRewards.get(userId)?.has(moduleId) ?? false;
+    return claimedRewards.get(userId)?.has(moduleId) ?? false
   }
 
   /**
    * Return all recorded transactions.
    */
   getTransactions(): Transaction[] {
-    return [...transactions];
+    return [...transactions]
   }
 
   /**
@@ -365,48 +365,45 @@ export class RewardService {
   // ── Private helpers ─────────────────────────────────────────────────────────
 
   private calculateBaseReward(module: Module): number {
-    const multiplier = DIFFICULTY_MULTIPLIERS[module.difficulty] ?? 1.0;
-    return +(BASE_REWARD_XLM * multiplier).toFixed(7);
+    const multiplier = DIFFICULTY_MULTIPLIERS[module.difficulty] ?? 1.0
+    
+return +(BASE_REWARD_XLM * multiplier).toFixed(7)
   }
 
   private calculateStreakBonus(baseAmount: number, streakDays: number): number {
-    if (streakDays <= 0) return 0;
+    if (streakDays <= 0) return 0
     const bonusRate = Math.min(
       streakDays * STREAK_BONUS_RATE,
       MAX_STREAK_BONUS,
-    );
-    return +(baseAmount * bonusRate).toFixed(7);
+    )
+    
+return +(baseAmount * bonusRate).toFixed(7)
   }
 
   private resolveReferralCode(code: string): string | undefined {
-    return referralCodes.get(code);
+    return referralCodes.get(code)
   }
 
   private assertNotAlreadyClaimed(userId: string, moduleId: string): void {
     if (this.hasAlreadyClaimed(userId, moduleId)) {
       throw new Error(
         `User "${userId}" has already claimed the reward for module "${moduleId}"`,
-      );
+      )
     }
   }
 
   private markAsClaimed(userId: string, moduleId: string): void {
     if (!claimedRewards.has(userId)) {
-      claimedRewards.set(userId, new Set());
+      claimedRewards.set(userId, new Set())
     }
-    claimedRewards.get(userId)!.add(moduleId);
+    claimedRewards.get(userId)!.add(moduleId)
   }
 
   private recordTransaction(
-    data: Omit<Transaction, "id" | "createdAt">,
+    data: Omit<Transaction, 'id' | 'createdAt'>,
   ): string {
     const id = `txn_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-    const transaction: Transaction = {
-      id,
-      ...data,
-      createdAt: new Date(),
-    };
-    transactions.push(transaction);
+    transactions.push({ id, ...data, createdAt: new Date() });
     return id;
   }
 
@@ -434,8 +431,8 @@ export class RewardService {
   ): Promise<void> {
     try {
       const referrerWallet =
-        await this.stellarService.getWalletAddress(referrerId);
-      if (!referrerWallet) return;
+        await this.stellarService.getWalletAddress(referrerId)
+      if (!referrerWallet) return
 
       const paymentResult = await this.stellarService.sendPayment({
         sourceSecret: process.env.STELLAR_SOURCE_SECRET!,
@@ -452,10 +449,10 @@ export class RewardService {
         type: "referral_reward",
         status: "completed",
         stellarTxHash: txHash,
-      });
+      })
     } catch (err) {
       // Referral bonus failure must NOT roll back the learner's main reward
-      console.error(`Failed to pay referral bonus to user ${referrerId}:`, err);
+      console.error(`Failed to pay referral bonus to user ${referrerId}:`, err)
     }
   }
 

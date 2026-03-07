@@ -1,23 +1,23 @@
 export enum CredentialType {
-  CERTIFICATE = "certificate",
-  BADGE = "badge",
-  LICENSE = "license",
-  ACHIEVEMENT = "achievement",
+  CERTIFICATE = 'certificate',
+  BADGE = 'badge',
+  LICENSE = 'license',
+  ACHIEVEMENT = 'achievement',
 }
 
 export enum CredentialStatus {
-  ACTIVE = "active",
-  EXPIRED = "expired",
-  REVOKED = "revoked",
-  PENDING = "pending",
+  ACTIVE = 'active',
+  EXPIRED = 'expired',
+  REVOKED = 'revoked',
+  PENDING = 'pending',
 }
 
 export enum VerificationStatus {
-  UNVERIFIED = "unverified",
-  PENDING = "pending",
-  VERIFIED = "verified",
-  FAILED = "failed",
-  EXPIRED = "expired",
+  UNVERIFIED = 'unverified',
+  PENDING = 'pending',
+  VERIFIED = 'verified',
+  FAILED = 'failed',
+  EXPIRED = 'expired',
 }
 
 export interface Credential {

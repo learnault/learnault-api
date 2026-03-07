@@ -1,15 +1,16 @@
-import { Request, Response } from 'express';
-import { User, UpdateUserData, ChangePasswordData, UpdateWalletData, PublicUserInfo } from '../types/user.types';
+import { ChangePasswordData, PublicUserInfo, UpdateUserData, UpdateWalletData, User } from '../types/user.types'
+import { Request, Response } from 'express'
 
 export class UserController {
-  async getCurrentUser(req: Request, res: Response): Promise<void> {
+  async getCurrentUser (req: Request, res: Response): Promise<void> {
     try {
-      const userId = (req as any).user.id;
-      
-      const user = await this.findUserById(userId);
+      const userId = (req as any).user.id
+
+      const user = await this.findUserById(userId)
       if (!user) {
-        res.status(404).json({ error: 'User not found' });
-        return;
+        res.status(404).json({ error: 'User not found' })
+
+        return
       }
 
       res.json({
@@ -24,20 +25,20 @@ export class UserController {
         isActive: user.isActive,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
-      });
+      })
     } catch (error) {
-      console.error('Error getting current user:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error('Error getting current user:', error)
+      res.status(500).json({ error: 'Internal server error' })
     }
   }
 
-  async updateProfile(req: Request, res: Response): Promise<void> {
+  async updateProfile (req: Request, res: Response): Promise<void> {
     try {
-      const userId = (req as any).user.id;
-      const updateData: UpdateUserData = req.body;
+      const userId = (req as any).user.id
+      const updateData: UpdateUserData = req.body
 
-      const updatedUser = await this.updateUserProfile(userId, updateData);
-      
+      const updatedUser = await this.updateUserProfile(userId, updateData)
+
       res.json({
         id: updatedUser.id,
         email: updatedUser.email,
@@ -50,21 +51,22 @@ export class UserController {
         isActive: updatedUser.isActive,
         createdAt: updatedUser.createdAt,
         updatedAt: updatedUser.updatedAt,
-      });
+      })
     } catch (error) {
-      console.error('Error updating profile:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error('Error updating profile:', error)
+      res.status(500).json({ error: 'Internal server error' })
     }
   }
 
-  async getUserById(req: Request, res: Response): Promise<void> {
+  async getUserById (req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
-      
-      const user = await this.findUserById(id);
+      const { id } = req.params
+
+      const user = await this.findUserById(id)
       if (!user) {
-        res.status(404).json({ error: 'User not found' });
-        return;
+        res.status(404).json({ error: 'User not found' })
+
+        return
       }
 
       const publicInfo: PublicUserInfo = {
@@ -74,53 +76,56 @@ export class UserController {
         lastName: user.lastName,
         avatar: user.avatar,
         createdAt: user.createdAt,
-      };
+      }
 
-      res.json(publicInfo);
+      res.json(publicInfo)
     } catch (error) {
-      console.error('Error getting user by ID:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error('Error getting user by ID:', error)
+      res.status(500).json({ error: 'Internal server error' })
     }
   }
 
-  async changePassword(req: Request, res: Response): Promise<void> {
+  async changePassword (req: Request, res: Response): Promise<void> {
     try {
-      const userId = (req as any).user.id;
-      const { currentPassword, newPassword }: ChangePasswordData = req.body;
+      const userId = (req as any).user.id
+      const { currentPassword, newPassword }: ChangePasswordData = req.body
 
-      const user = await this.findUserById(userId);
+      const user = await this.findUserById(userId)
       if (!user) {
-        res.status(404).json({ error: 'User not found' });
-        return;
+        res.status(404).json({ error: 'User not found' })
+
+        return
       }
 
-      const isCurrentPasswordValid = await this.validatePassword(user, currentPassword);
+      const isCurrentPasswordValid = await this.validatePassword(user, currentPassword)
       if (!isCurrentPasswordValid) {
-        res.status(400).json({ error: 'Current password is incorrect' });
-        return;
+        res.status(400).json({ error: 'Current password is incorrect' })
+
+        return
       }
 
-      await this.updateUserPassword(userId, newPassword);
-      
-      res.json({ message: 'Password updated successfully' });
+      await this.updateUserPassword(userId, newPassword)
+
+      res.json({ message: 'Password updated successfully' })
     } catch (error) {
-      console.error('Error changing password:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error('Error changing password:', error)
+      res.status(500).json({ error: 'Internal server error' })
     }
   }
 
-  async updateWalletAddress(req: Request, res: Response): Promise<void> {
+  async updateWalletAddress (req: Request, res: Response): Promise<void> {
     try {
-      const userId = (req as any).user.id;
-      const { walletAddress }: UpdateWalletData = req.body;
+      const userId = (req as any).user.id
+      const { walletAddress }: UpdateWalletData = req.body
 
       if (!this.isValidStellarAddress(walletAddress)) {
-        res.status(400).json({ error: 'Invalid Stellar wallet address' });
-        return;
+        res.status(400).json({ error: 'Invalid Stellar wallet address' })
+
+        return
       }
 
-      const updatedUser = await this.updateUserWallet(userId, walletAddress);
-      
+      const updatedUser = await this.updateUserWallet(userId, walletAddress)
+
       res.json({
         id: updatedUser.id,
         email: updatedUser.email,
@@ -133,14 +138,14 @@ export class UserController {
         isActive: updatedUser.isActive,
         createdAt: updatedUser.createdAt,
         updatedAt: updatedUser.updatedAt,
-      });
+      })
     } catch (error) {
-      console.error('Error updating wallet address:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error('Error updating wallet address:', error)
+      res.status(500).json({ error: 'Internal server error' })
     }
   }
 
-  private async findUserById(id: string): Promise<User | null> {
+  private async findUserById (id: string): Promise<User | null> {
     const mockUser: User = {
       id,
       email: 'test@example.com',
@@ -153,11 +158,12 @@ export class UserController {
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
-    };
-    return mockUser;
+    }
+
+    return mockUser
   }
 
-  private async updateUserProfile(id: string, data: UpdateUserData): Promise<User> {
+  private async updateUserProfile (id: string, data: UpdateUserData): Promise<User> {
     const mockUser: User = {
       id,
       email: 'test@example.com',
@@ -170,19 +176,20 @@ export class UserController {
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
-    };
-    return mockUser;
+    }
+
+    return mockUser
   }
 
-  private async validatePassword(user: User, password: string): Promise<boolean> {
-    return false;
+  private async validatePassword (_user: User, _password: string): Promise<boolean> {
+    return false
   }
 
-  private async updateUserPassword(id: string, newPassword: string): Promise<void> {
-    throw new Error('Not implemented');
+  private async updateUserPassword (_id: string, _newPassword: string): Promise<void> {
+    throw new Error('Not implemented')
   }
 
-  private async updateUserWallet(id: string, walletAddress: string): Promise<User> {
+  private async updateUserWallet (id: string, walletAddress: string): Promise<User> {
     const mockUser: User = {
       id,
       email: 'test@example.com',
@@ -191,11 +198,12 @@ export class UserController {
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
-    };
-    return mockUser;
+    } as never
+
+    return mockUser
   }
 
-  private isValidStellarAddress(address: string): boolean {
-    return /^G[A-Z0-9]{50,55}$/.test(address);
+  private isValidStellarAddress (address: string): boolean {
+    return /^G[A-Z0-9]{50,55}$/.test(address)
   }
 }

@@ -1,13 +1,13 @@
-import configLogger from "../config/logger";
+import configLogger from '../config/logger'
 
 export type LogLevel =
-  | "error"
-  | "warn"
-  | "info"
-  | "http"
-  | "verbose"
-  | "debug"
-  | "silly";
+  | 'error'
+  | 'warn'
+  | 'info'
+  | 'http'
+  | 'verbose'
+  | 'debug'
+  | 'silly';
 
 const logger = {
   error: (message: string, meta?: any) => configLogger.error(message, meta),
@@ -18,8 +18,8 @@ const logger = {
   debug: (message: string, meta?: any) => configLogger.debug(message, meta),
   silly: (message: string, meta?: any) => configLogger.silly(message, meta),
   setLevel: (level: LogLevel) => {
-    configLogger.level = level;
+    configLogger.level = level
   },
-};
+}
 
-export default logger;
+export default logger

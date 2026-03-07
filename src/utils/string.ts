@@ -6,11 +6,11 @@ export function slugify(input: string): string {
   // decompose letters, remove diacritics, then clean up
   return input
     .toString()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // strip diacritics
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // strip diacritics
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-") // replace non-alphanumeric groups with dash
-    .replace(/^-+|-+$/g, ""); // trim dashes
+    .replace(/[^a-z0-9]+/g, '-') // replace non-alphanumeric groups with dash
+    .replace(/^-+|-+$/g, '') // trim dashes
 }
 
 /**
@@ -19,8 +19,9 @@ export function slugify(input: string): string {
 export function truncate(
   input: string,
   maxLength: number,
-  ellipsis = "..."
+  ellipsis = '...'
 ): string {
-  if (input.length <= maxLength) return input;
-  return input.slice(0, maxLength - ellipsis.length) + ellipsis;
+  if (input.length <= maxLength) return input
+  
+return input.slice(0, maxLength - ellipsis.length) + ellipsis
 }

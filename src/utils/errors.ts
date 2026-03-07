@@ -3,24 +3,24 @@
  * Extends the native Error class with HTTP status codes and additional context
  */
 export class AppError extends Error {
-  public readonly statusCode: number;
-  public readonly isOperational: boolean;
+  public readonly statusCode: number
+  public readonly isOperational: boolean
 
   constructor(
     message: string,
     statusCode: number = 500,
     isOperational: boolean = true
   ) {
-    super(message);
-    this.statusCode = statusCode;
-    this.isOperational = isOperational;
+    super(message)
+    this.statusCode = statusCode
+    this.isOperational = isOperational
 
     // Maintains proper stack trace for where our error was thrown (only available on V8)
     if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, this.constructor);
+      Error.captureStackTrace(this, this.constructor)
     }
 
-    this.name = this.constructor.name;
+    this.name = this.constructor.name
   }
 }
 
@@ -29,7 +29,7 @@ export class AppError extends Error {
  */
 export class BadRequestError extends AppError {
   constructor(message: string = 'Bad Request') {
-    super(message, 400);
+    super(message, 400)
   }
 }
 
@@ -38,7 +38,7 @@ export class BadRequestError extends AppError {
  */
 export class UnauthorizedError extends AppError {
   constructor(message: string = 'Unauthorized') {
-    super(message, 401);
+    super(message, 401)
   }
 }
 
@@ -47,7 +47,7 @@ export class UnauthorizedError extends AppError {
  */
 export class ForbiddenError extends AppError {
   constructor(message: string = 'Forbidden') {
-    super(message, 403);
+    super(message, 403)
   }
 }
 
@@ -56,7 +56,7 @@ export class ForbiddenError extends AppError {
  */
 export class NotFoundError extends AppError {
   constructor(message: string = 'Resource not found') {
-    super(message, 404);
+    super(message, 404)
   }
 }
 
@@ -65,7 +65,7 @@ export class NotFoundError extends AppError {
  */
 export class ConflictError extends AppError {
   constructor(message: string = 'Conflict') {
-    super(message, 409);
+    super(message, 409)
   }
 }
 
@@ -73,14 +73,14 @@ export class ConflictError extends AppError {
  * Validation error (422) for input validation
  */
 export class ValidationError extends AppError {
-  public readonly errors?: Record<string, string[]>;
+  public readonly errors?: Record<string, string[]>
 
   constructor(
     message: string = 'Validation failed',
     errors?: Record<string, string[]>
   ) {
-    super(message, 422);
-    this.errors = errors;
+    super(message, 422)
+    this.errors = errors
   }
 }
 
@@ -89,6 +89,6 @@ export class ValidationError extends AppError {
  */
 export class InternalServerError extends AppError {
   constructor(message: string = 'Internal Server Error') {
-    super(message, 500, false);
+    super(message, 500, false)
   }
 }

@@ -10,13 +10,13 @@ The Learnault API provides endpoints for user management, learning modules, rewa
 
 Most endpoints require authentication using a JWT token.
 
-```
+```txt
 Authorization: Bearer <your-jwt-token>
 ```
 
 ### Get JWT Token
 
-```
+```txt
 POST /v1/auth/login
 ```
 
@@ -49,7 +49,7 @@ POST /v1/auth/login
 
 #### Get Current User
 
-```
+```txt
 GET /v1/users/me
 ```
 
@@ -75,7 +75,7 @@ GET /v1/users/me
 
 #### Update User Profile
 
-```
+```txt
 PATCH /v1/users/me
 ```
 
@@ -95,7 +95,7 @@ PATCH /v1/users/me
 
 #### List Modules
 
-```
+```txt
 GET /v1/modules?category=finance&page=1&limit=20
 ```
 
@@ -136,7 +136,7 @@ GET /v1/modules?category=finance&page=1&limit=20
 
 #### Get Module Details
 
-```
+```txt
 GET /v1/modules/:moduleId
 ```
 
@@ -183,7 +183,7 @@ GET /v1/modules/:moduleId
 
 #### Submit Module Completion
 
-```
+```txt
 POST /v1/modules/:moduleId/complete
 ```
 
@@ -228,7 +228,7 @@ POST /v1/modules/:moduleId/complete
 
 #### Get Wallet Balance
 
-```
+```txt
 GET /v1/rewards/balance
 ```
 
@@ -255,7 +255,7 @@ GET /v1/rewards/balance
 
 #### Get Reward History
 
-```
+```txt
 GET /v1/rewards/history?page=1&limit=20
 ```
 
@@ -295,7 +295,7 @@ GET /v1/rewards/history?page=1&limit=20
 
 #### Withdraw Funds
 
-```
+```txt
 POST /v1/rewards/withdraw
 ```
 
@@ -331,7 +331,7 @@ POST /v1/rewards/withdraw
 
 #### Get User Credentials
 
-```
+```txt
 GET /v1/credentials
 ```
 
@@ -355,7 +355,7 @@ GET /v1/credentials
 
 #### Verify Credential
 
-```
+```txt
 GET /v1/credentials/verify/:onChainId
 ```
 
@@ -382,7 +382,7 @@ GET /v1/credentials/verify/:onChainId
 
 #### Search Talent
 
-```
+```txt
 GET /v1/employer/search?skills=finance,defi&location=kenya
 ```
 
@@ -453,7 +453,7 @@ Error response format:
 
 Rate limit headers:
 
-```
+```txt
 X-RateLimit-Limit: 60
 X-RateLimit-Remaining: 58
 X-RateLimit-Reset: 1627583492
