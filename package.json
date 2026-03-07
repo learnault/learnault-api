@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Decentralized learn-to-earn platform on Stellar",
+  "type": "module",
   "keywords": [
     "stellar",
     "education",
@@ -25,19 +26,23 @@
     "test": "vitest",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:ci": "vitest run"
+    "test:ci": "vitest run",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
-    "@prisma/client": "^7.4.1",
+    "@prisma/adapter-pg": "^7.4.2",
+    "@prisma/client": "^7.4.2",
     "@stellar/stellar-sdk": "^14.6.1",
-    "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
     "express": "^5.2.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.1",
-    "pg": "^8.11.3",
+    "pg": "^8.20.0",
     "winston": "^3.19.0"
   },
   "devDependencies": {
@@ -49,10 +54,11 @@
     "@types/jsonwebtoken": "^9.0.5",
     "@types/morgan": "^1.9.10",
     "@types/node": "^22.19.13",
+    "@types/pg": "^8.18.0",
     "@types/supertest": "^7.2.0",
     "eslint": "^10.0.2",
     "nodemon": "^3.1.14",
-    "prisma": "^7.4.1",
+    "prisma": "^7.4.2",
     "supertest": "^7.2.2",
     "ts-node": "^10.9.2",
     "tsx": "^4.7.0",
@@ -61,6 +67,9 @@
     "vitest": "^4.0.18"
   },
   "packageManager": "pnpm@10.0.0",
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "engines": {
     "node": ">=20.0.0",
     "pnpm": ">=10.0.0"

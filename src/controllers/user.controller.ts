@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { User, UpdateUserData, ChangePasswordData, UpdateWalletData, PublicUserInfo } from '../types/user.types';
+import { User, UpdateUserData, ChangePasswordData, UpdateWalletData, PublicUserInfo, UserRole, UserStatus } from '../types/user.types';
 
 export class UserController {
   async getCurrentUser(req: Request, res: Response): Promise<void> {
@@ -74,6 +74,7 @@ export class UserController {
         lastName: user.lastName,
         avatar: user.avatar,
         createdAt: user.createdAt,
+        role: user.role
       };
 
       res.json(publicInfo);
@@ -153,6 +154,8 @@ export class UserController {
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
+      role: UserRole.LEARNER,
+      status: UserStatus.ACTIVE
     };
     return mockUser;
   }
@@ -170,6 +173,8 @@ export class UserController {
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
+      role: UserRole.LEARNER,
+      status: UserStatus.ACTIVE
     };
     return mockUser;
   }
@@ -191,6 +196,8 @@ export class UserController {
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
+      role: UserRole.LEARNER,
+      status: UserStatus.ACTIVE
     };
     return mockUser;
   }
