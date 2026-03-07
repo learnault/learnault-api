@@ -28,7 +28,7 @@ A world where anyone, anywhere can access quality education, earn while learning
 
 ## Architecture
 
-```txt
+```
 ┌─────────────────────────────────────────────────────────────┐
 │                      PWA Frontend (React)                   │
 └───────────────────────────┬─────────────────────────────────┘
