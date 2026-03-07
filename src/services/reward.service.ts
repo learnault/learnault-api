@@ -430,26 +430,13 @@ return +(baseAmount * bonusRate).toFixed(7)
     _originalTxHash: string,
   ): Promise<void> {
     try {
-      const referrerWallet =
-        await this.stellarService.getWalletAddress(referrerId)
-      if (!referrerWallet) return
-
-      const paymentResult = await this.stellarService.sendPayment({
-        sourceSecret: process.env.STELLAR_SOURCE_SECRET!,
-        destinationPublicKey: referrerWallet,
-        amount: REFERRAL_BONUS_XLM.toString(),
-        memo: `Learnault referral bonus: module ${moduleId}`,
-      });
-      const txHash = paymentResult.hash;
-
-      this.recordTransaction({
-        userId: referrerId,
-        moduleId,
-        amount: REFERRAL_BONUS_XLM,
-        type: "referral_reward",
-        status: "completed",
-        stellarTxHash: txHash,
-      })
+      // TODO: Implement user wallet storage and retrieval
+      // For now, skip referral bonus if wallet address cannot be retrieved
+      // This requires a user wallet storage mechanism to be implemented
+      console.warn(
+        `Referral bonus skipped: No wallet address storage implemented for user ${referrerId}`
+      )
+      return
     } catch (err) {
       // Referral bonus failure must NOT roll back the learner's main reward
       console.error(`Failed to pay referral bonus to user ${referrerId}:`, err)

@@ -65,10 +65,12 @@ describe('RewardController', () => {
       }
 
       getBalanceSpy.mockReturnValue(mockBalance)
+      const nextFn = createNextFunction()
 
       await controller.getBalance(
         mockRequest as Request,
         mockResponse as Response,
+        nextFn,
       )
 
       expect(getBalanceSpy).toHaveBeenCalledWith('user-123')
@@ -119,10 +121,12 @@ describe('RewardController', () => {
       }
 
       getTransactionHistorySpy.mockReturnValue(mockHistory)
+      const nextFn = createNextFunction()
 
       await controller.getHistory(
         mockRequest as Request,
         mockResponse as Response,
+        nextFn,
       )
 
       expect(getTransactionHistorySpy).toHaveBeenCalledWith(
@@ -144,10 +148,12 @@ describe('RewardController', () => {
       mockRequest.query = { type: 'withdrawal' }
       const mockHistory = { transactions: [], total: 0, hasMore: false }
       getTransactionHistorySpy.mockReturnValue(mockHistory)
+      const nextFn = createNextFunction()
 
       await controller.getHistory(
         mockRequest as Request,
         mockResponse as Response,
+        nextFn,
       )
 
       expect(getTransactionHistorySpy).toHaveBeenCalledWith(
@@ -160,10 +166,12 @@ describe('RewardController', () => {
       mockRequest.query = { status: 'pending' }
       const mockHistory = { transactions: [], total: 0, hasMore: false }
       getTransactionHistorySpy.mockReturnValue(mockHistory)
+      const nextFn = createNextFunction()
 
       await controller.getHistory(
         mockRequest as Request,
         mockResponse as Response,
+        nextFn,
       )
 
       expect(getTransactionHistorySpy).toHaveBeenCalledWith(
@@ -178,10 +186,12 @@ describe('RewardController', () => {
       mockRequest.query = { fromDate, toDate }
       const mockHistory = { transactions: [], total: 0, hasMore: false }
       getTransactionHistorySpy.mockReturnValue(mockHistory)
+      const nextFn = createNextFunction()
 
       await controller.getHistory(
         mockRequest as Request,
         mockResponse as Response,
+        nextFn,
       )
 
       expect(getTransactionHistorySpy).toHaveBeenCalledWith(
@@ -197,10 +207,12 @@ describe('RewardController', () => {
       mockRequest.query = { limit: '10', offset: '20' }
       const mockHistory = { transactions: [], total: 50, hasMore: true }
       getTransactionHistorySpy.mockReturnValue(mockHistory)
+      const nextFn = createNextFunction()
 
       await controller.getHistory(
         mockRequest as Request,
         mockResponse as Response,
+        nextFn,
       )
 
       expect(getTransactionHistorySpy).toHaveBeenCalledWith(
