@@ -20,6 +20,29 @@ export enum VerificationStatus {
   EXPIRED = "expired",
 }
 
+/**
+ * @openapi
+ * components:
+ *   schemas:
+ *     Credential:
+ *       type: object
+ *       required: [id, userId, moduleId, type, status, title, description, issuedAt]
+ *       properties:
+ *         id: { type: string, format: uuid }
+ *         userId: { type: string, format: uuid }
+ *         moduleId: { type: string, format: uuid }
+ *         type: { type: string, enum: [certificate, badge, license, achievement] }
+ *         status: { type: string, enum: [active, expired, revoked, pending] }
+ *         title: { type: string }
+ *         description: { type: string }
+ *         issuedAt: { type: string, format: date-time }
+ *         expiresAt: { type: string, format: date-time }
+ *         revokedAt: { type: string, format: date-time }
+ *         revokedReason: { type: string }
+ *         blockchainTxHash: { type: string }
+ *         metadataUrl: { type: string, format: uri }
+ *         imageUrl: { type: string, format: uri }
+ */
 export interface Credential {
   id: string;
   userId: string;
@@ -68,13 +91,34 @@ export interface IssueCredentialRequest {
   imageUrl?: string;
 }
 
-export interface RevokeCredentialRequest {
-  reason: string;
-}
-
+/**
+ * @openapi
+ * components:
+ *   schemas:
+ *     VerifyCredentialRequest:
+ *       type: object
+ *       required: [credentialId]
+ *       properties:
+ *         credentialId: { type: string, format: uuid }
+ *         requestedBy: { type: string }
+ */
 export interface VerifyCredentialRequest {
   credentialId: string;
   requestedBy?: string;
+}
+
+/**
+ * @openapi
+ * components:
+ *   schemas:
+ *     RevokeCredentialRequest:
+ *       type: object
+ *       required: [reason]
+ *       properties:
+ *         reason: { type: string }
+ */
+export interface RevokeCredentialRequest {
+  reason: string;
 }
 
 export interface CredentialFilterParams {

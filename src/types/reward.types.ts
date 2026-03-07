@@ -22,6 +22,27 @@ export enum TransactionReason {
   ADMIN_ADJUSTMENT = "admin_adjustment",
 }
 
+/**
+ * @openapi
+ * components:
+ *   schemas:
+ *     Transaction:
+ *       type: object
+ *       properties:
+ *         id: { type: string, format: uuid }
+ *         userId: { type: string, format: uuid }
+ *         type: { type: string, enum: [earned, spent, transferred, refunded, bonus] }
+ *         status: { type: string, enum: [pending, completed, failed, reversed] }
+ *         reason: { type: string, enum: [module_completion, credential_issued, referral_bonus, streak_bonus, reward_redemption, admin_adjustment] }
+ *         amount: { type: number }
+ *         balanceBefore: { type: number }
+ *         balanceAfter: { type: number }
+ *         referenceId: { type: string }
+ *         referenceType: { type: string }
+ *         note: { type: string }
+ *         createdAt: { type: string, format: date-time }
+ *         completedAt: { type: string, format: date-time }
+ */
 export interface Transaction {
   id: string;
   userId: string;
@@ -38,6 +59,19 @@ export interface Transaction {
   completedAt?: string;
 }
 
+/**
+ * @openapi
+ * components:
+ *   schemas:
+ *     Balance:
+ *       type: object
+ *       properties:
+ *         userId: { type: string, format: uuid }
+ *         available: { type: number }
+ *         pending: { type: number }
+ *         lifetime: { type: number }
+ *         updatedAt: { type: string, format: date-time }
+ */
 export interface Balance {
   userId: string;
   available: number;
