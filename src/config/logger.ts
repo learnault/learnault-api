@@ -1,12 +1,12 @@
-import winston from 'winston'
+import winston from "winston";
 
 const logger = winston.createLogger({
-  level: 'info',
+  level: "info",
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.simple()
   ),
   transports: [new winston.transports.Console()]
-})
+});
 
-export default logger
+export default logger;

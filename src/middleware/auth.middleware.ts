@@ -1,6 +1,5 @@
-import { NextFunction, Request, Response } from 'express'
-
-import jwt from 'jsonwebtoken'
+import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
 
 export type UserRole = 'learner' | 'employer';
 
@@ -13,7 +12,6 @@ export interface JwtPayload {
 }
 
 declare global {
-     // eslint-disable-next-line @typescript-eslint/no-namespace
      namespace Express {
           interface Request {
                user?: JwtPayload;
@@ -21,11 +19,13 @@ declare global {
      }
 }
 
-const JWT_SECRET = process.env.JWT_SECRET as string
-
-if (!JWT_SECRET) {
-     throw new Error('JWT_SECRET environment variable is required')
-}
+const getJwtSecret = (): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable is required');
+  }
+  return secret;
+};
 
 /**
  * Strict authentication — rejects requests without a valid JWT.
@@ -35,34 +35,31 @@ export const authenticate = (
      res: Response,
      next: NextFunction
 ): void => {
-     const authHeader = req.headers.authorization
+     const authHeader = req.headers.authorization;
 
      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-          res.status(401).json({ message: 'Authorization token required' })
-
-          return
+          res.status(401).json({ message: 'Authorization token required' });
+          return;
      }
 
-     const token = authHeader.split(' ')[1]
+     const token = authHeader.split(' ')[1];
 
      try {
-          const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload
-          req.user = decoded
-          next()
+          const decoded = jwt.verify(token, getJwtSecret()) as JwtPayload;
+          req.user = decoded;
+          next();
      } catch (err) {
           if (err instanceof jwt.TokenExpiredError) {
-               res.status(401).json({ message: 'Token has expired' })
-
-               return
+               res.status(401).json({ message: 'Token has expired' });
+               return;
           }
           if (err instanceof jwt.JsonWebTokenError) {
-               res.status(401).json({ message: 'Invalid token' })
-
-               return
+               res.status(401).json({ message: 'Invalid token' });
+               return;
           }
-          res.status(500).json({ message: 'Internal server error during authentication' })
+          res.status(500).json({ message: 'Internal server error during authentication' });
      }
-}
+};
 
 /**
  * Optional authentication — attaches user to req if token is present and valid,
@@ -73,21 +70,23 @@ export const optionalAuthenticate = (
      res: Response,
      next: NextFunction
 ): void => {
-     const authHeader = req.headers.authorization
+     const authHeader = req.headers.authorization;
 
      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-          return next()
+          return next();
      }
 
-     const token = authHeader.split(' ')[1]
+     const token = authHeader.split(' ')[1];
 
      try {
-          const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload
-          req.user = decoded
-     } catch { /** */ }
+          const decoded = jwt.verify(token, getJwtSecret()) as JwtPayload;
+          req.user = decoded;
+     } catch {
 
-     next()
-}
+     }
+
+     next();
+};
 
 /**
  * Role-based authorization — must be used after `authenticate`.
@@ -96,19 +95,17 @@ export const optionalAuthenticate = (
 export const authorize = (...roles: UserRole[]) => {
      return (req: Request, res: Response, next: NextFunction): void => {
           if (!req.user) {
-               res.status(401).json({ message: 'Authentication required' })
-
-               return
+               res.status(401).json({ message: 'Authentication required' });
+               return;
           }
 
           if (!roles.includes(req.user.role)) {
                res.status(403).json({
                     message: `Access denied. Requires one of the following roles: ${roles.join(', ')}`,
-               })
-
-               return
+               });
+               return;
           }
 
-          next()
-     }
-}
+          next();
+     };
+};
