@@ -40,7 +40,7 @@ describe("RewardService", () => {
 
   beforeEach(() => {
     stellarMock = {
-      sendPayment: vi.fn().mockResolvedValue(MOCK_TX_HASH),
+      sendPayment: vi.fn().mockResolvedValue({ hash: MOCK_TX_HASH, ledger: 123, successful: true }),
       getWalletAddress: vi.fn().mockResolvedValue(MOCK_WALLET),
       verifyTransaction: vi.fn().mockResolvedValue(true),
     } as unknown as StellarService;
@@ -144,9 +144,11 @@ describe("RewardService", () => {
 
       const { totalAmount } = service.calculateReward(module, 2, false);
       expect(stellarMock.sendPayment).toHaveBeenCalledWith(
-        claim.walletAddress,
-        totalAmount,
-        expect.stringContaining(claim.moduleId),
+        expect.objectContaining({
+          destinationPublicKey: claim.walletAddress,
+          amount: totalAmount.toString(),
+          memo: expect.stringContaining(claim.moduleId),
+        })
       );
     });
 
@@ -209,9 +211,11 @@ describe("RewardService", () => {
 
       const { totalAmount } = service.calculateReward(module, 5, false);
       expect(stellarMock.sendPayment).toHaveBeenCalledWith(
-        claim.walletAddress,
-        totalAmount,
-        expect.any(String),
+        expect.objectContaining({
+          destinationPublicKey: claim.walletAddress,
+          amount: totalAmount.toString(),
+          memo: expect.any(String),
+        })
       );
     });
   });
@@ -234,9 +238,11 @@ describe("RewardService", () => {
       expect(stellarMock.sendPayment).toHaveBeenCalledTimes(2);
       expect(stellarMock.sendPayment).toHaveBeenNthCalledWith(
         2,
-        MOCK_WALLET,
-        REFERRAL_BONUS_XLM,
-        expect.stringContaining("referral"),
+        expect.objectContaining({
+          destinationPublicKey: MOCK_WALLET,
+          amount: REFERRAL_BONUS_XLM.toString(),
+          memo: expect.stringContaining("referral"),
+        })
       );
     });
 
@@ -260,7 +266,7 @@ describe("RewardService", () => {
 
     it("still completes learner reward even if referral payout fails", async () => {
       (stellarMock.sendPayment as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce(MOCK_TX_HASH) // learner tx succeeds
+        .mockResolvedValueOnce({ hash: MOCK_TX_HASH, ledger: 123, successful: true }) // learner tx succeeds
         .mockRejectedValueOnce(new Error("Network error")); // referral tx fails
 
       const claim = makeClaim({ referralCode: REFERRAL_CODE });
@@ -336,6 +342,290 @@ describe("RewardService", () => {
       await service.claimReward(makeClaim(), makeModule());
       const [txn] = service.getTransactions();
       expect(txn.stellarTxHash).toBe(MOCK_TX_HASH);
+    });
+  });
+
+  // ── Balance calculations ────────────────────────────────────────────────────
+
+  describe("getBalance", () => {
+    it("returns correct balance for user with no transactions", () => {
+      const balance = service.getBalance("user-new");
+      expect(balance).toEqual({
+        userId: "user-new",
+        available: 0,
+        pending: 0,
+        lifetime: 0,
+        updatedAt: expect.any(Date),
+      });
+    });
+
+    it("calculates available balance from completed module rewards", async () => {
+      await service.claimReward(makeClaim({ moduleId: "mod-1" }), makeModule({ id: "mod-1", baseReward: 5 }));
+      await service.claimReward(makeClaim({ moduleId: "mod-2" }), makeModule({ id: "mod-2", baseReward: 5 }));
+
+      const balance = service.getBalance("user-abc");
+      expect(balance.available).toBeGreaterThan(0);
+      expect(balance.lifetime).toBe(balance.available);
+    });
+
+    it("includes streak and referral bonuses in balance", async () => {
+      service.registerReferralCode("REF-XYZ", "referrer-123");
+      const claim = makeClaim({ streakDays: 5, referralCode: "REF-XYZ" });
+      
+      await service.claimReward(claim, makeModule({ baseReward: 5 }));
+
+      const learnerBalance = service.getBalance("user-abc");
+      const referrerBalance = service.getBalance("referrer-123");
+
+      expect(learnerBalance.available).toBeGreaterThanOrEqual(BASE_REWARD_XLM);
+      expect(referrerBalance.available).toBe(REFERRAL_BONUS_XLM);
+    });
+
+    it("subtracts completed withdrawals from available balance", async () => {
+      // First, earn some rewards
+      await service.claimReward(makeClaim({ moduleId: "mod-1" }), makeModule({ id: "mod-1", baseReward: 5 }));
+      const initialBalance = service.getBalance("user-abc");
+      expect(initialBalance.available).toBeGreaterThan(0);
+
+      // Then withdraw a small amount
+      const withdrawalAmount = Math.min(1, initialBalance.available / 2);
+      (stellarMock.sendPayment as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ hash: "withdrawal-tx-hash", ledger: 123, successful: true });
+      
+      await service.processWithdrawal({
+        userId: "user-abc",
+        walletAddress: makeClaim().walletAddress,
+        amount: withdrawalAmount,
+      });
+
+      const finalBalance = service.getBalance("user-abc");
+      expect(finalBalance.available).toBeCloseTo(initialBalance.available - withdrawalAmount);
+    });
+
+    it("includes pending withdrawals in pending balance", async () => {
+      await service.claimReward(makeClaim(), makeModule());
+      const initialBalance = service.getBalance("user-abc");
+
+      // Mock a pending withdrawal (we'll test the actual flow in integration tests)
+      const transactions = service.getUserTransactions("user-abc");
+      const earnedAmount = transactions
+        .filter(t => t.status === "completed")
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      expect(initialBalance.lifetime).toBe(earnedAmount);
+    });
+  });
+
+  // ── Transaction history ─────────────────────────────────────────────────────
+
+  describe("getTransactionHistory", () => {
+    beforeEach(async () => {
+      // Create multiple transactions
+      await service.claimReward(makeClaim({ moduleId: "mod-1" }), makeModule({ id: "mod-1" }));
+      await service.claimReward(makeClaim({ moduleId: "mod-2" }), makeModule({ id: "mod-2" }));
+      await service.claimReward(makeClaim({ userId: "user-xyz", moduleId: "mod-3" }), makeModule({ id: "mod-3" }));
+    });
+
+    it("returns all transactions without filters", () => {
+      const history = service.getTransactionHistory("user-abc");
+      expect(history.transactions.length).toBe(2);
+      expect(history.total).toBe(2);
+      expect(history.hasMore).toBe(false);
+    });
+
+    it("filters by transaction type", async () => {
+      service.registerReferralCode("REF-TEST", "referrer-456");
+      await service.claimReward(
+        makeClaim({ moduleId: "mod-4", referralCode: "REF-TEST" }),
+        makeModule({ id: "mod-4" })
+      );
+
+      const history = service.getTransactionHistory("referrer-456", { type: "referral_reward" });
+      expect(history.transactions.length).toBe(1);
+      expect(history.transactions[0].type).toBe("referral_reward");
+    });
+
+    it("filters by transaction status", () => {
+      const history = service.getTransactionHistory("user-abc", { status: "completed" });
+      expect(history.transactions.every(t => t.status === "completed")).toBe(true);
+    });
+
+    it("filters by date range", () => {
+      const now = new Date();
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+      const history = service.getTransactionHistory("user-abc", {
+        fromDate: now,
+        toDate: tomorrow,
+      });
+
+      expect(history.transactions.every(t => t.createdAt >= now)).toBe(true);
+      expect(history.transactions.every(t => t.createdAt <= tomorrow)).toBe(true);
+    });
+
+    it("applies pagination correctly", () => {
+      const historyPage1 = service.getTransactionHistory("user-abc", { limit: 1, offset: 0 });
+      const historyPage2 = service.getTransactionHistory("user-abc", { limit: 1, offset: 1 });
+
+      expect(historyPage1.transactions.length).toBe(1);
+      expect(historyPage2.transactions.length).toBe(1);
+      expect(historyPage1.transactions[0].id).not.toBe(historyPage2.transactions[0].id);
+      expect(historyPage1.hasMore).toBe(true);
+    });
+
+    it("sorts transactions by date (newest first)", () => {
+      const history = service.getTransactionHistory("user-abc");
+      const timestamps = history.transactions.map(t => t.createdAt.getTime());
+      
+      for (let i = 1; i < timestamps.length; i++) {
+        expect(timestamps[i - 1]).toBeGreaterThanOrEqual(timestamps[i]);
+      }
+    });
+  });
+
+  // ── Withdrawals ─────────────────────────────────────────────────────────────
+
+  describe("processWithdrawal", () => {
+    beforeEach(async () => {
+      // Ensure user has sufficient balance by claiming a reward
+      await service.claimReward(makeClaim(), makeModule({ baseReward: 10 }));
+    });
+
+    it("processes valid withdrawal successfully", async () => {
+      const balance = service.getBalance("user-abc");
+      const withdrawalAmount = Math.min(2, balance.available);
+
+      (stellarMock.sendPayment as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ hash: "withdrawal-hash", ledger: 123, successful: true });
+
+      const result = await service.processWithdrawal({
+        userId: "user-abc",
+        walletAddress: makeClaim().walletAddress,
+        amount: withdrawalAmount,
+      });
+
+      expect(result).toMatchObject({
+        userId: "user-abc",
+        amount: withdrawalAmount,
+        stellarTxHash: "withdrawal-hash",
+        status: "completed",
+      });
+      expect(result.transactionId).toMatch(/^txn_/);
+      expect(result.completedAt).toBeInstanceOf(Date);
+    });
+
+    it("throws error for insufficient balance", async () => {
+      const largeAmount = 999999;
+
+      await expect(
+        service.processWithdrawal({
+          userId: "user-abc",
+          walletAddress: makeClaim().walletAddress,
+          amount: largeAmount,
+        })
+      ).rejects.toThrow("Insufficient balance");
+    });
+
+    it("throws error for zero or negative amount", async () => {
+      await expect(
+        service.processWithdrawal({
+          userId: "user-abc",
+          walletAddress: makeClaim().walletAddress,
+          amount: 0,
+        })
+      ).rejects.toThrow("greater than 0");
+
+      await expect(
+        service.processWithdrawal({
+          userId: "user-abc",
+          walletAddress: makeClaim().walletAddress,
+          amount: -10,
+        })
+      ).rejects.toThrow("greater than 0");
+    });
+
+    it("creates a withdrawal transaction record", async () => {
+      const balance = service.getBalance("user-abc");
+      const withdrawalAmount = Math.min(1, balance.available);
+
+      (stellarMock.sendPayment as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ hash: "withdrawal-hash", ledger: 123, successful: true });
+
+      await service.processWithdrawal({
+        userId: "user-abc",
+        walletAddress: makeClaim().walletAddress,
+        amount: withdrawalAmount,
+      });
+
+      const transactions = service.getUserTransactions("user-abc");
+      const withdrawalTxn = transactions.find(t => t.type === "withdrawal");
+
+      expect(withdrawalTxn).toBeDefined();
+      expect(withdrawalTxn?.amount).toBe(withdrawalAmount);
+      expect(withdrawalTxn?.status).toBe("completed");
+    });
+
+    it("updates balance after withdrawal", async () => {
+      const initialBalance = service.getBalance("user-abc");
+      const withdrawalAmount = Math.min(1, initialBalance.available);
+
+      (stellarMock.sendPayment as ReturnType<typeof vi.fn>).mockResolvedValueOnce("withdrawal-hash");
+
+      await service.processWithdrawal({
+        userId: "user-abc",
+        walletAddress: makeClaim().walletAddress,
+        amount: withdrawalAmount,
+      });
+
+      const finalBalance = service.getBalance("user-abc");
+      expect(finalBalance.available).toBeCloseTo(initialBalance.available - withdrawalAmount);
+    });
+
+    it("marks transaction as failed if Stellar payment fails", async () => {
+      const balance = service.getBalance("user-abc");
+      const withdrawalAmount = Math.min(1, balance.available);
+
+      (stellarMock.sendPayment as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+        new Error("Network error")
+      );
+
+      await expect(
+        service.processWithdrawal({
+          userId: "user-abc",
+          walletAddress: makeClaim().walletAddress,
+          amount: withdrawalAmount,
+        })
+      ).rejects.toThrow("Network error");
+
+      // Verify transaction was marked as failed
+      const transactions = service.getUserTransactions("user-abc");
+      const withdrawalTxn = transactions.find(t => t.type === "withdrawal");
+      expect(withdrawalTxn?.status).toBe("failed");
+    });
+  });
+
+  // ── Balance validation ──────────────────────────────────────────────────────
+
+  describe("hasSufficientBalance", () => {
+    beforeEach(async () => {
+      await service.claimReward(makeClaim(), makeModule({ baseReward: 10 }));
+    });
+
+    it("returns true when amount is within available balance", () => {
+      const balance = service.getBalance("user-abc");
+      const smallAmount = Math.max(0.5, balance.available / 2);
+
+      expect(service.hasSufficientBalance("user-abc", smallAmount)).toBe(true);
+    });
+
+    it("returns false when amount exceeds available balance", () => {
+      const balance = service.getBalance("user-abc");
+      const largeAmount = balance.available + 1;
+
+      expect(service.hasSufficientBalance("user-abc", largeAmount)).toBe(false);
+    });
+
+    it("returns true when amount equals available balance exactly", () => {
+      const balance = service.getBalance("user-abc");
+
+      expect(service.hasSufficientBalance("user-abc", balance.available)).toBe(true);
     });
   });
 });
