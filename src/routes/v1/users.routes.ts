@@ -1,10 +1,10 @@
-import express, { Router } from 'express';
-import { UserController } from '../../controllers/user.controller';
-import { authenticate } from '../../middleware/auth.middleware';
-import { validateProfileUpdate, validatePasswordChange, validateWalletAddress } from '../../middleware/validation.middleware';
+import express, { Router } from 'express'
+import { UserController } from '../../controllers/user.controller'
+import { authenticate } from '../../middleware/auth.middleware'
+import { validateProfileUpdate, validatePasswordChange, validateWalletAddress } from '../../middleware/validation.middleware'
 
-const router: express.Router = Router();
-const userController = new UserController();
+const router: express.Router = Router()
+const userController = new UserController()
 
 router.get('/me', authenticate, userController.getCurrentUser.bind(userController))
 
