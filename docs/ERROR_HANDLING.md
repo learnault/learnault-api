@@ -13,25 +13,18 @@ All error classes extend the base `AppError` class and return appropriate HTTP s
 - **AppError** (base class, 500)
   - Custom error class for application-level errors
   - Supports operational vs. unexpected errors
-  
 - **BadRequestError** (400)
   - Invalid client input or request
-  
 - **UnauthorizedError** (401)
   - Missing or invalid authentication
-  
 - **ForbiddenError** (403)
   - User lacks permissions for the action
-  
 - **NotFoundError** (404)
   - Requested resource does not exist
-  
 - **ConflictError** (409)
   - Resource conflict (e.g., duplicate email)
-  
 - **ValidationError** (422)
   - Input validation failures with detailed error messages
-  
 - **InternalServerError** (500)
   - Unexpected server errors
 
@@ -40,85 +33,92 @@ All error classes extend the base `AppError` class and return appropriate HTTP s
 ### Basic Error Throwing
 
 ```typescript
-import { 
-  NotFoundError, 
-  BadRequestError, 
-  ValidationError 
-} from '../utils/errors';
+import {
+  NotFoundError,
+  BadRequestError,
+  ValidationError,
+} from '../utils/errors'
 
 // In a controller
-export const getUserById = async (req: Request, res: Response, next: NextFunction) => {
-  const { id } = req.params;
+export const getUserById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const { id } = req.params
 
   // Validate input
   if (!id) {
-    throw new BadRequestError('User ID is required');
+    throw new BadRequestError('User ID is required')
   }
 
-  const user = await User.findById(id);
-  
+  const user = await User.findById(id)
+
   // Handle not found
   if (!user) {
-    throw new NotFoundError('User not found');
+    throw new NotFoundError('User not found')
   }
 
-  res.json(user);
-};
+  res.json(user)
+}
 ```
 
 ### Validation Errors
 
 ```typescript
-import { ValidationError } from '../utils/errors';
+import { ValidationError } from '../utils/errors'
 
 export const createUser = async (req: Request, res: Response) => {
-  const { email, password } = req.body;
-  const errors: Record<string, string[]> = {};
+  const { email, password } = req.body
+  const errors: Record<string, string[]> = {}
 
   if (!email || !/^[^@]+@[^@]+\.[^@]+$/.test(email)) {
-    errors.email = ['Invalid email format'];
+    errors.email = ['Invalid email format']
   }
 
   if (!password || password.length < 8) {
-    errors.password = ['Password must be at least 8 characters'];
+    errors.password = ['Password must be at least 8 characters']
   }
 
   if (Object.keys(errors).length > 0) {
-    throw new ValidationError('Validation failed', errors);
+    throw new ValidationError('Validation failed', errors)
   }
 
   // Create user...
-};
+}
 ```
 
 ### Conflict Errors
 
 ```typescript
-import { ConflictError } from '../utils/errors';
+import { ConflictError } from '../utils/errors'
 
 export const registerUser = async (req: Request, res: Response) => {
-  const existingUser = await User.findByEmail(req.body.email);
+  const existingUser = await User.findByEmail(req.body.email)
 
   if (existingUser) {
-    throw new ConflictError('Email already registered');
+    throw new ConflictError('Email already registered')
   }
 
   // Register user...
-};
+}
 ```
 
 ### Async Handler Usage
 
 ```typescript
-import { asyncHandler } from '../middleware/error.middleware';
+import { asyncHandler } from '../middleware/error.middleware'
 
-router.get('/users/:id', asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
-  if (!user) {
-    throw new NotFoundError('User not found');
-  }
-  res.json(user);
-}));
+router.get(
+  '/users/:id',
+  asyncHandler(async (req, res) => {
+    const user = await User.findById(req.params.id)
+    if (!user) {
+      throw new NotFoundError('User not found')
+    }
+    res.json(user)
+  }),
+)
 ```
 
 ## Middleware Setup
@@ -127,10 +127,10 @@ The error handling middleware is already configured in `src/app.ts`:
 
 ```typescript
 // 404 handler - must be after all routes
-app.use(notFoundHandler);
+app.use(notFoundHandler)
 
 // Global error handler - must be last
-app.use(errorHandler);
+app.use(errorHandler)
 ```
 
 **Important:** The `notFoundHandler` and `errorHandler` must be registered as the last middleware in the application.
@@ -138,14 +138,18 @@ app.use(errorHandler);
 ## Error Response Format
 
 ### Success Response
+
 ```json
 {
   "success": true,
-  "data": { /* response data */ }
+  "data": {
+    /* response data */
+  }
 }
 ```
 
 ### Error Response (Production)
+
 ```json
 {
   "success": false,
@@ -157,6 +161,7 @@ app.use(errorHandler);
 ```
 
 ### Error Response (Development)
+
 ```json
 {
   "success": false,
@@ -171,13 +176,16 @@ app.use(errorHandler);
     "request": {
       "method": "GET",
       "path": "/api/users/123",
-      "headers": { /* request headers */ }
+      "headers": {
+        /* request headers */
+      }
     }
   }
 }
 ```
 
 ### Validation Error Response
+
 ```json
 {
   "success": false,
@@ -197,44 +205,51 @@ app.use(errorHandler);
 ### 1. Throw Errors Instead of Handling in Controllers
 
 ❌ **Don't do this:**
+
 ```typescript
 export const getUser = (req: Request, res: Response) => {
-  const user = await User.findById(req.params.id);
+  const user = await User.findById(req.params.id)
   if (!user) {
-    return res.status(404).json({ error: 'Not found' });
+    return res.status(404).json({ error: 'Not found' })
   }
-  res.json(user);
-};
+  res.json(user)
+}
 ```
 
 ✅ **Do this:**
+
 ```typescript
 export const getUser = async (req: Request, res: Response) => {
-  const user = await User.findById(req.params.id);
+  const user = await User.findById(req.params.id)
   if (!user) {
-    throw new NotFoundError('User not found');
+    throw new NotFoundError('User not found')
   }
-  res.json(user);
-};
+  res.json(user)
+}
 ```
 
 ### 2. Use asyncHandler for Async Routes
 
 ❌ **Don't do this:**
+
 ```typescript
 router.post('/users', (req, res, next) => {
   createUser(req.body)
-    .then(user => res.json(user))
-    .catch(next); // Redundant error handling
-});
+    .then((user) => res.json(user))
+    .catch(next) // Redundant error handling
+})
 ```
 
 ✅ **Do this:**
+
 ```typescript
-router.post('/users', asyncHandler(async (req, res) => {
-  const user = await createUser(req.body);
-  res.json(user);
-}));
+router.post(
+  '/users',
+  asyncHandler(async (req, res) => {
+    const user = await createUser(req.body)
+    res.json(user)
+  }),
+)
 ```
 
 ### 3. Choose Appropriate Error Types
@@ -248,6 +263,7 @@ router.post('/users', asyncHandler(async (req, res) => {
 ### 4. Log Errors Appropriately
 
 Errors are automatically logged with:
+
 - Error message
 - Stack trace (development only)
 - Request path and method
@@ -258,11 +274,13 @@ Don't duplicate logging in your controllers.
 ### 5. Development vs Production
 
 In **development** mode:
+
 - Full stack traces are included
 - Request headers and body preview included
 - All error details visible
 
 In **production** mode:
+
 - Stack traces are hidden
 - Generic messages for operational errors
 - Minimal information to prevent information leakage
@@ -272,12 +290,14 @@ In **production** mode:
 ### Errors Not Being Caught
 
 Make sure you're either:
+
 1. Using `asyncHandler` wrapper for async routes, OR
 2. Calling `next(error)` explicitly for synchronous errors
 
 ### Status Code Not Changing
 
 Verify the correct error class is being thrown:
+
 - Check the error extends `AppError`
 - Confirm the statusCode parameter is correct
 - Ensure error is being thrown (not just created)
@@ -285,13 +305,15 @@ Verify the correct error class is being thrown:
 ### Stack Trace Not Showing in Development
 
 Set `NODE_ENV=development` in your `.env` file:
-```
+
+```txt
 NODE_ENV=development
 ```
 
 ## Testing Error Handling
 
 See `tests/error.middleware.test.ts` for comprehensive test examples including:
+
 - Testing error classes
 - Testing middleware behavior
 - Testing async error handling

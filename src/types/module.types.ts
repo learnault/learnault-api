@@ -1,30 +1,30 @@
 export enum Difficulty {
-  BEGINNER = "beginner",
-  INTERMEDIATE = "intermediate",
-  ADVANCED = "advanced",
-  EXPERT = "expert",
+  BEGINNER = 'beginner',
+  INTERMEDIATE = 'intermediate',
+  ADVANCED = 'advanced',
+  EXPERT = 'expert',
 }
 
 export enum Category {
-  BLOCKCHAIN = "blockchain",
-  FINANCE = "finance",
-  SECURITY = "security",
-  DEVELOPMENT = "development",
-  COMPLIANCE = "compliance",
-  IDENTITY = "identity",
+  BLOCKCHAIN = 'blockchain',
+  FINANCE = 'finance',
+  SECURITY = 'security',
+  DEVELOPMENT = 'development',
+  COMPLIANCE = 'compliance',
+  IDENTITY = 'identity',
 }
 
 export enum ModuleStatus {
-  DRAFT = "draft",
-  PUBLISHED = "published",
-  ARCHIVED = "archived",
+  DRAFT = 'draft',
+  PUBLISHED = 'published',
+  ARCHIVED = 'archived',
 }
 
 export enum EnrollmentStatus {
-  NOT_STARTED = "not_started",
-  IN_PROGRESS = "in_progress",
-  COMPLETED = "completed",
-  FAILED = "failed",
+  NOT_STARTED = 'not_started',
+  IN_PROGRESS = 'in_progress',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
 }
 
 export interface Module {

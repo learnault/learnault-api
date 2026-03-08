@@ -6,14 +6,14 @@ import { validateProfileUpdate, validatePasswordChange, validateWalletAddress } 
 const router: express.Router = Router();
 const userController = new UserController();
 
-router.get('/me', authenticate, userController.getCurrentUser.bind(userController));
+router.get('/me', authenticate, userController.getCurrentUser.bind(userController))
 
-router.patch('/me', authenticate, validateProfileUpdate, userController.updateProfile.bind(userController));
+router.patch('/me', authenticate, validateProfileUpdate, userController.updateProfile.bind(userController))
 
-router.get('/:id', userController.getUserById.bind(userController));
+router.get('/:id', userController.getUserById.bind(userController))
 
-router.patch('/password', authenticate, validatePasswordChange, userController.changePassword.bind(userController));
+router.patch('/password', authenticate, validatePasswordChange, userController.changePassword.bind(userController))
 
-router.patch('/wallet', authenticate, validateWalletAddress, userController.updateWalletAddress.bind(userController));
+router.patch('/wallet', authenticate, validateWalletAddress, userController.updateWalletAddress.bind(userController))
 
-export default router;
+export default router

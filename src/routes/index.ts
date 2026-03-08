@@ -3,10 +3,10 @@ import userRoutes from "./v1/users.routes";
 
 const router: express.Router = Router();
 
-router.get("/", (req, res) => {
-  res.json({ message: "API is running" });
-});
+router.get('/', (req, res) => {
+  res.json({ message: 'API is running' })
+})
 
-router.use("/v1/users", userRoutes);
+router.use('/v1/users', userRoutes)
 
-export default router;
+export default router

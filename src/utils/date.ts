@@ -14,15 +14,16 @@ export function formatDate(
   date: Date | string | number,
   opts: FormatDateOptions = {}
 ): string {
-  const { locale = "en-US", timeZone, ...rest } = opts;
-  const d = typeof date === "string" || typeof date === "number" ? new Date(date) : date;
-  const formatter = new Intl.DateTimeFormat(locale, { timeZone, ...rest });
-  return formatter.format(d);
+  const { locale = 'en-US', timeZone, ...rest } = opts
+  const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date
+  const formatter = new Intl.DateTimeFormat(locale, { timeZone, ...rest })
+  
+return formatter.format(d)
 }
 
 /**
  * Parse an ISO 8601 string and return a Date object.
  */
 export function parseISO(isoString: string): Date {
-  return new Date(isoString);
+  return new Date(isoString)
 }
