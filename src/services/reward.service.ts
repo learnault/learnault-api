@@ -40,8 +40,8 @@ export interface Transaction {
   userId: string;
   moduleId?: string;
   amount: number;
-  type: "module_reward" | "streak_bonus" | "referral_reward" | "withdrawal";
-  status: "pending" | "completed" | "failed";
+  type: 'module_reward' | 'streak_bonus' | 'referral_reward' | 'withdrawal';
+  status: 'pending' | 'completed' | 'failed';
   stellarTxHash?: string;
   createdAt: Date;
   completedAt?: Date;
@@ -73,7 +73,7 @@ export interface WithdrawalResult {
   userId: string;
   amount: number;
   stellarTxHash: string;
-  status: "pending" | "completed" | "failed";
+  status: 'pending' | 'completed' | 'failed';
   requestedAt: Date;
   completedAt?: Date;
 }
@@ -87,8 +87,8 @@ export interface Balance {
 }
 
 export interface TransactionFilter {
-  type?: Transaction["type"];
-  status?: Transaction["status"];
+  type?: Transaction['type'];
+  status?: Transaction['status'];
   fromDate?: Date;
   toDate?: Date;
   limit?: number;
@@ -97,10 +97,10 @@ export interface TransactionFilter {
 
 // ─── In-memory stores (replace with Prisma in production) ────────────────────
 
-const claimedRewards = new Map<string, Set<string>>();
-const transactions: Transaction[] = [];
-const referralCodes = new Map<string, string>(); // code -> referrerId
-const pendingWithdrawals = new Map<string, WithdrawalRequest>();
+const claimedRewards = new Map<string, Set<string>>()
+const transactions: Transaction[] = []
+const referralCodes = new Map<string, string>() // code -> referrerId
+const pendingWithdrawals = new Map<string, WithdrawalRequest>()
 
 // ─── RewardService ────────────────────────────────────────────────────────────
 
@@ -157,8 +157,8 @@ export class RewardService {
       destinationPublicKey: claim.walletAddress,
       amount: totalAmount.toString(),
       memo: `Learnault reward: module ${claim.moduleId}`,
-    });
-    const stellarTxHash = paymentResult.hash;
+    })
+    const stellarTxHash = paymentResult.hash
 
     // 5. Mark claimed to prevent duplicates
     this.markAsClaimed(claim.userId, claim.moduleId)
@@ -168,8 +168,8 @@ export class RewardService {
       userId: claim.userId,
       moduleId: claim.moduleId,
       amount: totalAmount,
-      type: "module_reward",
-      status: "completed",
+      type: 'module_reward',
+      status: 'completed',
       stellarTxHash,
     })
 
@@ -219,29 +219,29 @@ export class RewardService {
    * Return all recorded transactions for a specific user.
    */
   getUserTransactions(userId: string): Transaction[] {
-    return transactions.filter((t) => t.userId === userId);
+    return transactions.filter((t) => t.userId === userId)
   }
 
   /**
    * Calculate user's current balance based on completed rewards and withdrawals.
    */
   getBalance(userId: string): Balance {
-    const userTransactions = this.getUserTransactions(userId);
+    const userTransactions = this.getUserTransactions(userId)
     
     // Calculate totals from completed transactions only
     const earned = userTransactions
-      .filter(t => t.status === "completed" && ["module_reward", "streak_bonus", "referral_reward"].includes(t.type))
-      .reduce((sum, t) => sum + t.amount, 0);
+      .filter(t => t.status === 'completed' && ['module_reward', 'streak_bonus', 'referral_reward'].includes(t.type))
+      .reduce((sum, t) => sum + t.amount, 0)
     
     const withdrawn = userTransactions
-      .filter(t => t.status === "completed" && t.type === "withdrawal")
-      .reduce((sum, t) => sum + t.amount, 0);
+      .filter(t => t.status === 'completed' && t.type === 'withdrawal')
+      .reduce((sum, t) => sum + t.amount, 0)
     
     const pending = userTransactions
-      .filter(t => t.status === "pending" && t.type === "withdrawal")
-      .reduce((sum, t) => sum + t.amount, 0);
+      .filter(t => t.status === 'pending' && t.type === 'withdrawal')
+      .reduce((sum, t) => sum + t.amount, 0)
     
-    const available = earned - withdrawn - pending;
+    const available = earned - withdrawn - pending
     
     return {
       userId,
@@ -249,7 +249,7 @@ export class RewardService {
       pending: +(pending).toFixed(7),
       lifetime: +(earned).toFixed(7),
       updatedAt: new Date(),
-    };
+    }
   }
 
   /**
@@ -260,39 +260,39 @@ export class RewardService {
     total: number;
     hasMore: boolean;
   } {
-    let userTransactions = this.getUserTransactions(userId);
+    let userTransactions = this.getUserTransactions(userId)
     
     // Apply filters
     if (filters.type) {
-      userTransactions = userTransactions.filter(t => t.type === filters.type);
+      userTransactions = userTransactions.filter(t => t.type === filters.type)
     }
     
     if (filters.status) {
-      userTransactions = userTransactions.filter(t => t.status === filters.status);
+      userTransactions = userTransactions.filter(t => t.status === filters.status)
     }
     
     if (filters.fromDate) {
-      userTransactions = userTransactions.filter(t => t.createdAt >= filters.fromDate!);
+      userTransactions = userTransactions.filter(t => t.createdAt >= filters.fromDate!)
     }
     
     if (filters.toDate) {
-      userTransactions = userTransactions.filter(t => t.createdAt <= filters.toDate!);
+      userTransactions = userTransactions.filter(t => t.createdAt <= filters.toDate!)
     }
     
     // Sort by creation date (newest first)
-    userTransactions.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    userTransactions.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
     
-    const total = userTransactions.length;
-    const limit = filters.limit ?? 20;
-    const offset = filters.offset ?? 0;
+    const total = userTransactions.length
+    const limit = filters.limit ?? 20
+    const offset = filters.offset ?? 0
     
-    const paginatedTransactions = userTransactions.slice(offset, offset + limit);
+    const paginatedTransactions = userTransactions.slice(offset, offset + limit)
     
     return {
       transactions: paginatedTransactions,
       total,
       hasMore: offset + limit < total,
-    };
+    }
   }
 
   /**
@@ -300,29 +300,29 @@ export class RewardService {
    */
   async processWithdrawal(request: WithdrawalRequest): Promise<WithdrawalResult> {
     // Validate sufficient balance
-    const balance = this.getBalance(request.userId);
+    const balance = this.getBalance(request.userId)
     
     if (request.amount > balance.available) {
       throw new Error(
         `Insufficient balance. Available: ${balance.available} XLM, Requested: ${request.amount} XLM`
-      );
+      )
     }
     
     if (request.amount <= 0) {
-      throw new Error("Withdrawal amount must be greater than 0");
+      throw new Error('Withdrawal amount must be greater than 0')
     }
     
     // Create pending withdrawal transaction
     const transactionId = this.recordTransaction({
       userId: request.userId,
       amount: request.amount,
-      type: "withdrawal",
-      status: "pending",
+      type: 'withdrawal',
+      status: 'pending',
       stellarTxHash: undefined,
-    });
+    })
     
     // Store pending withdrawal
-    pendingWithdrawals.set(transactionId, request);
+    pendingWithdrawals.set(transactionId, request)
     
     // Process the withdrawal via Stellar
     try {
@@ -331,26 +331,26 @@ export class RewardService {
         destinationPublicKey: request.walletAddress,
         amount: request.amount.toString(),
         memo: request.memo ?? `Learnault withdrawal: ${transactionId}`,
-      });
-      const stellarTxHash = paymentResult.hash;
+      })
+      const stellarTxHash = paymentResult.hash
       
       // Update transaction status to completed
-      this.updateTransactionStatus(transactionId, "completed", stellarTxHash);
+      this.updateTransactionStatus(transactionId, 'completed', stellarTxHash)
       
       return {
         transactionId,
         userId: request.userId,
         amount: request.amount,
         stellarTxHash,
-        status: "completed",
+        status: 'completed',
         requestedAt: new Date(),
         completedAt: new Date(),
-      };
+      }
     } catch (error) {
       // Mark transaction as failed
-      this.updateTransactionStatus(transactionId, "failed");
-      pendingWithdrawals.delete(transactionId);
-      throw error;
+      this.updateTransactionStatus(transactionId, 'failed')
+      pendingWithdrawals.delete(transactionId)
+      throw error
     }
   }
 
@@ -358,8 +358,9 @@ export class RewardService {
    * Check if user has sufficient balance for withdrawal.
    */
   hasSufficientBalance(userId: string, amount: number): boolean {
-    const balance = this.getBalance(userId);
-    return amount <= balance.available;
+    const balance = this.getBalance(userId)
+    
+return amount <= balance.available
   }
 
   // ── Private helpers ─────────────────────────────────────────────────────────
@@ -402,31 +403,32 @@ return +(baseAmount * bonusRate).toFixed(7)
   private recordTransaction(
     data: Omit<Transaction, 'id' | 'createdAt'>,
   ): string {
-    const id = `txn_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-    transactions.push({ id, ...data, createdAt: new Date() });
-    return id;
+    const id = `txn_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+    transactions.push({ id, ...data, createdAt: new Date() })
+    
+return id
   }
 
   private updateTransactionStatus(
     transactionId: string,
-    status: Transaction["status"],
+    status: Transaction['status'],
     stellarTxHash?: string,
   ): void {
-    const transaction = transactions.find(t => t.id === transactionId);
+    const transaction = transactions.find(t => t.id === transactionId)
     if (transaction) {
-      transaction.status = status;
+      transaction.status = status
       if (stellarTxHash) {
-        transaction.stellarTxHash = stellarTxHash;
+        transaction.stellarTxHash = stellarTxHash
       }
-      if (status === "completed") {
-        transaction.completedAt = new Date();
+      if (status === 'completed') {
+        transaction.completedAt = new Date()
       }
     }
   }
 
   private async payReferralBonus(
     referrerId: string,
-    moduleId: string,
+    _moduleId: string,
     _originalTxHash: string,
   ): Promise<void> {
     try {
@@ -436,7 +438,8 @@ return +(baseAmount * bonusRate).toFixed(7)
       console.warn(
         `Referral bonus skipped: No wallet address storage implemented for user ${referrerId}`
       )
-      return
+      
+return
     } catch (err) {
       // Referral bonus failure must NOT roll back the learner's main reward
       console.error(`Failed to pay referral bonus to user ${referrerId}:`, err)
@@ -445,9 +448,9 @@ return +(baseAmount * bonusRate).toFixed(7)
 
   /** @internal – resets in-memory state between unit tests */
   _resetState(): void {
-    claimedRewards.clear();
-    transactions.length = 0;
-    referralCodes.clear();
-    pendingWithdrawals.clear();
+    claimedRewards.clear()
+    transactions.length = 0
+    referralCodes.clear()
+    pendingWithdrawals.clear()
   }
 }

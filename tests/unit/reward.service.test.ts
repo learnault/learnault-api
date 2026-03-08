@@ -30,7 +30,6 @@ const makeClaim = (overrides: Partial<RewardClaim> = {}): RewardClaim => ({
 })
 
 const MOCK_TX_HASH = 'abc123stellar'
-const MOCK_WALLET = 'GREFERRER12345678901234567890123456789012345678901234'
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
