@@ -3,8 +3,72 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider = "postgresql"
+}
+
+model User {
+  id              String         @id @default(uuid())
+  email           String         @unique
+  name            String
+  walletAddress   String?        @unique
+  passwordHash    String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  completions     Completion[]
+  credentials     Credential[]
+  transactions    Transaction[]
+}
+
+model Module {
+  id              String         @id @default(uuid())
+  title           String
+  description     String
+  category        String
+  difficulty      String         // easy, medium, hard
+  reward          Float
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  completions     Completion[]
+  credentials     Credential[]
+}
+
+model Completion {
+  id              String         @id @default(uuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moduleId        String
+  module          Module         @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  score           Float
+  completedAt     DateTime       @default(now())
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([userId, moduleId])
+}
+
+model Credential {
+  id              String         @id @default(uuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moduleId        String
+  module          Module         @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  onChainId       String?
+  issuedAt        DateTime       @default(now())
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([userId, moduleId])
+}
+
+model Transaction {
+  id              String         @id @default(uuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount          Float
+  type            String         // reward, refund, transfer
+  status          String         @default("pending") // pending, completed, failed
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 }
 
 model WebhookEndpoint {
@@ -22,7 +86,7 @@ model WebhookEndpoint {
 model WebhookDelivery {
   id             String          @id @default(uuid())
   endpointId     String
-  endpoint       WebhookEndpoint @relation(fields: [endpointId], references: [id])
+  endpoint       WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
   eventType      String
   payload        String          // JSON string
   status         String          @default("pending") // pending, success, failed

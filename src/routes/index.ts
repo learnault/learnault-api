@@ -1,7 +1,7 @@
-import { Router } from 'express'
+import express, { Router } from 'express'
 import userRoutes from './v1/users.routes'
 
-const router = Router()
+const router: express.Router = Router()
 
 router.get('/', (req, res) => {
   res.json({ message: 'API is running' })

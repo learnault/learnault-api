@@ -67,9 +67,15 @@ pnpm install
 # Set up environment variables
 cp .env.example .env
 
+# Set up database
+pnpm db:migrate
+pnpm db:seed
+
 # Run development environment
 pnpm dev
 ```
+
+For detailed database setup instructions, see [Prisma Setup Guide](./prisma/SETUP.md)
 
 ### Development Workflow
 
