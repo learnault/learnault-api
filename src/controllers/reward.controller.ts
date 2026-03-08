@@ -1,7 +1,7 @@
 import { Request, Response } from 'express'
 import { RewardService } from '../services/reward.service'
 import { asyncHandler } from '../middleware/error.middleware'
-import { BadRequestError, NotFoundError, ForbiddenError } from '../utils/errors'
+import { BadRequestError } from '../utils/errors'
 
 export class RewardController {
   private rewardService: RewardService
