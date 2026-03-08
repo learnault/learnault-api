@@ -39,7 +39,13 @@ describe('RewardService', () => {
 
   beforeEach(() => {
     stellarMock = {
-      sendPayment: vi.fn().mockResolvedValue({ hash: MOCK_TX_HASH, ledger: 123, successful: true }),
+      sendPayment: vi
+        .fn()
+        .mockResolvedValue({
+          hash: MOCK_TX_HASH,
+          ledger: 123,
+          successful: true,
+        }),
       verifyTransaction: vi.fn().mockResolvedValue(true),
     } as unknown as StellarService
 
@@ -56,9 +62,7 @@ describe('RewardService', () => {
       ['advanced', 10],
       ['expert', 15],
     ] as const)('%s difficulty yields %d XLM base', (difficulty, expected) => {
-      const { baseAmount } = service.calculateReward(
-        makeModule({ difficulty }),
-      )
+      const { baseAmount } = service.calculateReward(makeModule({ difficulty }))
       expect(baseAmount).toBe(expected)
     })
 
@@ -142,9 +146,11 @@ describe('RewardService', () => {
 
       const { totalAmount } = service.calculateReward(module, 2, false)
       expect(stellarMock.sendPayment).toHaveBeenCalledWith(
-        claim.walletAddress,
-        totalAmount,
-        expect.stringContaining(claim.moduleId),
+        expect.objectContaining({
+          destinationPublicKey: claim.walletAddress,
+          amount: totalAmount.toString(),
+          memo: expect.stringContaining(claim.moduleId),
+        }),
       )
     })
 
@@ -207,9 +213,11 @@ describe('RewardService', () => {
 
       const { totalAmount } = service.calculateReward(module, 5, false)
       expect(stellarMock.sendPayment).toHaveBeenCalledWith(
-        claim.walletAddress,
-        totalAmount,
-        expect.any(String),
+        expect.objectContaining({
+          destinationPublicKey: claim.walletAddress,
+          amount: totalAmount.toString(),
+          memo: expect.any(String),
+        }),
       )
     })
   })

@@ -6,45 +6,45 @@ export type ModuleDifficulty =
   | 'beginner'
   | 'intermediate'
   | 'advanced'
-  | 'expert';
+  | 'expert'
 
 export interface Module {
-  id: string;
-  difficulty: ModuleDifficulty;
-  baseReward: number;
-  title: string;
+  id: string
+  difficulty: ModuleDifficulty
+  baseReward: number
+  title: string
 }
 
 export interface RewardClaim {
-  userId: string;
-  moduleId: string;
-  walletAddress: string;
-  streakDays?: number;
-  referralCode?: string;
+  userId: string
+  moduleId: string
+  walletAddress: string
+  streakDays?: number
+  referralCode?: string
 }
 
 export interface RewardResult {
-  transactionId: string;
-  userId: string;
-  moduleId: string;
-  baseAmount: number;
-  streakBonus: number;
-  referralBonus: number;
-  totalAmount: number;
-  stellarTxHash: string;
-  claimedAt: Date;
+  transactionId: string
+  userId: string
+  moduleId: string
+  baseAmount: number
+  streakBonus: number
+  referralBonus: number
+  totalAmount: number
+  stellarTxHash: string
+  claimedAt: Date
 }
 
 export interface Transaction {
-  id: string;
-  userId: string;
-  moduleId?: string;
-  amount: number;
-  type: 'module_reward' | 'streak_bonus' | 'referral_reward' | 'withdrawal';
-  status: 'pending' | 'completed' | 'failed';
-  stellarTxHash?: string;
-  createdAt: Date;
-  completedAt?: Date;
+  id: string
+  userId: string
+  moduleId?: string
+  amount: number
+  type: 'module_reward' | 'streak_bonus' | 'referral_reward' | 'withdrawal'
+  status: 'pending' | 'completed' | 'failed'
+  stellarTxHash?: string
+  createdAt: Date
+  completedAt?: Date
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -62,37 +62,37 @@ export const MAX_STREAK_BONUS = 1.0 // cap at 100% of base
 export const REFERRAL_BONUS_XLM = 2 // flat XLM bonus per referral
 
 export interface WithdrawalRequest {
-  userId: string;
-  walletAddress: string;
-  amount: number;
-  memo?: string;
+  userId: string
+  walletAddress: string
+  amount: number
+  memo?: string
 }
 
 export interface WithdrawalResult {
-  transactionId: string;
-  userId: string;
-  amount: number;
-  stellarTxHash: string;
-  status: 'pending' | 'completed' | 'failed';
-  requestedAt: Date;
-  completedAt?: Date;
+  transactionId: string
+  userId: string
+  amount: number
+  stellarTxHash: string
+  status: 'pending' | 'completed' | 'failed'
+  requestedAt: Date
+  completedAt?: Date
 }
 
 export interface Balance {
-  userId: string;
-  available: number;
-  pending: number;
-  lifetime: number;
-  updatedAt: Date;
+  userId: string
+  available: number
+  pending: number
+  lifetime: number
+  updatedAt: Date
 }
 
 export interface TransactionFilter {
-  type?: Transaction['type'];
-  status?: Transaction['status'];
-  fromDate?: Date;
-  toDate?: Date;
-  limit?: number;
-  offset?: number;
+  type?: Transaction['type']
+  status?: Transaction['status']
+  fromDate?: Date
+  toDate?: Date
+  limit?: number
+  offset?: number
 }
 
 // ─── In-memory stores (replace with Prisma in production) ────────────────────
@@ -121,10 +121,10 @@ export class RewardService {
     streakDays = 0,
     hasReferral = false,
   ): {
-    baseAmount: number;
-    streakBonus: number;
-    referralBonus: number;
-    totalAmount: number;
+    baseAmount: number
+    streakBonus: number
+    referralBonus: number
+    totalAmount: number
   } {
     const baseAmount = this.calculateBaseReward(module)
     const streakBonus = this.calculateStreakBonus(baseAmount, streakDays)
@@ -227,27 +227,31 @@ export class RewardService {
    */
   getBalance(userId: string): Balance {
     const userTransactions = this.getUserTransactions(userId)
-    
+
     // Calculate totals from completed transactions only
     const earned = userTransactions
-      .filter(t => t.status === 'completed' && ['module_reward', 'streak_bonus', 'referral_reward'].includes(t.type))
+      .filter(
+        (t) =>
+          t.status === 'completed' &&
+          ['module_reward', 'streak_bonus', 'referral_reward'].includes(t.type),
+      )
       .reduce((sum, t) => sum + t.amount, 0)
-    
+
     const withdrawn = userTransactions
-      .filter(t => t.status === 'completed' && t.type === 'withdrawal')
+      .filter((t) => t.status === 'completed' && t.type === 'withdrawal')
       .reduce((sum, t) => sum + t.amount, 0)
-    
+
     const pending = userTransactions
-      .filter(t => t.status === 'pending' && t.type === 'withdrawal')
+      .filter((t) => t.status === 'pending' && t.type === 'withdrawal')
       .reduce((sum, t) => sum + t.amount, 0)
-    
+
     const available = earned - withdrawn - pending
-    
+
     return {
       userId,
-      available: Math.max(0, +(available).toFixed(7)),
-      pending: +(pending).toFixed(7),
-      lifetime: +(earned).toFixed(7),
+      available: Math.max(0, +available.toFixed(7)),
+      pending: +pending.toFixed(7),
+      lifetime: +earned.toFixed(7),
       updatedAt: new Date(),
     }
   }
@@ -255,39 +259,50 @@ export class RewardService {
   /**
    * Get transaction history with filtering and pagination.
    */
-  getTransactionHistory(userId: string, filters: TransactionFilter = {}): {
-    transactions: Transaction[];
-    total: number;
-    hasMore: boolean;
+  getTransactionHistory(
+    userId: string,
+    filters: TransactionFilter = {},
+  ): {
+    transactions: Transaction[]
+    total: number
+    hasMore: boolean
   } {
     let userTransactions = this.getUserTransactions(userId)
-    
+
     // Apply filters
     if (filters.type) {
-      userTransactions = userTransactions.filter(t => t.type === filters.type)
+      userTransactions = userTransactions.filter((t) => t.type === filters.type)
     }
-    
+
     if (filters.status) {
-      userTransactions = userTransactions.filter(t => t.status === filters.status)
+      userTransactions = userTransactions.filter(
+        (t) => t.status === filters.status,
+      )
     }
-    
+
     if (filters.fromDate) {
-      userTransactions = userTransactions.filter(t => t.createdAt >= filters.fromDate!)
+      userTransactions = userTransactions.filter(
+        (t) => t.createdAt >= filters.fromDate!,
+      )
     }
-    
+
     if (filters.toDate) {
-      userTransactions = userTransactions.filter(t => t.createdAt <= filters.toDate!)
+      userTransactions = userTransactions.filter(
+        (t) => t.createdAt <= filters.toDate!,
+      )
     }
-    
+
     // Sort by creation date (newest first)
-    userTransactions.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-    
+    userTransactions.sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    )
+
     const total = userTransactions.length
     const limit = filters.limit ?? 20
     const offset = filters.offset ?? 0
-    
+
     const paginatedTransactions = userTransactions.slice(offset, offset + limit)
-    
+
     return {
       transactions: paginatedTransactions,
       total,
@@ -298,20 +313,22 @@ export class RewardService {
   /**
    * Process a withdrawal request.
    */
-  async processWithdrawal(request: WithdrawalRequest): Promise<WithdrawalResult> {
+  async processWithdrawal(
+    request: WithdrawalRequest,
+  ): Promise<WithdrawalResult> {
     // Validate sufficient balance
     const balance = this.getBalance(request.userId)
-    
+
     if (request.amount > balance.available) {
       throw new Error(
-        `Insufficient balance. Available: ${balance.available} XLM, Requested: ${request.amount} XLM`
+        `Insufficient balance. Available: ${balance.available} XLM, Requested: ${request.amount} XLM`,
       )
     }
-    
+
     if (request.amount <= 0) {
       throw new Error('Withdrawal amount must be greater than 0')
     }
-    
+
     // Create pending withdrawal transaction
     const transactionId = this.recordTransaction({
       userId: request.userId,
@@ -320,10 +337,10 @@ export class RewardService {
       status: 'pending',
       stellarTxHash: undefined,
     })
-    
+
     // Store pending withdrawal
     pendingWithdrawals.set(transactionId, request)
-    
+
     // Process the withdrawal via Stellar
     try {
       const paymentResult = await this.stellarService.sendPayment({
@@ -333,10 +350,10 @@ export class RewardService {
         memo: request.memo ?? `Learnault withdrawal: ${transactionId}`,
       })
       const stellarTxHash = paymentResult.hash
-      
+
       // Update transaction status to completed
       this.updateTransactionStatus(transactionId, 'completed', stellarTxHash)
-      
+
       return {
         transactionId,
         userId: request.userId,
@@ -359,26 +376,23 @@ export class RewardService {
    */
   hasSufficientBalance(userId: string, amount: number): boolean {
     const balance = this.getBalance(userId)
-    
-return amount <= balance.available
+
+    return amount <= balance.available
   }
 
   // ── Private helpers ─────────────────────────────────────────────────────────
 
   private calculateBaseReward(module: Module): number {
     const multiplier = DIFFICULTY_MULTIPLIERS[module.difficulty] ?? 1.0
-    
-return +(BASE_REWARD_XLM * multiplier).toFixed(7)
+
+    return +(BASE_REWARD_XLM * multiplier).toFixed(7)
   }
 
   private calculateStreakBonus(baseAmount: number, streakDays: number): number {
     if (streakDays <= 0) return 0
-    const bonusRate = Math.min(
-      streakDays * STREAK_BONUS_RATE,
-      MAX_STREAK_BONUS,
-    )
-    
-return +(baseAmount * bonusRate).toFixed(7)
+    const bonusRate = Math.min(streakDays * STREAK_BONUS_RATE, MAX_STREAK_BONUS)
+
+    return +(baseAmount * bonusRate).toFixed(7)
   }
 
   private resolveReferralCode(code: string): string | undefined {
@@ -405,8 +419,8 @@ return +(baseAmount * bonusRate).toFixed(7)
   ): string {
     const id = `txn_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
     transactions.push({ id, ...data, createdAt: new Date() })
-    
-return id
+
+    return id
   }
 
   private updateTransactionStatus(
@@ -414,7 +428,7 @@ return id
     status: Transaction['status'],
     stellarTxHash?: string,
   ): void {
-    const transaction = transactions.find(t => t.id === transactionId)
+    const transaction = transactions.find((t) => t.id === transactionId)
     if (transaction) {
       transaction.status = status
       if (stellarTxHash) {
@@ -436,10 +450,10 @@ return id
       // For now, skip referral bonus if wallet address cannot be retrieved
       // This requires a user wallet storage mechanism to be implemented
       console.warn(
-        `Referral bonus skipped: No wallet address storage implemented for user ${referrerId}`
+        `Referral bonus skipped: No wallet address storage implemented for user ${referrerId}`,
       )
-      
-return
+
+      return
     } catch (err) {
       // Referral bonus failure must NOT roll back the learner's main reward
       console.error(`Failed to pay referral bonus to user ${referrerId}:`, err)

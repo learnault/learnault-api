@@ -18,38 +18,38 @@ describe('RewardController', () => {
   beforeEach(() => {
     // Reset all mocks before each test
     vi.clearAllMocks()
-  
+
     jsonMock = vi.fn()
     statusMock = vi.fn().mockReturnValue({ json: jsonMock })
-  
+
     mockResponse = {
       json: jsonMock,
       status: statusMock,
     }
-  
+
     mockRequest = {
       user: { id: 'user-123' },
       query: {}, // Initialize empty query object
     }
-  
+
     // Create spies on RewardService prototype
     getBalanceSpy = vi.spyOn(RewardService.prototype, 'getBalance')
     getTransactionHistorySpy = vi.spyOn(
       RewardService.prototype,
-      'getTransactionHistory'
+      'getTransactionHistory',
     )
     hasSufficientBalanceSpy = vi.spyOn(
       RewardService.prototype,
-      'hasSufficientBalance'
+      'hasSufficientBalance',
     )
     processWithdrawalSpy = vi.spyOn(
       RewardService.prototype,
-      'processWithdrawal'
+      'processWithdrawal',
     )
-  
+
     controller = new RewardController()
   })
-  
+
   // Helper function to create a mock next function
   const createNextFunction = () => {
     return vi.fn()
@@ -129,10 +129,7 @@ describe('RewardController', () => {
         nextFn,
       )
 
-      expect(getTransactionHistorySpy).toHaveBeenCalledWith(
-        'user-123',
-        {},
-      )
+      expect(getTransactionHistorySpy).toHaveBeenCalledWith('user-123', {})
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: true,
@@ -262,7 +259,9 @@ describe('RewardController', () => {
       )
 
       expect(nextFn).toHaveBeenCalledWith(
-        expect.objectContaining({ message: expect.stringContaining('Invalid fromDate format') }),
+        expect.objectContaining({
+          message: expect.stringContaining('Invalid fromDate format'),
+        }),
       )
     })
 
@@ -292,7 +291,9 @@ describe('RewardController', () => {
       )
 
       expect(nextFn).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'Offset must be a non-negative number' }),
+        expect.objectContaining({
+          message: 'Offset must be a non-negative number',
+        }),
       )
     })
   })
@@ -318,16 +319,9 @@ describe('RewardController', () => {
       })
       const nextFn = createNextFunction()
 
-      await controller.withdraw(
-        mockRequest as any,
-        mockResponse as any,
-        nextFn,
-      )
+      await controller.withdraw(mockRequest as any, mockResponse as any, nextFn)
 
-      expect(hasSufficientBalanceSpy).toHaveBeenCalledWith(
-        'user-123',
-        50,
-      )
+      expect(hasSufficientBalanceSpy).toHaveBeenCalledWith('user-123', 50)
       expect(processWithdrawalSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: 'user-123',
@@ -349,11 +343,7 @@ describe('RewardController', () => {
       mockRequest.body = { amount: 50 }
       const nextFn = createNextFunction()
 
-      await controller.withdraw(
-        mockRequest as any,
-        mockResponse as any,
-        nextFn,
-      )
+      await controller.withdraw(mockRequest as any, mockResponse as any, nextFn)
 
       expect(nextFn).toHaveBeenCalledWith(
         expect.objectContaining({ message: 'Wallet address is required' }),
@@ -366,11 +356,7 @@ describe('RewardController', () => {
       }
       const nextFn = createNextFunction()
 
-      await controller.withdraw(
-        mockRequest as any,
-        mockResponse as any,
-        nextFn,
-      )
+      await controller.withdraw(mockRequest as any, mockResponse as any, nextFn)
 
       expect(nextFn).toHaveBeenCalledWith(
         expect.objectContaining({ message: 'Amount is required' }),
@@ -384,11 +370,7 @@ describe('RewardController', () => {
       }
       const nextFn = createNextFunction()
 
-      await controller.withdraw(
-        mockRequest as any,
-        mockResponse as any,
-        nextFn,
-      )
+      await controller.withdraw(mockRequest as any, mockResponse as any, nextFn)
 
       expect(nextFn).toHaveBeenCalledWith(
         expect.objectContaining({ message: 'Amount must be a valid number' }),
@@ -402,11 +384,7 @@ describe('RewardController', () => {
       }
       const nextFn = createNextFunction()
 
-      await controller.withdraw(
-        mockRequest as any,
-        mockResponse as any,
-        nextFn,
-      )
+      await controller.withdraw(mockRequest as any, mockResponse as any, nextFn)
 
       expect(nextFn).toHaveBeenCalledWith(
         expect.objectContaining({ message: 'Amount must be greater than 0' }),
@@ -417,11 +395,7 @@ describe('RewardController', () => {
         amount: -10,
       }
 
-      await controller.withdraw(
-        mockRequest as any,
-        mockResponse as any,
-        nextFn,
-      )
+      await controller.withdraw(mockRequest as any, mockResponse as any, nextFn)
 
       expect(nextFn).toHaveBeenCalledWith(
         expect.objectContaining({ message: 'Amount must be greater than 0' }),
@@ -435,14 +409,12 @@ describe('RewardController', () => {
       }
       const nextFn = createNextFunction()
 
-      await controller.withdraw(
-        mockRequest as any,
-        mockResponse as any,
-        nextFn,
-      )
+      await controller.withdraw(mockRequest as any, mockResponse as any, nextFn)
 
       expect(nextFn).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'Invalid Stellar wallet address format' }),
+        expect.objectContaining({
+          message: 'Invalid Stellar wallet address format',
+        }),
       )
     })
 
@@ -460,14 +432,12 @@ describe('RewardController', () => {
       })
       const nextFn = createNextFunction()
 
-      await controller.withdraw(
-        mockRequest as any,
-        mockResponse as any,
-        nextFn,
-      )
+      await controller.withdraw(mockRequest as any, mockResponse as any, nextFn)
 
       expect(nextFn).toHaveBeenCalledWith(
-        expect.objectContaining({ message: expect.stringContaining('Insufficient balance') }),
+        expect.objectContaining({
+          message: expect.stringContaining('Insufficient balance'),
+        }),
       )
     })
 
@@ -478,19 +448,13 @@ describe('RewardController', () => {
       }
 
       hasSufficientBalanceSpy.mockReturnValue(true)
-      processWithdrawalSpy.mockRejectedValue(
-        new Error('Stellar network error'),
-      )
+      processWithdrawalSpy.mockRejectedValue(new Error('Stellar network error'))
       const nextFn = createNextFunction()
 
-      await controller.withdraw(
-        mockRequest as any,
-        mockResponse as any,
-        nextFn,
-      )
+      await controller.withdraw(mockRequest as any, mockResponse as any, nextFn)
 
       // Wait for async error handling
-      await new Promise(resolve => setTimeout(resolve, 10))
+      await new Promise((resolve) => setTimeout(resolve, 10))
 
       expect(nextFn).toHaveBeenCalledWith(
         expect.objectContaining({ message: 'Stellar network error' }),

@@ -1,16 +1,20 @@
-import { Router } from 'express';
-import { RewardController } from '../../controllers/reward.controller';
-import { authenticate } from '../../middleware/auth.middleware';
+import { Router } from 'express'
+import { RewardController } from '../../controllers/reward.controller'
+import { authenticate } from '../../middleware/auth.middleware'
 
-const router = Router();
-const rewardController = new RewardController();
+const router = Router()
+const rewardController = new RewardController()
 
 /**
  * @route   GET /api/v1/rewards/balance
  * @desc    Get current user's reward balance
  * @access  Private (requires authentication)
  */
-router.get('/balance', authenticate, rewardController.getBalance.bind(rewardController));
+router.get(
+  '/balance',
+  authenticate,
+  rewardController.getBalance.bind(rewardController),
+)
 
 /**
  * @route   GET /api/v1/rewards/history
@@ -23,7 +27,11 @@ router.get('/balance', authenticate, rewardController.getBalance.bind(rewardCont
  * @query   offset - Pagination offset (default: 0)
  * @access  Private (requires authentication)
  */
-router.get('/history', authenticate, rewardController.getHistory.bind(rewardController));
+router.get(
+  '/history',
+  authenticate,
+  rewardController.getHistory.bind(rewardController),
+)
 
 /**
  * @route   POST /api/v1/rewards/withdraw
@@ -33,6 +41,10 @@ router.get('/history', authenticate, rewardController.getHistory.bind(rewardCont
  * @body    memo - Optional memo for the transaction
  * @access  Private (requires authentication)
  */
-router.post('/withdraw', authenticate, rewardController.withdraw.bind(rewardController));
+router.post(
+  '/withdraw',
+  authenticate,
+  rewardController.withdraw.bind(rewardController),
+)
 
-export default router;
+export default router
