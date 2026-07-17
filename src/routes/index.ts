@@ -8,6 +8,7 @@ import userRoutes from './v1/users.routes'
 import notificationRoutes from './v1/notifications.routes'
 import syncRoutes from './v1/sync.routes'
 import referralRoutes from './v1/referrals.routes'
+import walletRoutes from './v1/wallet.routes'
 
 const router: Router = Router()
 
@@ -24,5 +25,6 @@ router.use('/v1/employer', employerRoutes)
 router.use('/v1/notifications', notificationRoutes)
 router.use('/v1/sync', syncRoutes)
 router.use('/v1/referrals', referralRoutes)
+router.use('/v1/wallet', walletRoutes)
 
 export default router

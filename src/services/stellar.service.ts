@@ -65,7 +65,31 @@ export interface StellarWallet {
 export interface AccountBalance {
   asset: string;
   balance: string;
+  issuer?: string;
   limit?: string;
+  sourceTime?: string;
+}
+
+export interface StellarTransaction {
+  hash: string;
+  ledger: number;
+  createdAt: string;
+  successful: boolean;
+}
+
+export interface PaymentOperation {
+  id: string;
+  sourceAccount: string;
+  type: string;
+  type_i: number;
+  createdAt: string;
+  transactionHash: string;
+  assetType: string;
+  assetCode?: string;
+  assetIssuer?: string;
+  from: string;
+  to: string;
+  amount: string;
 }
 
 export interface PaymentOptions {
@@ -227,14 +251,20 @@ export class StellarService {
             ? 'XLM'
             : `${(b as { asset_code: string }).asset_code}:${(b as { asset_issuer: string }).asset_issuer
             }`
+        const issuer =
+          b.asset_type !== 'native'
+            ? (b as { asset_issuer: string }).asset_issuer
+            : undefined
 
         return {
-          asset: assetName,
+          asset: b.asset_type === 'native' ? 'XLM' : (b as { asset_code: string }).asset_code,
           balance: b.balance,
+          issuer,
           limit:
             b.asset_type !== 'native'
               ? (b as { limit: string }).limit
               : undefined,
+          sourceTime: new Date().toISOString(),
         }
       })
     } catch (err) {
@@ -250,6 +280,64 @@ export class StellarService {
     const balances = await this.getBalances(publicKey)
 
     return balances.find((b) => b.asset === 'XLM')?.balance ?? '0'
+  }
+
+  // ── Account Status ────────────────────────────────────────────────────────
+
+  async accountExists (publicKey: string): Promise<boolean> {
+    try {
+      await this.horizonServer.loadAccount(publicKey)
+      return true
+    } catch (err) {
+      return false
+    }
+  }
+
+  // ── Transaction History ───────────────────────────────────────────────────
+
+  async getPaymentHistory (
+    publicKey: string,
+    limit: number = 20,
+    cursor?: string
+  ): Promise<{ payments: PaymentOperation[], nextCursor?: string }> {
+    try {
+      let request = this.horizonServer
+        .payments()
+        .forAccount(publicKey)
+        .order('desc')
+        .limit(limit)
+
+      if (cursor) {
+        request = request.cursor(cursor)
+      }
+
+      const page = await request.call()
+      const payments = page.records.map((record) => ({
+        id: record.id,
+        sourceAccount: record.source_account,
+        type: record.type,
+        type_i: record.type_i,
+        createdAt: record.created_at,
+        transactionHash: record.transaction_hash,
+        assetType: record.asset_type,
+        assetCode: record.asset_code,
+        assetIssuer: record.asset_issuer,
+        from: record.from,
+        to: record.to,
+        amount: record.amount,
+      })) as PaymentOperation[]
+
+      return {
+        payments,
+        nextCursor: page.records.length > 0 ? page.records[page.records.length - 1].paging_token : undefined,
+      }
+    } catch (err) {
+      throw new StellarServiceError(
+        `Failed to fetch payment history for ${publicKey}`,
+        'HISTORY_FETCH_ERROR',
+        err
+      )
+    }
   }
 
   // ── Payments ──────────────────────────────────────────────────────────────
