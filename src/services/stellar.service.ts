@@ -246,11 +246,6 @@ export class StellarService {
       const account = await this.horizonServer.loadAccount(publicKey)
 
       return account.balances.map((b) => {
-        const assetName =
-          b.asset_type === 'native'
-            ? 'XLM'
-            : `${(b as { asset_code: string }).asset_code}:${(b as { asset_issuer: string }).asset_issuer
-            }`
         const issuer =
           b.asset_type !== 'native'
             ? (b as { asset_issuer: string }).asset_issuer
@@ -288,7 +283,7 @@ export class StellarService {
     try {
       await this.horizonServer.loadAccount(publicKey)
       return true
-    } catch (err) {
+    } catch (_err) {
       return false
     }
   }
