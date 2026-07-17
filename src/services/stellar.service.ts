@@ -282,8 +282,9 @@ export class StellarService {
   async accountExists (publicKey: string): Promise<boolean> {
     try {
       await this.horizonServer.loadAccount(publicKey)
+
       return true
-    } catch (_err) {
+    } catch {
       return false
     }
   }

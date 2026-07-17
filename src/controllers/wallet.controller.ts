@@ -10,17 +10,20 @@ export class WalletController {
       const userId = (req as any).user?.id
       if (!userId) {
         res.status(401).json({ error: 'Unauthorized' })
+
         return
       }
 
       const user = await this.findUserById(userId)
       if (!user) {
         res.status(404).json({ error: 'User not found' })
+
         return
       }
 
       if (!user.walletAddress) {
         res.json({ status: WalletStatus.UNSET })
+
         return
       }
 
@@ -41,12 +44,14 @@ export class WalletController {
       const userId = (req as any).user?.id
       if (!userId) {
         res.status(401).json({ error: 'Unauthorized' })
+
         return
       }
 
       const user = await this.findUserById(userId)
       if (!user) {
         res.status(404).json({ error: 'User not found' })
+
         return
       }
 
@@ -55,6 +60,7 @@ export class WalletController {
           status: WalletStatus.UNSET,
           balances: [],
         })
+
         return
       }
 
@@ -84,12 +90,14 @@ export class WalletController {
       const userId = (req as any).user?.id
       if (!userId) {
         res.status(401).json({ error: 'Unauthorized' })
+
         return
       }
 
       const user = await this.findUserById(userId)
       if (!user) {
         res.status(404).json({ error: 'User not found' })
+
         return
       }
 
@@ -108,6 +116,7 @@ export class WalletController {
           timestamp: new Date().toISOString(),
         }
         res.json(response)
+
         return
       }
 
