@@ -47,3 +47,4 @@ export interface WalletBalancesResponse {
   publicAddress?: string;
   balances: WalletAsset[];
 }
+
