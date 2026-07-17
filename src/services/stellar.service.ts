@@ -65,9 +65,7 @@ export interface StellarWallet {
 export interface AccountBalance {
   asset: string;
   balance: string;
-  issuer?: string;
   limit?: string;
-  sourceTime?: string;
 }
 
 export interface StellarTransaction {
@@ -246,25 +244,44 @@ export class StellarService {
       const account = await this.horizonServer.loadAccount(publicKey)
 
       return account.balances.map((b) => {
-        const issuer =
-          b.asset_type !== 'native'
-            ? (b as { asset_issuer: string }).asset_issuer
-            : undefined
+        const assetName =
+          b.asset_type === 'native'
+            ? 'XLM'
+            : `${(b as { asset_code: string }).asset_code}:${(b as { asset_issuer: string }).asset_issuer}`
 
         return {
-          asset: b.asset_type === 'native' ? 'XLM' : (b as { asset_code: string }).asset_code,
+          asset: assetName,
           balance: b.balance,
-          issuer,
           limit:
             b.asset_type !== 'native'
               ? (b as { limit: string }).limit
               : undefined,
-          sourceTime: new Date().toISOString(),
         }
       })
     } catch (err) {
       throw new StellarServiceError(
         `Failed to fetch balances for ${publicKey}`,
+        'BALANCE_FETCH_ERROR',
+        err
+      )
+    }
+  }
+
+  async getWalletBalances (publicKey: string): Promise<{ asset: string; issuer?: string; amount: string; sourceTime: string }[]> {
+    try {
+      const account = await this.horizonServer.loadAccount(publicKey)
+
+      return account.balances.map((b) => {
+        return {
+          asset: b.asset_type === 'native' ? 'XLM' : (b as { asset_code: string }).asset_code,
+          issuer: b.asset_type !== 'native' ? (b as { asset_issuer: string }).asset_issuer : undefined,
+          amount: b.balance,
+          sourceTime: new Date().toISOString(),
+        }
+      })
+    } catch (err) {
+      throw new StellarServiceError(
+        `Failed to fetch wallet balances for ${publicKey}`,
         'BALANCE_FETCH_ERROR',
         err
       )

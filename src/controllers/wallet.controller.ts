@@ -64,13 +64,7 @@ export class WalletController {
         return
       }
 
-      const balances = await stellarService.getBalances(user.walletAddress)
-      const walletAssets: WalletAsset[] = balances.map(b => ({
-        asset: b.asset,
-        issuer: b.issuer,
-        amount: b.balance,
-        sourceTime: b.sourceTime,
-      }))
+      const walletAssets: WalletAsset[] = await stellarService.getWalletBalances(user.walletAddress)
 
       const exists = await stellarService.accountExists(user.walletAddress)
       const status = exists ? WalletStatus.ACTIVE : WalletStatus.INACTIVE
