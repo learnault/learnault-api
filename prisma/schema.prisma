@@ -29,8 +29,108 @@ model User {
   referredBy      Referral?      @relation("Referree")
   verificationTokens VerificationToken[]
   emailDeliveries EmailDelivery[]
+  learnerProfile  LearnerProfile?
+  assets          Asset[]
+  uploadIntents   UploadIntent[]
 
   @@map("users")
+}
+
+model LearnerProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName       String?
+  bio               String?
+  avatar            String?
+  country           String?
+  timezone          String?
+  languages         String?
+  skillLevel        String?
+  interests         String?
+  goals             String?
+  profileVisibility String   @default("public")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("learner_profiles")
+}
+
+model Asset {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storageKey  String
+  mimeType    String
+  sizeBytes   Int
+  width       Int?
+  height      Int?
+  status      String   @default("pending")
+  finalizedAt DateTime?
+  retiredAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  variants    AssetVariant[]
+  intents     UploadIntent[]
+
+  @@index([userId, status])
+  @@map("assets")
+}
+
+model AssetVariant {
+  id         String  @id @default(uuid())
+  assetId    String
+  asset      Asset   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  variant    String
+  format     String
+  storageKey String
+  sizeBytes  Int
+  width      Int
+  height     Int
+  status     String  @default("active")
+  createdAt  DateTime @default(now())
+
+  @@unique([assetId, variant])
+  @@map("asset_variants")
+}
+
+model UploadIntent {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mimeType    String
+  sizeBytes   Int
+  storageKey  String
+  status      String   @default("pending")
+  expiresAt   DateTime
+  finalizedAt DateTime?
+  assetId     String?
+  asset       Asset?   @relation(fields: [assetId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  jobs        UploadProcessingJob[]
+
+  @@index([userId, status])
+  @@index([expiresAt])
+  @@map("upload_intents")
+}
+
+model UploadProcessingJob {
+  id            String    @id @default(uuid())
+  intentId      String
+  intent        UploadIntent @relation(fields: [intentId], references: [id], onDelete: Cascade)
+  status        String    @default("pending")
+  error         String?
+  attemptCount  Int       @default(0)
+  maxAttempts   Int       @default(5)
+  nextAttemptAt DateTime? @default(now())
+  lastAttemptAt DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@map("upload_processing_jobs")
 }
 
 model VerificationToken {

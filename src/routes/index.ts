@@ -8,6 +8,7 @@ import userRoutes from './v1/users.routes'
 import notificationRoutes from './v1/notifications.routes'
 import syncRoutes from './v1/sync.routes'
 import referralRoutes from './v1/referrals.routes'
+import profileRoutes from './v1/profile.routes'
 
 const router: Router = Router()
 
@@ -17,6 +18,7 @@ router.get('/', (_req, res) => {
 
 router.use('/v1/auth', authRoutes)
 router.use('/v1/users', userRoutes)
+router.use('/v1/profile', profileRoutes)
 router.use('/v1/modules', moduleRoutes)
 router.use('/v1/credentials', credentialRoutes)
 router.use('/v1/rewards', rewardRoutes)

@@ -383,4 +383,228 @@
  *               type: object
  *             verification:
  *               type: object
+ *
+ *     LearnerProfile:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *         userId:
+ *           type: string
+ *           format: uuid
+ *         displayName:
+ *           type: string
+ *           nullable: true
+ *         bio:
+ *           type: string
+ *           nullable: true
+ *         avatar:
+ *           type: string
+ *           nullable: true
+ *         country:
+ *           type: string
+ *           nullable: true
+ *         timezone:
+ *           type: string
+ *           nullable: true
+ *         languages:
+ *           type: array
+ *           items:
+ *             type: string
+ *         skillLevel:
+ *           type: string
+ *           enum: [beginner, intermediate, advanced]
+ *           nullable: true
+ *         interests:
+ *           type: array
+ *           items:
+ *             type: string
+ *         goals:
+ *           type: string
+ *           nullable: true
+ *         profileVisibility:
+ *           type: string
+ *           enum: [public, private]
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *
+ *     UpdateProfileInput:
+ *       type: object
+ *       properties:
+ *         displayName:
+ *           type: string
+ *           maxLength: 50
+ *         bio:
+ *           type: string
+ *           maxLength: 500
+ *         country:
+ *           type: string
+ *           minLength: 2
+ *           maxLength: 2
+ *         timezone:
+ *           type: string
+ *           maxLength: 50
+ *         languages:
+ *           type: array
+ *           maxItems: 20
+ *           items:
+ *             type: string
+ *         skillLevel:
+ *           type: string
+ *           enum: [beginner, intermediate, advanced]
+ *         interests:
+ *           type: array
+ *           maxItems: 20
+ *           items:
+ *             type: string
+ *         goals:
+ *           type: string
+ *           maxLength: 500
+ *         profileVisibility:
+ *           type: string
+ *           enum: [public, private]
+ *
+ *     CreateUploadIntentRequest:
+ *       type: object
+ *       required:
+ *         - mimeType
+ *         - sizeBytes
+ *       properties:
+ *         mimeType:
+ *           type: string
+ *           enum: [image/jpeg, image/png, image/webp, image/gif]
+ *         sizeBytes:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 5242880
+ *
+ *     UploadIntent:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *         uploadUrl:
+ *           type: string
+ *           format: uri
+ *         storageKey:
+ *           type: string
+ *         expiresAt:
+ *           type: string
+ *           format: date-time
+ *         mimeType:
+ *           type: string
+ *         maxSizeBytes:
+ *           type: integer
+ *
+ *     FinalizeUploadRequest:
+ *       type: object
+ *       required:
+ *         - intentId
+ *       properties:
+ *         intentId:
+ *           type: string
+ *           format: uuid
+ *
+ *     FinalizeUploadResponse:
+ *       type: object
+ *       properties:
+ *         intentId:
+ *           type: string
+ *           format: uuid
+ *         status:
+ *           type: string
+ *           enum: [processing, finalized, failed]
+ *         asset:
+ *           $ref: '#/components/schemas/Asset'
+ *
+ *     AssetVariant:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *         assetId:
+ *           type: string
+ *           format: uuid
+ *         variant:
+ *           type: string
+ *           enum: [original, small, medium, large]
+ *         format:
+ *           type: string
+ *           enum: [webp, png]
+ *         storageKey:
+ *           type: string
+ *         sizeBytes:
+ *           type: integer
+ *         width:
+ *           type: integer
+ *         height:
+ *           type: integer
+ *         status:
+ *           type: string
+ *           enum: [active, retired]
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *
+ *     Asset:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *         userId:
+ *           type: string
+ *           format: uuid
+ *         storageKey:
+ *           type: string
+ *         mimeType:
+ *           type: string
+ *         sizeBytes:
+ *           type: integer
+ *         width:
+ *           type: integer
+ *           nullable: true
+ *         height:
+ *           type: integer
+ *           nullable: true
+ *         status:
+ *           type: string
+ *           enum: [pending, active, retired]
+ *         finalizedAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *         retiredAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *         variants:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/AssetVariant'
+ *
+ *     AvatarResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *         data:
+ *           type: object
+ *           properties:
+ *             asset:
+ *               $ref: '#/components/schemas/Asset'
+ *               nullable: true
  */
