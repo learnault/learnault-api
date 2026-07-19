@@ -1,7 +1,6 @@
 import crypto from 'crypto'
 import prisma from '../config/database'
 import jwt from 'jsonwebtoken'
-import logger from '../utils/logger'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-default-secret'
 const ACCESS_TOKEN_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN || '15m'
@@ -58,6 +57,7 @@ export class SessionService {
             throw new Error('User not found')
         }
 
+
         return {
             accessToken: generateAccessToken(user.id, user.role),
             refreshToken
@@ -111,6 +111,7 @@ export class SessionService {
             throw new Error('User not found')
         }
 
+
         return {
             accessToken: generateAccessToken(user.id, user.role),
             refreshToken: newRefreshToken
@@ -128,6 +129,7 @@ export class SessionService {
                 data: { isRevoked: true, revokedAt: new Date() }
             })
         }
+
     }
 
     async revokeAllSessions(userId: string): Promise<void> {
@@ -135,6 +137,7 @@ export class SessionService {
             where: { userId, isRevoked: false },
             data: { isRevoked: true, revokedAt: new Date() }
         })
+
     }
 
     async revokeSessionFamily(familyId: string): Promise<void> {
@@ -142,9 +145,11 @@ export class SessionService {
             where: { familyId, isRevoked: false },
             data: { isRevoked: true, revokedAt: new Date() }
         })
+
     }
 
     async getValidSessionByRefreshToken(refreshToken: string) {
+
         return prisma.session.findFirst({
             where: {
                 refreshToken,

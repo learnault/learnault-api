@@ -1,7 +1,6 @@
 import crypto from 'crypto'
 import { Request, Response } from 'express'
 import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
 import prisma from '../config/database'
 import { loginSchema, registerSchema, verifyEmailSchema, resendVerificationSchema, forgotPasswordSchema, resetPasswordSchema, refreshTokenSchema } from '../schemas/auth.schema'
 import { UserRole } from '../types/user.types'
@@ -9,9 +8,6 @@ import { emailService } from '../services/email.service'
 import { sessionService } from '../services/session.service'
 import logger from '../utils/logger'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-default-secret'
-const ACCESS_TOKEN_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN || '15m'
-const REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || '7d'
 const VERIFICATION_TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000 // 24 hours
 const PASSWORD_RESET_TOKEN_EXPIRY_MS = 30 * 60 * 1000 // 30 minutes
 const RESEND_COOLDOWN_MS = 60 * 1000 // 1 minute
@@ -170,6 +166,7 @@ export class AuthController {
                 || 'unknown'
             const { accessToken, refreshToken } = await sessionService.createSession(user.id, userAgent, ip)
 
+
             res.status(201).json({
                 message: 'User registered successfully',
                 accessToken,
@@ -215,6 +212,7 @@ export class AuthController {
             if (!validation.success) {
                 res.status(400).json({ error: 'Invalid token' })
 
+
                 return
             }
 
@@ -223,6 +221,7 @@ export class AuthController {
             // Validate token format before hashing
             if (!/^[0-9a-f]{64}$/i.test(token)) {
                 res.status(400).json({ error: 'Invalid token' })
+
 
                 return
             }
@@ -237,17 +236,20 @@ export class AuthController {
             if (!verificationToken) {
                 res.status(400).json({ error: 'Invalid token' })
 
+
                 return
             }
 
             if (verificationToken.status === 'USED') {
                 res.status(200).json({ message: 'Email already verified' })
 
+
                 return
             }
 
             if (verificationToken.status === 'REVOKED') {
                 res.status(400).json({ error: 'Invalid token' })
+
 
                 return
             }
@@ -258,6 +260,7 @@ export class AuthController {
                     data: { status: 'REVOKED' },
                 })
                 res.status(400).json({ error: 'Token expired' })
+
 
                 return
             }
@@ -275,6 +278,7 @@ export class AuthController {
             ])
 
             logger.info(`[Auth] Email verified for user ${verificationToken.userId}`)
+
 
             res.status(200).json({ message: 'Email verified successfully' })
         } catch (error) {
@@ -310,6 +314,7 @@ export class AuthController {
                 // Neutral response regardless
                 res.status(200).json({ message: 'If the account exists, a verification email has been sent.' })
 
+
                 return
             }
 
@@ -324,6 +329,7 @@ export class AuthController {
             if (this.isRateLimited(`ip:${ip}`, RESEND_COOLDOWN_MS)) {
                 res.status(429).json({ error: 'Too many requests. Please try again later.' })
 
+
                 return
             }
 
@@ -333,11 +339,13 @@ export class AuthController {
             if (!user) {
                 res.status(200).json({ message: 'If the account exists, a verification email has been sent.' })
 
+
                 return
             }
 
             if (user.isVerified) {
                 res.status(200).json({ message: 'If the account exists, a verification email has been sent.' })
+
 
                 return
             }
@@ -346,12 +354,14 @@ export class AuthController {
             if (this.isAccountLimited(user.id)) {
                 res.status(429).json({ error: 'Too many requests. Please try again later.' })
 
+
                 return
             }
 
             // Cooldown per user
             if (this.isRateLimited(`user:${user.id}`, RESEND_COOLDOWN_MS)) {
                 res.status(429).json({ error: 'Too many requests. Please try again later.' })
+
 
                 return
             }
@@ -381,6 +391,7 @@ export class AuthController {
             )
 
             this.recordAccountRequest(user.id)
+
 
             res.status(200).json({ message: 'If the account exists, a verification email has been sent.' })
         } catch (error) {
@@ -424,6 +435,7 @@ export class AuthController {
                     details: validation.error.format()
                 })
 
+
                 return
             }
 
@@ -436,12 +448,14 @@ export class AuthController {
             if (!user) {
                 res.status(401).json({ error: 'Invalid credentials' })
 
+
                 return
             }
 
             const isMatch = await bcrypt.compare(password, user.password)
             if (!isMatch) {
                 res.status(401).json({ error: 'Invalid credentials' })
+
 
                 return
             }
@@ -458,6 +472,7 @@ export class AuthController {
                 || 'unknown'
 
             const { accessToken, refreshToken } = await sessionService.createSession(user.id, userAgent, ip)
+
 
             res.status(200).json({
                 message: 'Login successful',
@@ -507,6 +522,7 @@ export class AuthController {
                     details: validation.error.format()
                 })
 
+
                 return
             }
 
@@ -519,6 +535,7 @@ export class AuthController {
                 || 'unknown'
 
             const { accessToken, refreshToken: newRefreshToken } = await sessionService.refreshSession(refreshToken, userAgent, ip)
+
 
             res.status(200).json({
                 message: 'Tokens refreshed successfully',
@@ -564,11 +581,13 @@ export class AuthController {
                     details: validation.error.format()
                 })
 
+
                 return
             }
 
             const { refreshToken } = validation.data
             await sessionService.revokeSession(refreshToken)
+
 
             res.status(200).json({ message: 'Logged out successfully' })
         } catch (error) {
@@ -595,10 +614,12 @@ export class AuthController {
         try {
             if (!req.user) {
                 res.status(401).json({ error: 'Unauthorized' })
+
                 return
             }
 
             await sessionService.revokeAllSessions(req.user.id)
+
 
             res.status(200).json({ message: 'All sessions logged out successfully' })
         } catch (error) {
@@ -633,6 +654,7 @@ export class AuthController {
             if (!validation.success) {
                 res.status(200).json({ message: 'If the account exists, a password reset email has been sent.' })
 
+
                 return
             }
 
@@ -646,6 +668,7 @@ export class AuthController {
             if (this.isRateLimited(`reset:ip:${ip}`, RESET_PASSWORD_COOLDOWN_MS)) {
                 res.status(429).json({ error: 'Too many requests. Please try again later.' })
 
+
                 return
             }
 
@@ -653,17 +676,20 @@ export class AuthController {
             if (!user) {
                 res.status(200).json({ message: 'If the account exists, a password reset email has been sent.' })
 
+
                 return
             }
 
             if (this.isResetPasswordAccountLimited(user.id)) {
                 res.status(429).json({ error: 'Too many requests. Please try again later.' })
 
+
                 return
             }
 
             if (this.isRateLimited(`reset:user:${user.id}`, RESET_PASSWORD_COOLDOWN_MS)) {
                 res.status(429).json({ error: 'Too many requests. Please try again later.' })
+
 
                 return
             }
@@ -691,6 +717,7 @@ export class AuthController {
             )
 
             this.recordResetPasswordAccountRequest(user.id)
+
 
             res.status(200).json({ message: 'If the account exists, a password reset email has been sent.' })
         } catch (error) {
@@ -725,6 +752,7 @@ export class AuthController {
             if (!validation.success) {
                 res.status(400).json({ error: 'Invalid token or password' })
 
+
                 return
             }
 
@@ -732,6 +760,7 @@ export class AuthController {
 
             if (!/^[0-9a-f]{64}$/i.test(token)) {
                 res.status(400).json({ error: 'Invalid token' })
+
 
                 return
             }
@@ -746,11 +775,13 @@ export class AuthController {
             if (!resetToken) {
                 res.status(400).json({ error: 'Invalid token' })
 
+
                 return
             }
 
             if (resetToken.status === 'USED' || resetToken.status === 'REVOKED') {
                 res.status(400).json({ error: 'Invalid token' })
+
 
                 return
             }
@@ -761,6 +792,7 @@ export class AuthController {
                     data: { status: 'REVOKED' },
                 })
                 res.status(400).json({ error: 'Token expired' })
+
 
                 return
             }
@@ -803,6 +835,7 @@ export class AuthController {
             ])
 
             logger.info(`[Auth] Password reset for user ${resetToken.userId}`)
+
             res.status(200).json({ message: 'Password reset successful' })
         } catch (error) {
             console.error('Reset password error:', error)
