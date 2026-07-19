@@ -3,14 +3,15 @@ import { Request, Response } from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import prisma from '../config/database'
-import { loginSchema, registerSchema, verifyEmailSchema, resendVerificationSchema, forgotPasswordSchema, resetPasswordSchema } from '../schemas/auth.schema'
+import { loginSchema, registerSchema, verifyEmailSchema, resendVerificationSchema, forgotPasswordSchema, resetPasswordSchema, refreshTokenSchema } from '../schemas/auth.schema'
 import { UserRole } from '../types/user.types'
 import { emailService } from '../services/email.service'
+import { sessionService } from '../services/session.service'
 import logger from '../utils/logger'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-default-secret'
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d'
-
+const ACCESS_TOKEN_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES_IN || '15m'
+const REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || '7d'
 const VERIFICATION_TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000 // 24 hours
 const PASSWORD_RESET_TOKEN_EXPIRY_MS = 30 * 60 * 1000 // 30 minutes
 const RESEND_COOLDOWN_MS = 60 * 1000 // 1 minute
@@ -162,11 +163,17 @@ export class AuthController {
                 logger.error('[Auth] Failed to queue verification email:', err)
             )
 
-            const token = this.generateToken(user.id, user.role)
+            const userAgent = req.headers['user-agent']
+            const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
+                || (req.headers['x-real-ip'] as string)
+                || req.socket.remoteAddress
+                || 'unknown'
+            const { accessToken, refreshToken } = await sessionService.createSession(user.id, userAgent, ip)
 
             res.status(201).json({
                 message: 'User registered successfully',
-                token,
+                accessToken,
+                refreshToken,
                 user: {
                     id: user.id,
                     email: user.email,
@@ -444,11 +451,18 @@ export class AuthController {
                 data: { lastLoginAt: new Date() }
             })
 
-            const token = this.generateToken(user.id, user.role)
+            const userAgent = req.headers['user-agent']
+            const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
+                || (req.headers['x-real-ip'] as string)
+                || req.socket.remoteAddress
+                || 'unknown'
+
+            const { accessToken, refreshToken } = await sessionService.createSession(user.id, userAgent, ip)
 
             res.status(200).json({
                 message: 'Login successful',
-                token,
+                accessToken,
+                refreshToken,
                 user: {
                     id: user.id,
                     email: user.email,
@@ -464,16 +478,133 @@ export class AuthController {
 
     /**
      * @openapi
+     * /auth/refresh:
+     *   post:
+     *     summary: Refresh access token using refresh token
+     *     tags: [Auth]
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             $ref: '#/components/schemas/RefreshTokenInput'
+     *     responses:
+     *       200:
+     *         description: Tokens refreshed successfully
+     *       400:
+     *         description: Validation failed
+     *       401:
+     *         description: Invalid refresh token
+     *       500:
+     *         description: Internal server error
+     */
+    async refresh(req: Request, res: Response): Promise<void> {
+        try {
+            const validation = refreshTokenSchema.safeParse(req.body)
+            if (!validation.success) {
+                res.status(400).json({
+                    error: 'Validation failed',
+                    details: validation.error.format()
+                })
+
+                return
+            }
+
+            const { refreshToken } = validation.data
+
+            const userAgent = req.headers['user-agent']
+            const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
+                || (req.headers['x-real-ip'] as string)
+                || req.socket.remoteAddress
+                || 'unknown'
+
+            const { accessToken, refreshToken: newRefreshToken } = await sessionService.refreshSession(refreshToken, userAgent, ip)
+
+            res.status(200).json({
+                message: 'Tokens refreshed successfully',
+                accessToken,
+                refreshToken: newRefreshToken
+            })
+        } catch (error) {
+            console.error('Refresh error:', error)
+            if (error instanceof Error && (error.message === 'Invalid refresh token' || error.message === 'Token reuse detected, family revoked' || error.message === 'Refresh token expired')) {
+                res.status(401).json({ error: error.message })
+            } else {
+                res.status(500).json({ error: 'Internal server error during refresh' })
+            }
+        }
+    }
+
+    /**
+     * @openapi
      * /auth/logout:
      *   post:
-     *     summary: Logout user
+     *     summary: Logout current session using refresh token
      *     tags: [Auth]
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             $ref: '#/components/schemas/RefreshTokenInput'
      *     responses:
      *       200:
      *         description: Logged out successfully
+     *       400:
+     *         description: Validation failed
+     *       500:
+     *         description: Internal server error
      */
     async logout(req: Request, res: Response): Promise<void> {
-        res.status(200).json({ message: 'Logged out successfully. Please clear your token client-side.' })
+        try {
+            const validation = refreshTokenSchema.safeParse(req.body)
+            if (!validation.success) {
+                res.status(400).json({
+                    error: 'Validation failed',
+                    details: validation.error.format()
+                })
+
+                return
+            }
+
+            const { refreshToken } = validation.data
+            await sessionService.revokeSession(refreshToken)
+
+            res.status(200).json({ message: 'Logged out successfully' })
+        } catch (error) {
+            console.error('Logout error:', error)
+            res.status(500).json({ error: 'Internal server error during logout' })
+        }
+    }
+
+    /**
+     * @openapi
+     * /auth/logout-all:
+     *   post:
+     *     summary: Logout all sessions for current user
+     *     tags: [Auth]
+     *     responses:
+     *       200:
+     *         description: All sessions logged out successfully
+     *       401:
+     *         description: Unauthorized
+     *       500:
+     *         description: Internal server error
+     */
+    async logoutAll(req: Request, res: Response): Promise<void> {
+        try {
+            if (!req.user) {
+                res.status(401).json({ error: 'Unauthorized' })
+                return
+            }
+
+            await sessionService.revokeAllSessions(req.user.id)
+
+            res.status(200).json({ message: 'All sessions logged out successfully' })
+        } catch (error) {
+            console.error('Logout all error:', error)
+            res.status(500).json({ error: 'Internal server error during logout' })
+        }
     }
 
     /**
@@ -677,14 +808,6 @@ export class AuthController {
             console.error('Reset password error:', error)
             res.status(500).json({ error: 'Internal server error' })
         }
-    }
-
-    private generateToken(userId: string, role: string): string {
-        return jwt.sign(
-            { id: userId, role },
-            JWT_SECRET as string,
-            { expiresIn: JWT_EXPIRES_IN as any }
-        )
     }
 
     private isRateLimited(key: string, windowMs: number): boolean {

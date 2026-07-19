@@ -36,20 +36,23 @@ model User {
 }
 
 model Session {
-  id           String    @id @default(uuid())
-  userId       String
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token        String    @unique
-  refreshToken String?   @unique
-  userAgent    String?
-  ipAddress    String?
-  expiresAt    DateTime
-  isRevoked    Boolean   @default(false)
-  revokedAt    DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshToken   String   @unique
+  familyId       String
+  parentId       String?
+  userAgent      String?
+  ipAddress      String?
+  expiresAt      DateTime
+  isRevoked      Boolean  @default(false)
+  revokedAt      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@index([userId, isRevoked])
+  @@index([refreshToken])
+  @@index([familyId])
   @@map("sessions")
 }
 

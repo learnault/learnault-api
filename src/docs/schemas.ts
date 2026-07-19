@@ -88,10 +88,20 @@
  *       properties:
  *         message:
  *           type: string
- *         token:
+ *         accessToken:
+ *           type: string
+ *         refreshToken:
  *           type: string
  *         user:
  *           $ref: '#/components/schemas/User'
+ *
+ *     RefreshTokenInput:
+ *       type: object
+ *       required:
+ *         - refreshToken
+ *       properties:
+ *         refreshToken:
+ *           type: string
  *
  *     VerifyEmailInput:
  *       type: object
