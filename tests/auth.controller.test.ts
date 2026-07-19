@@ -4,6 +4,7 @@ import { AuthController, resendCooldowns, resendAccountCounts } from '../src/con
 import prisma from '../src/config/database'
 import bcrypt from 'bcryptjs'
 import { emailService } from '../src/services/email.service'
+import { sessionService } from '../src/services/session.service'
 
 const mockTokenHash = 'abc123def456hash'
 const mockRawToken = 'aaabbbcccddd00112233445566778899aabbccddeeff00112233445566778899'
@@ -24,6 +25,13 @@ vi.mock('../src/config/database', () => ({
         },
         emailDelivery: {
             create: vi.fn(),
+        },
+        session: {
+            findUnique: vi.fn(),
+            create: vi.fn(),
+            update: vi.fn(),
+            updateMany: vi.fn(),
+            findFirst: vi.fn(),
         },
         $transaction: vi.fn((args: any[]) => Promise.all(args)),
     },
@@ -56,6 +64,15 @@ vi.mock('crypto', () => ({
 vi.mock('../src/services/email.service', () => ({
     emailService: {
         queueEmail: vi.fn().mockResolvedValue({ id: 'email1' }),
+    },
+}))
+
+vi.mock('../src/services/session.service', () => ({
+    sessionService: {
+        createSession: vi.fn().mockResolvedValue({ accessToken: 'mock_access_token', refreshToken: 'mock_refresh_token' }),
+        refreshSession: vi.fn(),
+        revokeSession: vi.fn(),
+        revokeAllSessions: vi.fn(),
     },
 }))
 
@@ -124,7 +141,8 @@ describe('AuthController', () => {
             expect(mockResponse.json).toHaveBeenCalledWith(
                 expect.objectContaining({
                     message: 'User registered successfully',
-                    token: 'mock_token',
+                    accessToken: 'mock_access_token',
+                    refreshToken: 'mock_refresh_token',
                 })
             )
         })
@@ -590,7 +608,8 @@ describe('AuthController', () => {
             expect(mockResponse.json).toHaveBeenCalledWith(
                 expect.objectContaining({
                     message: 'Login successful',
-                    token: 'mock_token',
+                    accessToken: 'mock_access_token',
+                    refreshToken: 'mock_refresh_token',
                 })
             )
         })
@@ -621,6 +640,7 @@ describe('AuthController', () => {
 
     describe('logout', () => {
         it('should return success message', async () => {
+            mockRequest.body = { refreshToken: 'test_refresh_token' }
             await authController.logout(
                 mockRequest as Request,
                 mockResponse as Response
@@ -628,8 +648,7 @@ describe('AuthController', () => {
 
             expect(mockResponse.status).toHaveBeenCalledWith(200)
             expect(mockResponse.json).toHaveBeenCalledWith({
-                message:
-                    'Logged out successfully. Please clear your token client-side.',
+                message: 'Logged out successfully',
             })
         })
     })
