@@ -6,11 +6,10 @@ export enum UserRole {
   INSTRUCTOR = 'instructor',
 }
 
-export enum UserStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-  SUSPENDED = 'suspended',
-  PENDING_VERIFICATION = 'pending_verification',
+export enum ProfileVisibility {
+  PUBLIC = 'public',
+  PRIVATE = 'private',
+  MENTOR_ONLY = 'mentor_only',
 }
 
 // ── Core models ────────────────────────────────────────────
@@ -25,7 +24,6 @@ export interface User {
   avatar?: string;
   walletAddress?: string;
   role: UserRole;
-  status: UserStatus;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -43,9 +41,40 @@ export interface PublicUserInfo {
 }
 
 export interface UserProfile extends User {
+  profile?: LearnerProfile | null;
+  onboarding?: OnboardingState | null;
   totalCredentials: number;
   totalPoints: number;
   completedModules: number;
+}
+
+export interface LearnerProfile {
+  id: string;
+  userId: string;
+  displayName?: string;
+  country?: string;
+  timezone?: string;
+  languages: string[];
+  skillLevel?: string;
+  interests: string[];
+  goals: string[];
+  visibility: ProfileVisibility;
+  consentGiven: boolean;
+  consentAt?: Date;
+}
+
+export interface OnboardingState {
+  id: string;
+  userId: string;
+  profileComplete: boolean;
+  emailVerified: boolean;
+  walletConnected: boolean;
+  firstSessionBooked: boolean;
+  firstCredentialEarned: boolean;
+  consentProvided: boolean;
+  completedSteps: string[];
+  currentStep: string;
+  dismissed: boolean;
 }
 
 // ── Request types ──────────────────────────────────────────
@@ -76,17 +105,29 @@ export interface UpdateWalletData {
   walletAddress: string;
 }
 
+export interface ProfileUpdateData {
+  displayName?: string;
+  country?: string;
+  timezone?: string;
+  languages?: string[];
+  skillLevel?: string;
+  interests?: string[];
+  goals?: string[];
+  visibility?: ProfileVisibility;
+  consentGiven?: boolean;
+}
+
 export interface UpdateUserRoleData {
   role: UserRole;
 }
 
-export interface UpdateUserStatusData {
-  status: UserStatus;
-}
-
 export interface UserFilterParams {
   role?: UserRole;
-  status?: UserStatus;
   search?: string;
   isActive?: boolean;
+}
+
+export interface ProfileCompletion {
+  percentage: number;
+  missingFields: string[];
 }

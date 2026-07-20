@@ -11,12 +11,18 @@ model User {
   email           String         @unique
   username        String         @unique
   password        String
+  firstName       String?
+  lastName        String?
+  bio             String?
+  avatar          String?
   role            Role           @default(LEARNER)
   walletAddress   String?        @unique
   isVerified      Boolean        @default(false)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   lastLoginAt     DateTime?
+  profile         LearnerProfile?
+  onboarding      OnboardingState?
   completions     Completion[]
   credentials     Credential[]
   transactions    Transaction[]
@@ -33,6 +39,45 @@ model User {
   audits          AuditLog[]
 
   @@map("users")
+}
+
+model LearnerProfile {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName   String?
+  country       String?
+  timezone      String?
+  languages     String   @default("[]")  // JSON array
+  skillLevel    String?  // beginner, intermediate, advanced
+  interests     String   @default("[]")  // JSON array
+  goals         String   @default("[]")  // JSON array
+  visibility    String   @default("public")  // public, private, mentor_only
+  consentGiven  Boolean  @default(false)
+  consentAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("learner_profiles")
+}
+
+model OnboardingState {
+  id                      String   @id @default(uuid())
+  userId                  String   @unique
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profileComplete         Boolean  @default(false)
+  emailVerified           Boolean  @default(false)
+  walletConnected         Boolean  @default(false)
+  firstSessionBooked      Boolean  @default(false)
+  firstCredentialEarned   Boolean  @default(false)
+  consentProvided         Boolean  @default(false)
+  completedSteps          String   @default("[]")  // JSON array of step keys
+  currentStep             String   @default("welcome")
+  dismissed               Boolean  @default(false)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@map("onboarding_states")
 }
 
 model Session {

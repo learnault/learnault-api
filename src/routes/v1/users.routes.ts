@@ -10,6 +10,8 @@ router.get('/me', authenticate, userController.getCurrentUser.bind(userControlle
 
 router.patch('/me', authenticate, validateProfileUpdate, userController.updateProfile.bind(userController))
 
+router.get('/me/profile', authenticate, userController.getMyProfile.bind(userController))
+
 router.get('/:id', userController.getUserById.bind(userController))
 
 router.patch('/password', authenticate, validatePasswordChange, userController.changePassword.bind(userController))

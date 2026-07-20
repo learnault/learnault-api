@@ -1,5 +1,7 @@
-import { ChangePasswordData, PublicUserInfo, UpdateUserData, User } from '../types/user.types'
 import { Request, Response } from 'express'
+import * as userService from '../services/user.service'
+import prisma from '../config/database'
+import type { UpdateUserData, ChangePasswordData } from '../types/user.types'
 
 export class UserController {
   /**
@@ -23,7 +25,7 @@ export class UserController {
    *         description: User not found
    */
 
-  async getCurrentUser (req: Request, res: Response): Promise<void> {
+  async getCurrentUser(req: Request, res: Response): Promise<void> {
     try {
       const userId = (req as any).user?.id
       if (!userId) {
@@ -31,7 +33,7 @@ export class UserController {
 
         return
       }
-      const user = await this.findUserById(userId)
+      const user = await userService.findUserById(userId)
       if (!user) {
         res.status(404).json({ error: 'User not found' })
 
@@ -46,9 +48,13 @@ export class UserController {
         bio: user.bio,
         avatar: user.avatar,
         walletAddress: user.walletAddress,
-        isActive: user.isActive,
+        isActive: true,
+        role: user.role,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
+        profile: user.profile,
+        onboarding: user.onboarding,
+        profileCompletion: user.profileCompletion,
       })
     } catch {
       res.status(500).json({ error: 'Internal server error' })
@@ -82,7 +88,7 @@ export class UserController {
    *         description: Internal server error
    */
 
-  async updateProfile (req: Request, res: Response): Promise<void> {
+  async updateProfile(req: Request, res: Response): Promise<void> {
     try {
       const userId = (req as any).user?.id
       if (!userId) {
@@ -91,7 +97,18 @@ export class UserController {
         return
       }
       const data = req.body as UpdateUserData
-      const user = await this.updateUserProfile(userId, data)
+      const user = await userService.updateUserProfile(userId, data)
+
+      await prisma.auditLog.create({
+        data: {
+          userId,
+          action: 'PROFILE_UPDATED',
+          metadata: JSON.stringify(Object.keys(data)),
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'] || 'unknown',
+        },
+      })
+
       res.json({
         id: user.id,
         email: user.email,
@@ -101,65 +118,110 @@ export class UserController {
         bio: user.bio,
         avatar: user.avatar,
         walletAddress: user.walletAddress,
-        isActive: user.isActive,
+        isActive: true,
+        role: user.role,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
+        profile: user.profile,
+        onboarding: user.onboarding,
+        profileCompletion: user.profileCompletion,
       })
     } catch {
       res.status(500).json({ error: 'Internal server error' })
     }
   }
 
-  async getUserById (req: Request, res: Response): Promise<void> {
+  async getUserById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params
-
-      const user = await this.findUserById(id)
-      if (!user) {
-        res.status(404).json({ error: 'User not found' })
+      const publicProfile = await userService.getPublicProfile(id)
+      if (!publicProfile) {
+        res.status(404).json({ error: 'User not found or profile is private' })
 
         return
       }
-
-      const publicInfo: PublicUserInfo = {
-        id: user.id,
-        username: user.username,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        avatar: user.avatar,
-        role: user.role,
-        createdAt: user.createdAt,
-      }
-
-      res.json(publicInfo)
+      res.json(publicProfile)
     } catch (error) {
       console.error('Error getting user by ID:', error)
       res.status(500).json({ error: 'Internal server error' })
     }
   }
 
-  async changePassword (req: Request, res: Response): Promise<void> {
+  async getMyProfile(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = (req as any).user?.id
+      if (!userId) {
+        res.status(401).json({ error: 'Unauthorized' })
+
+        return
+      }
+      const data = req.body as { displayName?: string; country?: string; bio?: string }
+      await userService.updateUserProfile(userId, {
+        firstName: data.displayName,
+        bio: data.bio,
+      })
+      await userService.updateUserProfileData(userId, req.body)
+
+      const user = await userService.findUserById(userId)
+      if (!user) {
+        res.status(404).json({ error: 'User not found' })
+
+        return
+      }
+      res.json({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        bio: user.bio,
+        avatar: user.avatar,
+        walletAddress: user.walletAddress,
+        isActive: true,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        profile: user.profile,
+        onboarding: user.onboarding,
+        profileCompletion: user.profileCompletion,
+      })
+
+      await prisma.auditLog.create({
+        data: {
+          userId,
+          action: 'PROFILE_UPDATED',
+          metadata: JSON.stringify(Object.keys(req.body)),
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'] || 'unknown',
+        },
+      })
+    } catch {
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  }
+
+  async changePassword(req: Request, res: Response): Promise<void> {
     try {
       const userId = (req as any).user?.id
       const { currentPassword, newPassword }: ChangePasswordData = req.body
 
-      const user = await this.findUserById(userId)
-      if (!user) {
-        res.status(404).json({ error: 'User not found' })
-
-
-        return
-      }
-
-      const isCurrentPasswordValid = await this.validatePassword(user, currentPassword)
-      if (!isCurrentPasswordValid) {
+      const isValid = await userService.validatePassword(userId, currentPassword)
+      if (!isValid) {
         res.status(400).json({ error: 'Current password is incorrect' })
 
-
         return
       }
 
-      await this.updateUserPassword(userId, newPassword)
+      await userService.updateUserPassword(userId, newPassword)
+
+      await prisma.auditLog.create({
+        data: {
+          userId,
+          action: 'PASSWORD_CHANGED',
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'] || 'unknown',
+        },
+      })
 
       res.json({ message: 'Password updated successfully' })
     } catch (error: unknown) {
@@ -203,7 +265,7 @@ export class UserController {
    *         description: Internal server error
    */
 
-  async updateWalletAddress (req: Request, res: Response): Promise<void> {
+  async updateWalletAddress(req: Request, res: Response): Promise<void> {
     try {
       const userId = (req as any).user?.id
       if (!userId) {
@@ -217,88 +279,38 @@ export class UserController {
 
         return
       }
-      const user = await this.updateUserWallet(userId, walletAddress)
+      const user = await userService.updateUserWallet(userId, walletAddress)
+
+      await prisma.auditLog.create({
+        data: {
+          userId,
+          action: 'WALLET_UPDATED',
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'] || 'unknown',
+        },
+      })
+
       res.json({
         id: user.id,
         email: user.email,
         username: user.username,
-        firstName: (user as any).firstName,
-        lastName: (user as any).lastName,
-        bio: (user as any).bio,
-        avatar: (user as any).avatar,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        bio: user.bio,
+        avatar: user.avatar,
         walletAddress: user.walletAddress,
-        isActive: user.isActive,
+        isActive: true,
+        role: user.role,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
+        onboarding: user.onboarding,
       })
     } catch {
       res.status(500).json({ error: 'Internal server error' })
     }
   }
 
-  private async findUserById (id: string): Promise<User | null> {
-    const mockUser: User = {
-      id,
-      email: 'test@example.com',
-      username: 'testuser',
-      firstName: 'Test',
-      lastName: 'User',
-      bio: 'Test bio',
-      avatar: 'https://example.com/avatar.jpg',
-      walletAddress: 'GABC123456789012345678901234567890123456789012345678901234567890',
-      isActive: true,
-      role: 'LEARNER' as any,
-      status: 'active' as any,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-
-    return mockUser
-  }
-
-  private async updateUserProfile (id: string, data: UpdateUserData): Promise<User> {
-    const mockUser: User = {
-      id,
-      email: 'test@example.com',
-      username: data.username || 'testuser',
-      firstName: data.firstName,
-      lastName: data.lastName,
-      bio: data.bio,
-      avatar: data.avatar,
-      walletAddress: 'GABC123456789012345678901234567890123456789012345678901234567890',
-      isActive: true,
-      role: 'LEARNER' as any,
-      status: 'active' as any,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-
-    return mockUser
-  }
-
-  private async validatePassword (_user: User, _password: string): Promise<boolean> {
-    return false
-  }
-
-  private async updateUserPassword (_id: string, _newPassword: string): Promise<void> {
-    throw new Error('Not implemented')
-  }
-
-  private async updateUserWallet (id: string, walletAddress: string): Promise<User> {
-    const mockUser: User = {
-      id,
-      email: 'test@example.com',
-      username: 'testuser',
-      walletAddress,
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    } as never
-
-    return mockUser
-  }
-
-  private isValidStellarAddress (address: string): boolean {
+  private isValidStellarAddress(address: string): boolean {
     return /^G[A-Z0-9]{50,55}$/.test(address)
   }
 }
