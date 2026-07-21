@@ -1,25 +1,17 @@
-import { config } from 'dotenv'
-import { validateTestDatabaseUrl } from './helpers/guard'
-import { applyMigrations } from './helpers/db'
+import { exec } from 'child_process'
+import { promisify } from 'util'
 
-config({ path: '.env.test' })
+const execAsync = promisify(exec)
 
-export async function setup(): Promise<void> {
+export default async function globalSetup() {
+  console.log('🚀 Setting up test database...')
+  
+  // Apply migrations to test database
   try {
-    const dbUrl = validateTestDatabaseUrl()
-
-    console.log('[globalSetup] Applying migrations to test database...')
-    applyMigrations(dbUrl)
-    console.log('[globalSetup] Migrations applied successfully.')
-  } catch (err) {
-    console.warn(
-      '[globalSetup] Could not apply migrations. ' +
-        'Integration tests requiring a database will be skipped. ' +
-        `Error: ${(err as Error).message}`,
-    )
+    await execAsync('npx prisma migrate deploy')
+    console.log('✅ Test database migrations applied')
+  } catch (error) {
+    console.error('❌ Failed to apply migrations:', error)
+    throw error
   }
-}
-
-export async function teardown(): Promise<void> {
-  console.log('[globalSetup] Test run complete.')
 }
