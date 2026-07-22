@@ -19,6 +19,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: learnault
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,13 +55,20 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
         env:
-          DATABASE_URL: "file:./dev.db"
+          DATABASE_URL: "postgresql://user:password@localhost:5432/learnault"
+
+      - name: Push database schema
+        run: npx prisma db push --accept-data-loss
+        env:
+          DATABASE_URL: "postgresql://user:password@localhost:5432/learnault"
 
       - name: Lint (ESLint)
         run: pnpm run lint
 
       - name: Run tests with coverage
         run: pnpm run test:coverage
+        env:
+          DATABASE_URL: "postgresql://user:password@localhost:5432/learnault"
 
       - name: Upload coverage (optional)
         uses: actions/upload-artifact@v4
