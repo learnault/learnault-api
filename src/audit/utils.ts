@@ -60,7 +60,8 @@ function isSensitiveField(fieldName: string): boolean {
  */
 function redactValue(value: unknown): string {
   if (typeof value === 'string') {
-    if (value.length <= 4) {
+    if (value.length <= 6) {
+      // For short values (like OTP codes), completely redact
       return '***'
     }
     // Show first and last 2 characters, redact middle
@@ -78,8 +79,8 @@ export function sanitizeMetadata(
   metadata: AuditMetadata,
   depth = 0
 ): AuditMetadata {
-  // Prevent infinite recursion
-  if (depth > 5) {
+  // Prevent infinite recursion - max depth of 4 levels
+  if (depth > 4) {
     return { _truncated: 'Max depth exceeded' }
   }
 

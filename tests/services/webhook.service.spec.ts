@@ -21,7 +21,23 @@ vi.mock('@prisma/client', () => ({
     PrismaClient: class {
         webhookEndpoint = mockPrismaInstance.webhookEndpoint
         webhookDelivery = mockPrismaInstance.webhookDelivery
+        $extends = vi.fn(function (this: any) {
+            return this
+        })
     },
+    Prisma: {
+        defineExtension: vi.fn((fn) => fn),
+    },
+}))
+
+// Mock the audit middleware to avoid extension complications
+vi.mock('../../src/audit/middleware', () => ({
+    createDataLifecycleExtension: vi.fn(() => ({})),
+}))
+
+// Mock the database config to avoid direct prisma imports
+vi.mock('../../src/config/database', () => ({
+    default: mockPrismaInstance,
 }))
 
 // Mock global fetch

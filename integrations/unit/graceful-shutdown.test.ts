@@ -17,7 +17,9 @@ describe('Graceful Shutdown', () => {
     // and send SIGTERM to test graceful shutdown
     
     const mockServer = {
-      close: vi.fn((callback) => callback()),
+      close: vi.fn((callback) => {
+        if (callback) callback()
+      }),
     }
 
     const mockPrisma = {
@@ -34,7 +36,9 @@ describe('Graceful Shutdown', () => {
 
   it('should handle SIGINT and shutdown gracefully', async () => {
     const mockServer = {
-      close: vi.fn((callback) => callback()),
+      close: vi.fn((callback) => {
+        if (callback) callback()
+      }),
     }
 
     const mockPrisma = {

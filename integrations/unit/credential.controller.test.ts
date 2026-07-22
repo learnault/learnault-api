@@ -224,7 +224,7 @@ describe('CredentialController', () => {
         issuedAt: new Date('2024-01-01'),
         user: {
           id: 'user-1',
-          name: 'John Doe',
+          username: 'John Doe',
           email: 'john@example.com',
         },
         module: {
@@ -253,12 +253,23 @@ describe('CredentialController', () => {
       })
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
-        data: expect.objectContaining({
+        data: {
           id: 'cred-1',
+          userId: 'user-1',
+          moduleId: 'module-1',
           holderName: 'John Doe',
           moduleName: 'JavaScript Basics',
+          moduleDescription: 'Learn JS fundamentals',
+          moduleCategory: 'Programming',
+          moduleDifficulty: 'easy',
           onChainId: 'chain-1',
-        }),
+          issuedAt: expect.any(String),
+          shareableLink: expect.any(String),
+          metadata: expect.objectContaining({
+            reward: 100,
+            verificationUrl: expect.any(String),
+          }),
+        },
       })
     })
 
@@ -343,7 +354,7 @@ describe('CredentialController', () => {
         issuedAt: new Date('2024-01-01'),
         user: {
           id: 'user-1',
-          name: 'John Doe',
+          username: 'John Doe',
         },
         module: {
           id: 'module-1',
@@ -368,16 +379,23 @@ describe('CredentialController', () => {
       })
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
-        data: expect.objectContaining({
+        data: {
           valid: true,
-          credential: expect.objectContaining({
+          credential: {
+            id: 'cred-1',
             holderName: 'John Doe',
             moduleName: 'JavaScript Basics',
-          }),
-          verification: expect.objectContaining({
+            moduleCategory: 'Programming',
+            moduleDifficulty: 'easy',
+            onChainId: 'chain-1',
+            issuedAt: expect.any(String),
+          },
+          verification: {
             status: 'verified',
-          }),
-        }),
+            message: expect.any(String),
+            verifiedAt: expect.any(String),
+          },
+        },
       })
     })
 
@@ -390,7 +408,7 @@ describe('CredentialController', () => {
         issuedAt: new Date('2024-01-01'),
         user: {
           id: 'user-1',
-          name: 'John Doe',
+          username: 'John Doe',
         },
         module: {
           id: 'module-1',
