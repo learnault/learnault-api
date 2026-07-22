@@ -4,14 +4,13 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    setupFiles: ['./tests/setup.ts'],
-    globalSetup: ['./tests/globalSetup.ts'],
-    include: ['tests/**/*.test.ts', 'tests/**/*.spec.ts', 'integrations/**/*.test.ts', 'integrations/**/*.spec.ts'],
+    // Skip global setup for audit tests (no database needed)
+    include: ['integrations/unit/audit.*.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
       outputDir: 'coverage',
-      include: ['src/**/*.ts'],
+      include: ['src/audit/**/*.ts'],
       exclude: ['src/**/*.d.ts'],
     },
   },
