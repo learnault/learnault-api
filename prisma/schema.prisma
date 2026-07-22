@@ -6,6 +6,37 @@ datasource db {
   provider = "postgresql"
 }
 
+enum TokenPurpose {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+enum TokenStatus {
+  PENDING
+  USED
+  REVOKED
+  EXPIRED
+}
+
+enum SessionStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum LoginAttemptStatus {
+  SUCCESS
+  FAILURE
+  LOCKED
+}
+
+enum AccountStatus {
+  ACTIVE
+  DEACTIVATED
+  PENDING_DELETION
+  DELETED
+}
+
 model User {
   id              String         @id @default(uuid())
   email           String         @unique
@@ -16,7 +47,7 @@ model User {
   isVerified      Boolean        @default(false)
   phone           String?        @unique
   phoneVerifiedAt DateTime?
-  status          String         @default("ACTIVE") // ACTIVE, DEACTIVATED, PENDING_DELETION, DELETED
+  status          AccountStatus  @default(ACTIVE)
   statusChangedAt DateTime?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -35,11 +66,12 @@ model User {
   emailDeliveries EmailDelivery[]
   learnerPreference LearnerPreference?
   preferenceAuditLogs PreferenceAuditLog[]
-  sessions        Session[]
+  sessions        RefreshSession[]
   audits          AuditLog[]
   dataExports     DataExportRequest[]
   deletionRequests AccountDeletionRequest[]
   otpChallenges   OtpChallenge[]
+  loginAttempts   LoginAttempt[]
 
   @@map("users")
 }
@@ -49,25 +81,20 @@ model LearnerPreference {
   userId              String   @unique
   user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Locale & regional
   locale              String   @default("en-US")
   timezone            String   @default("UTC")
 
-  // Connectivity
   lowDataMode         Boolean  @default(false)
 
-  // Accessibility
   highContrast        Boolean  @default(false)
   reduceMotion        Boolean  @default(false)
   screenReaderOptimized Boolean @default(false)
-  textSize            String   @default("medium") // small, medium, large, extra_large
+  textSize            String   @default("medium")
 
-  // Content
-  preferredDifficulty String   @default("beginner") // beginner, intermediate, advanced
+  preferredDifficulty String   @default("beginner")
   preferredCategories String[] @default([])
 
-  // Privacy (authoritative source for privacy-impacting preferences)
-  profileVisibility   String   @default("public") // public, private, connections
+  profileVisibility   String   @default("public")
   analyticsConsent    Boolean  @default(false)
   dataSharingConsent  Boolean  @default(false)
 
@@ -90,30 +117,35 @@ model PreferenceAuditLog {
   @@map("preference_audit_logs")
 }
 
-model Session {
-  id           String    @id @default(uuid())
-  userId       String
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token        String    @unique
-  refreshToken String?   @unique
-  userAgent    String?
-  ipAddress    String?
-  expiresAt    DateTime
-  isRevoked    Boolean   @default(false)
-  revokedAt    DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+model RefreshSession {
+  id             String        @id @default(uuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash      String        @unique
+  tokenFamily    String
+  userAgent      String?
+  ipAddress      String?
+  deviceId         String?
+  deviceName     String?
+  status         SessionStatus @default(ACTIVE)
+  expiresAt      DateTime
+  lastUsedAt    DateTime     @default(now())
+  revokedAt      DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
-  @@index([userId, isRevoked])
-  @@map("sessions")
+  @@index([userId, status])
+  @@index([tokenFamily])
+  @@index([expiresAt])
+  @@map("refresh_sessions")
 }
 
 model AuditLog {
   id        String   @id @default(uuid())
   userId    String?
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  action    String   // "PASSWORD_RESET", "EMAIL_VERIFIED", "LOGIN", etc.
-  metadata  String?  // JSON string for additional details (without secrets)
+  action    String
+  metadata  String?
   ipAddress String?
   userAgent String?
   createdAt DateTime @default(now())
@@ -123,18 +155,36 @@ model AuditLog {
 }
 
 model VerificationToken {
-  id        String   @id @default(uuid())
+  id        String         @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   tokenHash String
-  type      String   @default("EMAIL_VERIFICATION")
-  status    String   @default("PENDING") // PENDING, USED, REVOKED
+  purpose   TokenPurpose
+  status    TokenStatus    @default(PENDING)
   expiresAt DateTime
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  usedAt    DateTime?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 
-  @@index([userId, status])
+  @@index([userId, purpose, status])
+  @@index([expiresAt])
   @@map("verification_tokens")
+}
+
+model LoginAttempt {
+  id           String           @id @default(uuid())
+  userId       String
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email        String
+  ipAddress    String?
+  userAgent    String?
+  status       LoginAttemptStatus
+  failureReason String?
+  createdAt    DateTime         @default(now())
+
+  @@index([userId, createdAt])
+  @@index([email, createdAt])
+  @@map("login_attempts")
 }
 
 model EmailDelivery {
