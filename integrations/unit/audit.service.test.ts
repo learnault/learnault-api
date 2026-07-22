@@ -13,8 +13,8 @@ import type { CreateAuditLogInput } from '../../src/audit/types.js'
 
 describe('Audit Service', () => {
   beforeEach(async () => {
-    // Clean up test data
-    await prisma.auditLog.deleteMany({})
+    // Note: AuditLog is immutable and cannot be deleted via Prisma
+    // Tests use unique IDs and do not require cleanup
   })
 
   describe('Attribution Tests', () => {

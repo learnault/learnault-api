@@ -9,10 +9,10 @@ describe('Audit Middleware', () => {
   let testUserId: string
 
   beforeEach(async () => {
-    // Clean up test data
+    // Clean up mutable test data only
     await prisma.$executeRaw`DELETE FROM "users" WHERE "email" LIKE 'test-%'`
-    await prisma.auditLog.deleteMany({})
-    await prisma.transaction.deleteMany({})
+    // Note: AuditLog and Transaction are immutable and cannot be deleted
+    // Completion can be deleted
     await prisma.completion.deleteMany({})
 
     // Create test user

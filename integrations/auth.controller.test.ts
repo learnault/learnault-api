@@ -14,7 +14,15 @@ vi.mock('../src/config/database', () => ({
             create: vi.fn(),
             update: vi.fn(),
         },
+        $extends: vi.fn(function (this: any) {
+            return this
+        }),
     },
+}))
+
+// Mock the audit middleware to prevent extension issues
+vi.mock('../src/audit/middleware', () => ({
+    createDataLifecycleExtension: vi.fn(() => ({})),
 }))
 
 vi.mock('bcryptjs', () => ({
