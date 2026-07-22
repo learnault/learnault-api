@@ -28,6 +28,18 @@ vi.mock('@prisma/client', () => ({
     },
 }))
 
+// Mock the database config to return our mocked Prisma instance
+vi.mock('../../src/config/database', () => ({
+    default: {
+        webhookEndpoint: mockPrismaInstance.webhookEndpoint,
+        webhookDelivery: mockPrismaInstance.webhookDelivery,
+    },
+    prisma: {
+        webhookEndpoint: mockPrismaInstance.webhookEndpoint,
+        webhookDelivery: mockPrismaInstance.webhookDelivery,
+    },
+}))
+
 // Mock global fetch
 global.fetch = vi.fn()
 
