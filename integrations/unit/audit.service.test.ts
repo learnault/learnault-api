@@ -2,7 +2,7 @@
  * Tests for audit service - immutability, attribution, and redaction
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { prisma } from '../../src/config/database.js'
 import {
   createAuditLog,
@@ -12,9 +12,32 @@ import {
 import type { CreateAuditLogInput } from '../../src/audit/types.js'
 
 describe('Audit Service', () => {
+  const testUserIds = ['test-user-123', 'user-1', 'user-2']
+
   beforeEach(async () => {
-    // Note: AuditLog is immutable and cannot be deleted via Prisma
-    // Tests use unique IDs and do not require cleanup
+    // Create test users to satisfy foreign key constraints
+    for (const userId of testUserIds) {
+      await prisma.user.upsert({
+        where: { id: userId },
+        update: {},
+        create: {
+          id: userId,
+          email: `${userId}@test.com`,
+          username: userId,
+          password: 'hashed_password',
+          role: 'LEARNER',
+        },
+      })
+    }
+  })
+
+  afterEach(async () => {
+    // Clean up test data (users will cascade delete audit logs)
+    await prisma.user.deleteMany({
+      where: {
+        id: { in: testUserIds },
+      },
+    })
   })
 
   describe('Attribution Tests', () => {
