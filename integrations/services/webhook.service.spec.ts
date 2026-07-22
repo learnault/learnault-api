@@ -22,6 +22,10 @@ vi.mock('@prisma/client', () => ({
         webhookEndpoint = mockPrismaInstance.webhookEndpoint
         webhookDelivery = mockPrismaInstance.webhookDelivery
     },
+    Prisma: {
+        // Mock Prisma namespace utilities if needed
+        // Add any enums or types the service might use
+    },
 }))
 
 // Mock global fetch
