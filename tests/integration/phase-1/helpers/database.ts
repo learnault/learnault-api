@@ -10,6 +10,7 @@ export async function isDatabaseAvailable(): Promise<boolean> {
 
     return true
   } catch {
+
     return false
   }
 }
@@ -92,7 +93,7 @@ export async function countUserRecords(userId: string, table: string): Promise<n
   if (!model) {
     throw new Error(`Unknown table: ${table}`)
   }
-  
+
   return model.count({ where: { userId } })
 }
 
@@ -101,6 +102,7 @@ export async function countUserRecords(userId: string, table: string): Promise<n
  */
 export async function userExists(userId: string): Promise<boolean> {
   const user = await prisma.user.findUnique({ where: { id: userId } })
+
   return user !== null
 }
 

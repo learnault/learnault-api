@@ -53,6 +53,7 @@ export async function createMockWallet(userId: string) {
  * Create a funding request record.
  */
 export async function createFundingRequest(publicKey: string, amount: string = '10') {
+
   return prisma.stellarFunding.create({
     data: {
       publicKey,
@@ -88,6 +89,7 @@ export async function createFailedFunding(
   amount: string = '10',
   error: string = 'Funding failed'
 ) {
+
   return prisma.stellarFunding.create({
     data: {
       publicKey,

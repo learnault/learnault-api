@@ -20,8 +20,8 @@ export default async function globalSetup() {
   try {
     await execAsync('npx prisma migrate deploy')
     console.log('✅ Test database migrations applied')
-  } catch (error) {
-    console.error('❌ Failed to apply migrations:', error)
+  } catch {
+    console.error('❌ Failed to apply migrations')
     // Don't fail the entire test suite if migrations fail
     // This allows CI to at least check for syntax errors
     console.warn('⚠️  Continuing without database...')

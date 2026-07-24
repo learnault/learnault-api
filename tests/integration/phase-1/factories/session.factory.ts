@@ -15,6 +15,7 @@ export interface CreateSessionOptions {
  * Create a JWT token for a user.
  */
 export function createToken(userId: string, email: string, role: string = 'LEARNER'): string {
+
   return jwt.sign(
     { id: userId, email, role },
     env.JWT_SECRET,
@@ -112,6 +113,7 @@ export async function createExpiredVerificationToken(
  * Revoke all sessions for a user.
  */
 export async function revokeSessions(userId: string) {
+
   return prisma.session.updateMany({
     where: { userId, isRevoked: false },
     data: { isRevoked: true, revokedAt: new Date() },

@@ -67,6 +67,7 @@ export async function createUsers(count: number, options: CreateUserOptions = []
  * Create a verified user (email verified).
  */
 export async function createVerifiedUser(options: CreateUserOptions = {}) {
+
   return createUser({ ...options, isVerified: true })
 }
 
@@ -75,6 +76,7 @@ export async function createVerifiedUser(options: CreateUserOptions = {}) {
  */
 export async function createPhoneVerifiedUser(phone?: string, options: CreateUserOptions = {}) {
   const actualPhone = phone ?? `+234801${crypto.randomInt(1000000, 9999999)}`
+
   return createUser({
     ...options,
     phone: actualPhone,
@@ -86,6 +88,7 @@ export async function createPhoneVerifiedUser(phone?: string, options: CreateUse
  * Create a deactivated user.
  */
 export async function createDeactivatedUser(options: CreateUserOptions = {}) {
+
   return createUser({ ...options, status: 'DEACTIVATED' })
 }
 
@@ -93,6 +96,7 @@ export async function createDeactivatedUser(options: CreateUserOptions = {}) {
  * Create a user pending deletion.
  */
 export async function createPendingDeletionUser(options: CreateUserOptions = {}) {
+
   return createUser({ ...options, status: 'PENDING_DELETION' })
 }
 

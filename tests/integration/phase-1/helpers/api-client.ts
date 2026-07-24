@@ -47,6 +47,7 @@ export class ApiClient {
     }
     
     const response = await req
+
     return {
       status: response.status,
       body: response.body,
@@ -147,6 +148,7 @@ export class ApiClient {
  * Create an unauthenticated API client.
  */
 export function createClient(): ApiClient {
+
   return new ApiClient()
 }
 
@@ -154,5 +156,6 @@ export function createClient(): ApiClient {
  * Create an authenticated API client with the given token.
  */
 export function createAuthenticatedClient(token: string): ApiClient {
+
   return new ApiClient(token)
 }
