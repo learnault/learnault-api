@@ -45,8 +45,15 @@ jobs:
       - name: Lint (ESLint)
         run: pnpm run lint
 
-      - name: Run tests with coverage
-        run: pnpm run test:coverage
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Run unit tests
+        run: pnpm run test:ci
+        env:
+          DATABASE_URL: "file:./dev.db"
+          JWT_SECRET: "test-secret-for-ci"
+          NODE_ENV: "test"
 
       - name: Upload coverage (optional)
         uses: actions/upload-artifact@v4
