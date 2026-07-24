@@ -47,7 +47,7 @@ export async function createUser(options: CreateUserOptions = {}) {
       walletAddress: options.walletAddress,
     },
   })
-  
+
   return { user, plainPassword: password }
 }
 
@@ -59,6 +59,7 @@ export async function createUsers(count: number, options: CreateUserOptions = []
   for (let i = 0; i < count; i++) {
     users.push(await createUser(options))
   }
+
   return users
 }
 

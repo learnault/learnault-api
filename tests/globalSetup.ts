@@ -12,6 +12,7 @@ export default async function globalSetup() {
   
   if (!databaseUrl || databaseUrl.includes('file:')) {
     console.log('⚠️  Skipping database migrations (no PostgreSQL DATABASE_URL set)')
+
     return
   }
   

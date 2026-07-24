@@ -7,8 +7,9 @@ export async function isDatabaseAvailable(): Promise<boolean> {
   try {
     await prisma.$connect()
     await prisma.$disconnect()
+
     return true
-  } catch (error) {
+  } catch {
     return false
   }
 }
@@ -47,7 +48,7 @@ export async function cleanupDatabase(): Promise<void> {
     prisma.user.deleteMany(),
     prisma.module.deleteMany(),
   ])
-  } catch (error) {
+  } catch {
     // Silently fail if database is not available
     console.warn('⚠️  Database cleanup skipped (database not available)')
   }
@@ -111,5 +112,6 @@ export async function getUserStatus(userId: string): Promise<string | null> {
     where: { id: userId },
     select: { status: true }
   })
+
   return user?.status ?? null
 }

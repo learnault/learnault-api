@@ -55,6 +55,7 @@ export async function createSessions(userId: string, count: number) {
       ipAddress: `192.168.1.${i + 1}`,
     }))
   }
+
   return sessions
 }
 
@@ -103,7 +104,7 @@ export async function createExpiredVerificationToken(
       expiresAt,
     },
   })
-  
+
   return { token: record, tokenValue }
 }
 

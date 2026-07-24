@@ -21,7 +21,7 @@ describe('Phone OTP Authentication', () => {
   describe('POST /auth/otp/request - LOGIN purpose', () => {
     it('should send OTP for registered phone number', async () => {
       const phone = '+2348012345678'
-      const { user } = await createPhoneVerifiedUser(phone)
+      await createPhoneVerifiedUser(phone)
 
       const response = await client.post('/auth/otp/request', { phone })
 
@@ -47,7 +47,7 @@ describe('Phone OTP Authentication', () => {
 
     it('should revoke previous pending challenges', async () => {
       const phone = '+2348012345678'
-      const { user } = await createPhoneVerifiedUser(phone)
+      await createPhoneVerifiedUser(phone)
 
       // Request first OTP
       await client.post('/auth/otp/request', { phone })
@@ -123,7 +123,7 @@ describe('Phone OTP Authentication', () => {
   describe('POST /auth/otp/verify - LOGIN purpose', () => {
     it('should login successfully with valid OTP', async () => {
       const phone = '+2348012345678'
-      const { user } = await createPhoneVerifiedUser(phone)
+      await createPhoneVerifiedUser(phone)
 
       // Request OTP
       await client.post('/auth/otp/request', { phone })

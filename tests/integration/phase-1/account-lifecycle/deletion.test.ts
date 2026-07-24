@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createAuthenticatedClient } from '../helpers/api-client'
-import { cleanupDatabase, getUserStatus } from '../helpers/database'
+import { cleanupDatabase } from '../helpers/database'
 import { createUser } from '../factories/user.factory'
 import { createToken } from '../factories/session.factory'
 import {

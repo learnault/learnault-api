@@ -69,6 +69,7 @@ export class ApiClient {
     }
     
     const response = await req
+
     return {
       status: response.status,
       body: response.body,
@@ -91,6 +92,7 @@ export class ApiClient {
     }
     
     const response = await req
+
     return {
       status: response.status,
       body: response.body,
@@ -109,6 +111,7 @@ export class ApiClient {
     }
     
     const response = await req
+
     return {
       status: response.status,
       body: response.body,
@@ -131,6 +134,7 @@ export class ApiClient {
     }
     
     const response = await req
+
     return {
       status: response.status,
       body: response.body,

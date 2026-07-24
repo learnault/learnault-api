@@ -114,7 +114,7 @@ describe('POST /auth/login', () => {
   })
 
   it('should enforce rate limiting on login endpoint', async () => {
-    const { user, plainPassword } = await createUser()
+    const { user } = await createUser()
     
     const requests = []
     for (let i = 0; i < 12; i++) {

@@ -11,6 +11,7 @@ export function generateMockStellarPublicKey(): string {
   for (let i = 0; i < 55; i++) {
     key += chars[Math.floor(Math.random() * chars.length)]
   }
+
   return key
 }
 
@@ -24,6 +25,7 @@ export function generateMockStellarSecretKey(): string {
   for (let i = 0; i < 55; i++) {
     key += chars[Math.floor(Math.random() * chars.length)]
   }
+
   return key
 }
 
