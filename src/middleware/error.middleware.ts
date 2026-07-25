@@ -1,8 +1,34 @@
 import { AppError, InternalServerError, NotFoundError } from '../utils/errors'
 import { NextFunction, Request, Response } from 'express'
-
+import { ErrorCode } from '../types/api.types'
 import { env } from '../config/env'
 import logger from '../config/logger'
+
+/**
+ * Helper to map HTTP status code to standard ErrorCode
+ */
+export const mapStatusCodeToErrorCode = (statusCode: number): ErrorCode => {
+  switch (statusCode) {
+    case 400:
+      return ErrorCode.BAD_REQUEST
+    case 401:
+      return ErrorCode.UNAUTHORIZED
+    case 403:
+      return ErrorCode.FORBIDDEN
+    case 404:
+      return ErrorCode.RESOURCE_NOT_FOUND
+    case 409:
+      return ErrorCode.CONFLICT
+    case 422:
+      return ErrorCode.VALIDATION_ERROR
+    case 429:
+      return ErrorCode.RATE_LIMIT_EXCEEDED
+    case 503:
+      return ErrorCode.SERVICE_UNAVAILABLE
+    default:
+      return ErrorCode.INTERNAL_SERVER_ERROR
+  }
+}
 
 /**
  * Global error handler middleware
@@ -13,9 +39,11 @@ export const errorHandler = (
   err: Error | AppError,
   req: Request,
   res: Response,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  next?: NextFunction
 ): void => {
   let error = err
-  
+
   // Get request ID for correlation
   const requestId = req.requestId || 'unknown'
 
@@ -36,15 +64,18 @@ export const errorHandler = (
   }
 
   const statusCode = (error as AppError).statusCode || 500
+  const code =
+    (error as AppError).code || mapStatusCodeToErrorCode(statusCode)
   const isDevelopment = env.NODE_ENV === 'development'
 
   const errorResponse: any = {
     success: false,
     error: {
       message: (error as AppError).message,
-      code: (error as AppError).statusCode || 'INTERNAL_SERVER_ERROR',
+      code,
     },
-    requestId, // Include request ID in error response for correlation
+    requestId,
+    timestamp: new Date().toISOString(),
   }
 
   if (isDevelopment && err.stack) {
@@ -99,7 +130,7 @@ export const asyncHandler = (
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch((error) => {
       const requestId = req.requestId || 'unknown'
-      
+
       logger.error({
         message: 'Async error caught',
         error: error.message,
