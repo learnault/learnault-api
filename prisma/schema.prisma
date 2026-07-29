@@ -35,6 +35,7 @@ model User {
   emailDeliveries EmailDelivery[]
   learnerPreference LearnerPreference?
   preferenceAuditLogs PreferenceAuditLog[]
+  learnerProfile  LearnerProfile?
   sessions        Session[]
   audits          AuditLog[]
   dataExports     DataExportRequest[]
@@ -75,6 +76,32 @@ model LearnerPreference {
   updatedAt           DateTime @updatedAt
 
   @@map("learner_preferences")
+}
+
+model LearnerProfile {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  displayName   String?
+  bio           String?
+  avatarUrl     String?
+  country       String?
+  timezone      String?
+  languages     String[] @default([])
+  level         String   @default("beginner") // beginner, intermediate, advanced, expert
+  interests     String[] @default([])
+  goals         String[] @default([])
+
+  visibility    String   @default("private") // private, employer, public
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([country])
+  @@index([level])
+  @@index([visibility])
+  @@map("learner_profiles")
 }
 
 model PreferenceAuditLog {
