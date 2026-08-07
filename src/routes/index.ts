@@ -9,6 +9,8 @@ import notificationRoutes from './v1/notifications.routes'
 import syncRoutes from './v1/sync.routes'
 import referralRoutes from './v1/referrals.routes'
 import accountRoutes from './v1/account.routes'
+import onboardingRoutes from './v1/onboarding.routes'
+import consentRoutes from './v1/consent.routes'
 
 const router: Router = Router()
 
@@ -26,5 +28,7 @@ router.use('/v1/notifications', notificationRoutes)
 router.use('/v1/sync', syncRoutes)
 router.use('/v1/referrals', referralRoutes)
 router.use('/v1/account', accountRoutes)
+router.use('/v1/onboarding', onboardingRoutes)
+router.use('/v1/consents', consentRoutes)
 
 export default router

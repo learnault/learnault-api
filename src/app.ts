@@ -12,17 +12,23 @@ import routes from './routes'
 import healthRoutes from './routes/health.routes'
 import { errorHandler, notFoundHandler } from './middleware/error.middleware'
 import { requestContext } from './middleware/request-context'
+import { apiVersionHeader } from './middleware/versioning.middleware'
 
 const app: express.Application = express()
 
 app.use(express.json())
 app.use(cors())
-app.use(helmet({
-  contentSecurityPolicy: false, // Disable CSP for Swagger UI to work correctly
-}))
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // Disable CSP for Swagger UI to work correctly
+  })
+)
 
 // Request context middleware - must be early to track all requests
 app.use(requestContext)
+
+// Version header middleware
+app.use(apiVersionHeader)
 
 app.use(morgan('dev'))
 
