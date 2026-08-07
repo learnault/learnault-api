@@ -38,14 +38,15 @@ model User {
   emailDeliveries     EmailDelivery[]
   learnerPreference   LearnerPreference?
   preferenceAuditLogs PreferenceAuditLog[]
-  sessions            Session[]
-  audits              AuditLog[]
-  dataExports         DataExportRequest[]
-  deletionRequests    AccountDeletionRequest[]
-  otpChallenges       OtpChallenge[]
+  learnerProfile  LearnerProfile?
+  sessions        Session[]
+  audits          AuditLog[]
+  dataExports     DataExportRequest[]
+  deletionRequests AccountDeletionRequest[]
+  otpChallenges   OtpChallenge[]
+  onboarding      OnboardingProgress?
+  consentRecords  ConsentRecord[]
 
-  @@index([deletedAt])
-  @@index([archivedAt])
   @@map("users")
 }
 
@@ -84,6 +85,70 @@ model LearnerPreference {
   @@index([deletedAt])
   @@index([archivedAt])
   @@map("learner_preferences")
+}
+
+model LearnerProfile {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  displayName   String?
+  bio           String?
+  avatarUrl     String?
+  country       String?
+  timezone      String?
+  languages     String[] @default([])
+  level         String   @default("beginner") // beginner, intermediate, advanced, expert
+  interests     String[] @default([])
+  goals         String[] @default([])
+
+  visibility    String   @default("private") // private, employer, public
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([country])
+  @@index([level])
+  @@index([visibility])
+  @@map("learner_profiles")
+}
+
+model OnboardingProgress {
+  id             String    @id @default(uuid())
+  userId         String    @unique
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  version        String   @default("v1")
+  currentStep    String
+  completedSteps String[] @default([])
+  status         String   @default("in_progress") // in_progress, completed
+
+  startedAt      DateTime @default(now())
+  completedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status])
+  @@map("onboarding_progress")
+}
+
+model ConsentRecord {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  purpose       String   // terms_of_service, privacy_policy, marketing_emails, analytics, data_sharing
+  required      Boolean  @default(false)
+  policyVersion String
+  status        String   // granted, withdrawn
+  source        String   // onboarding, settings, api
+  grantedAt     DateTime?
+  withdrawnAt   DateTime?
+
+  createdAt     DateTime @default(now())
+
+  @@index([userId, purpose, createdAt])
+  @@map("consent_records")
 }
 
 model PreferenceAuditLog {

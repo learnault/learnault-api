@@ -14,6 +14,12 @@ vi.mock('../src/config/database', () => ({
             create: vi.fn(),
             update: vi.fn(),
         },
+        verificationToken: {
+            findFirst: vi.fn(),
+            create: vi.fn(),
+            update: vi.fn(),
+            updateMany: vi.fn(),
+        },
         $extends: vi.fn(function (this: any) {
             return this
         }),
@@ -68,7 +74,13 @@ describe('AuthController', () => {
                 email: 'test@example.com',
                 username: 'testuser',
                 role: 'LEARNER',
-            })
+            });
+            (prisma.verificationToken.create as any).mockResolvedValue({
+                id: 'vt1',
+                userId: '1',
+                tokenHash: 'hash',
+                expiresAt: new Date(),
+            });
 
             await authController.register(mockRequest as Request, mockResponse as Response)
 

@@ -132,10 +132,12 @@ describe('validate', () => {
     middleware(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['String must contain at least 5 character(s)'] }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { body: ['String must contain at least 5 character(s)'] }
+      })
+    )
     expect(next).not.toHaveBeenCalled()
   })
 
@@ -147,10 +149,12 @@ describe('validate', () => {
     middleware(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { query: expect.any(Array) }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { query: expect.any(Array) }
+      })
+    )
     expect(next).not.toHaveBeenCalled()
   })
 
@@ -162,10 +166,12 @@ describe('validate', () => {
     middleware(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { params: ['Invalid ID format'] }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { params: ['Invalid ID format'] }
+      })
+    )
     expect(next).not.toHaveBeenCalled()
   })
 
@@ -228,10 +234,12 @@ describe('validateProfileUpdate', () => {
     validateProfileUpdate(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['Username must be at least 3 characters long'] }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { body: ['Username must be at least 3 characters long'] }
+      })
+    )
     expect(next).not.toHaveBeenCalled()
   })
 
@@ -241,10 +249,12 @@ describe('validateProfileUpdate', () => {
     validateProfileUpdate(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['Username must be less than 30 characters'] }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { body: ['Username must be less than 30 characters'] }
+      })
+    )
   })
 
   it('returns 400 when username contains invalid characters', () => {
@@ -253,10 +263,12 @@ describe('validateProfileUpdate', () => {
     validateProfileUpdate(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['Username can only contain letters, numbers, and underscores'] }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { body: ['Username can only contain letters, numbers, and underscores'] }
+      })
+    )
   })
 
   it('returns 400 when firstName exceeds 50 characters', () => {
@@ -265,10 +277,12 @@ describe('validateProfileUpdate', () => {
     validateProfileUpdate(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['First name must be less than 50 characters'] }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { body: ['First name must be less than 50 characters'] }
+      })
+    )
   })
 
   it('returns 400 when lastName exceeds 50 characters', () => {
@@ -277,10 +291,12 @@ describe('validateProfileUpdate', () => {
     validateProfileUpdate(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['Last name must be less than 50 characters'] }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { body: ['Last name must be less than 50 characters'] }
+      })
+    )
   })
 
   it('returns 400 when bio exceeds 500 characters', () => {
@@ -289,10 +305,12 @@ describe('validateProfileUpdate', () => {
     validateProfileUpdate(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['Bio must be less than 500 characters'] }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { body: ['Bio must be less than 500 characters'] }
+      })
+    )
   })
 
   it('returns 400 when avatar is not a valid URL', () => {
@@ -301,10 +319,12 @@ describe('validateProfileUpdate', () => {
     validateProfileUpdate(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['Invalid URL format'] }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { body: ['Invalid URL format'] }
+      })
+    )
   })
 
   it('returns multiple errors when multiple fields are invalid', () => {
@@ -342,10 +362,12 @@ describe('validatePasswordChange', () => {
     validatePasswordChange(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['Current password is required'] }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { body: ['Current password is required'] }
+      })
+    )
   })
 
   it('returns 400 when newPassword is missing', () => {
@@ -354,10 +376,12 @@ describe('validatePasswordChange', () => {
     validatePasswordChange(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['New password is required'] }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { body: ['New password is required'] }
+      })
+    )
   })
 
   it('returns 400 when newPassword is too short', () => {
@@ -366,10 +390,12 @@ describe('validatePasswordChange', () => {
     validatePasswordChange(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['Password must be at least 8 characters long'] }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { body: ['Password must be at least 8 characters long'] }
+      })
+    )
   })
 
   it('returns 400 when newPassword has no lowercase letter', () => {
@@ -378,10 +404,12 @@ describe('validatePasswordChange', () => {
     validatePasswordChange(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['Password must contain at least one lowercase letter'] }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { body: ['Password must contain at least one lowercase letter'] }
+      })
+    )
   })
 
   it('returns 400 when newPassword has no uppercase letter', () => {
@@ -390,10 +418,12 @@ describe('validatePasswordChange', () => {
     validatePasswordChange(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['Password must contain at least one uppercase letter'] }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { body: ['Password must contain at least one uppercase letter'] }
+      })
+    )
   })
 
   it('returns 400 when newPassword has no number', () => {
@@ -402,10 +432,12 @@ describe('validatePasswordChange', () => {
     validatePasswordChange(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['Password must contain at least one number'] }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { body: ['Password must contain at least one number'] }
+      })
+    )
   })
 
   it('returns 400 when newPassword has no special character', () => {
@@ -414,10 +446,12 @@ describe('validatePasswordChange', () => {
     validatePasswordChange(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['Password must contain at least one special character'] }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { body: ['Password must contain at least one special character'] }
+      })
+    )
   })
 
   it('returns 400 when newPassword is the same as currentPassword', () => {
@@ -426,10 +460,12 @@ describe('validatePasswordChange', () => {
     validatePasswordChange(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['New password must be different from current password'] }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { body: ['New password must be different from current password'] }
+      })
+    )
   })
 })
 
@@ -453,10 +489,12 @@ describe('validateWalletAddress', () => {
     validateWalletAddress(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['Required'] }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { body: ['Required'] }
+      })
+    )
     expect(next).not.toHaveBeenCalled()
   })
 
@@ -466,10 +504,12 @@ describe('validateWalletAddress', () => {
     validateWalletAddress(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['Invalid Stellar wallet address format'] }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { body: ['Invalid Stellar wallet address format'] }
+      })
+    )
   })
 
   it('returns 400 when walletAddress is too short', () => {
@@ -478,10 +518,12 @@ describe('validateWalletAddress', () => {
     validateWalletAddress(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['Invalid Stellar wallet address format'] }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { body: ['Invalid Stellar wallet address format'] }
+      })
+    )
   })
 
   it('returns 400 when walletAddress contains lowercase characters', () => {
@@ -490,10 +532,12 @@ describe('validateWalletAddress', () => {
     validateWalletAddress(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['Invalid Stellar wallet address format'] }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { body: ['Invalid Stellar wallet address format'] }
+      })
+    )
   })
 
   it('returns 400 when walletAddress is not a string', () => {
@@ -502,10 +546,12 @@ describe('validateWalletAddress', () => {
     validateWalletAddress(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(400)
-    expect(res.json).toHaveBeenCalledWith({
-      message: 'Validation failed',
-      errors: { body: ['Expected string, received number'] }
-    })
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Validation failed',
+        errors: { body: ['Expected string, received number'] }
+      })
+    )
     expect(next).not.toHaveBeenCalled()
   })
 })
