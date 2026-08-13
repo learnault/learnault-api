@@ -74,13 +74,13 @@ describe('AuthController', () => {
                 email: 'test@example.com',
                 username: 'testuser',
                 role: 'LEARNER',
-            });
-            (prisma.verificationToken.create as any).mockResolvedValue({
+            })
+            ;(prisma.verificationToken.create as any).mockResolvedValue({
                 id: 'vt1',
                 userId: '1',
                 tokenHash: 'hash',
                 expiresAt: new Date(),
-            });
+            })
 
             await authController.register(mockRequest as Request, mockResponse as Response)
 
