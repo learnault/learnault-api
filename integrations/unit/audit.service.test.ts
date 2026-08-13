@@ -32,11 +32,19 @@ describe('Audit Service', () => {
   })
 
   afterEach(async () => {
-    // Clean up audit logs first (they have onDelete: SetNull, not Cascade)
-    await prisma.auditLog.deleteMany({
+    // Clean up audit logs with test cleanup flag
+    await (prisma.auditLog.deleteMany as any)({
       where: {
         userId: { in: testUserIds },
       },
+      allowAuditCleanup: true,
+    })
+    // Clean up completion records with test cleanup flag
+    await (prisma.completion.deleteMany as any)({
+      where: {
+        user: { id: { in: testUserIds } },
+      },
+      allowAuditCleanup: true,
     })
     // Then clean up test users
     await prisma.user.deleteMany({

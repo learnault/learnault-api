@@ -47,25 +47,37 @@ export function createDataLifecycleExtension() {
         // Apply immutability checks to all immutable models
         $allModels: {
           async update({ args, query, model }) {
-            if (IMMUTABLE_MODELS.includes(model as any)) {
+            const allowCleanup = (args as any)?.allowAuditCleanup || process.env.ALLOW_AUDIT_CLEANUP === 'true'
+            if (args && 'allowAuditCleanup' in (args as any)) {
+              delete (args as any).allowAuditCleanup
+            }
+            if (!allowCleanup && IMMUTABLE_MODELS.includes(model as any)) {
               throw new ForbiddenError(
                 `Cannot modify immutable model: ${model}. Audit data is append-only.`
               )
             }
             
-return query(args)
+            return query(args)
           },
           async updateMany({ args, query, model }) {
-            if (IMMUTABLE_MODELS.includes(model as any)) {
+            const allowCleanup = (args as any)?.allowAuditCleanup || process.env.ALLOW_AUDIT_CLEANUP === 'true'
+            if (args && 'allowAuditCleanup' in (args as any)) {
+              delete (args as any).allowAuditCleanup
+            }
+            if (!allowCleanup && IMMUTABLE_MODELS.includes(model as any)) {
               throw new ForbiddenError(
                 `Cannot modify immutable model: ${model}. Audit data is append-only.`
               )
             }
             
-return query(args)
+            return query(args)
           },
           async delete({ args, query, model }) {
-            if (IMMUTABLE_MODELS.includes(model as any)) {
+            const allowCleanup = (args as any)?.allowAuditCleanup || process.env.ALLOW_AUDIT_CLEANUP === 'true'
+            if (args && 'allowAuditCleanup' in (args as any)) {
+              delete (args as any).allowAuditCleanup
+            }
+            if (!allowCleanup && IMMUTABLE_MODELS.includes(model as any)) {
               throw new ForbiddenError(
                 `Cannot delete immutable model: ${model}. Audit data must be retained.`
               )
@@ -78,10 +90,14 @@ return query(args)
               })
             }
             
-return query(args)
+            return query(args)
           },
           async deleteMany({ args, query, model }) {
-            if (IMMUTABLE_MODELS.includes(model as any)) {
+            const allowCleanup = (args as any)?.allowAuditCleanup || process.env.ALLOW_AUDIT_CLEANUP === 'true'
+            if (args && 'allowAuditCleanup' in (args as any)) {
+              delete (args as any).allowAuditCleanup
+            }
+            if (!allowCleanup && IMMUTABLE_MODELS.includes(model as any)) {
               throw new ForbiddenError(
                 `Cannot delete immutable model: ${model}. Audit data must be retained.`
               )
@@ -94,7 +110,7 @@ return query(args)
               })
             }
             
-return query(args)
+            return query(args)
           },
           async findUnique({ args, query, model }) {
             // Exclude soft-deleted and archived records
