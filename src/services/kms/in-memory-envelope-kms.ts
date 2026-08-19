@@ -1,9 +1,16 @@
-import { createCipheriv, randomBytes, randomUUID } from 'node:crypto'
+import {
+  createCipheriv,
+  createDecipheriv,
+  randomBytes,
+  randomUUID,
+} from 'node:crypto'
 import type {
   KmsSecretStore,
+  SensitiveValue,
   StoredStellarKey,
   StoreStellarSecretInput,
 } from './kms-secret-store'
+import { SensitiveValue as ProtectedValue } from './kms-secret-store'
 
 interface EncryptedEntry {
   material: StoredStellarKey
@@ -16,6 +23,8 @@ export interface InMemoryEnvelopeKmsHooks {
   beforeLookup?: () => void | Promise<void>
   beforeStore?: () => void | Promise<void>
   afterStore?: () => void | Promise<void>
+  beforeLoad?: () => void | Promise<void>
+  beforeDelete?: () => void | Promise<void>
 }
 
 /**
@@ -72,6 +81,38 @@ export class InMemoryEnvelopeKms implements KmsSecretStore {
     await this.hooks.afterStore?.()
 
     return material
+  }
+
+  async loadStellarSecret(
+    opaqueReference: string,
+  ): Promise<SensitiveValue | null> {
+    await this.hooks.beforeLoad?.()
+    const entry = [...this.#entries.values()].find(
+      (candidate) => candidate.material.opaqueReference === opaqueReference,
+    )
+    if (!entry) return null
+
+    const decipher = createDecipheriv(
+      'aes-256-gcm',
+      this.#masterKey,
+      Buffer.from(entry.iv, 'base64'),
+    )
+    decipher.setAuthTag(Buffer.from(entry.authTag, 'base64'))
+    const plaintext = Buffer.concat([
+      decipher.update(Buffer.from(entry.ciphertext, 'base64')),
+      decipher.final(),
+    ]).toString('utf8')
+
+    return new ProtectedValue(plaintext)
+  }
+
+  async deleteStellarSecret(opaqueReference: string): Promise<void> {
+    await this.hooks.beforeDelete?.()
+    const match = [...this.#entries.entries()].find(
+      ([, entry]) => entry.material.opaqueReference === opaqueReference,
+    )
+    if (!match) throw new Error('KMS reference not found')
+    this.#entries.delete(match[0])
   }
 
   get storedKeyCount(): number {
