@@ -6,6 +6,7 @@ export const CONSENT_PURPOSES = [
   'marketing_emails',
   'analytics',
   'data_sharing',
+  'custodial_wallet',
 ] as const
 export type ConsentPurpose = typeof CONSENT_PURPOSES[number]
 
