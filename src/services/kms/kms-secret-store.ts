@@ -41,4 +41,11 @@ export interface StoreStellarSecretInput {
 export interface KmsSecretStore {
   findByIdempotencyKey(idempotencyKey: string): Promise<StoredStellarKey | null>
   storeStellarSecret(input: StoreStellarSecretInput): Promise<StoredStellarKey>
+  /**
+   * Reveal signing material only inside the self-custody export boundary.
+   * Callers must never stringify, log, cache, or persist the returned value.
+   */
+  loadStellarSecret(opaqueReference: string): Promise<SensitiveValue | null>
+  /** Permanently remove signing material after the custody transition commits. */
+  deleteStellarSecret(opaqueReference: string): Promise<void>
 }
