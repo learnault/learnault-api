@@ -67,6 +67,7 @@ function makeGif(width = 20, height = 10): Buffer {
   buf.write('GIF89a', 0, 'ascii')
   buf.writeUInt16LE(width, 6)
   buf.writeUInt16LE(height, 8)
+
   return buf
 }
 
@@ -81,6 +82,7 @@ function makeWebp(width = 80, height = 60): Buffer {
   // VP8 bitstream header stores (actual - 1) at offsets 26-29
   buf.writeUInt16LE(width - 1, 26)
   buf.writeUInt16LE(height - 1, 28)
+
   return buf
 }
 
@@ -93,6 +95,7 @@ function crc32(buf: Buffer): number {
       crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0)
     }
   }
+
   return (crc ^ 0xffffffff) >>> 0
 }
 

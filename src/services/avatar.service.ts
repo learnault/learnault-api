@@ -6,7 +6,6 @@ import {
   AVATAR_ALLOWED_MIME_TYPES,
 } from '../types/avatar.types'
 import type {
-  AvatarRecord,
   AvatarCurrentResponse,
   AvatarFinalizeResponse,
   UploadIntentResponse,
@@ -14,7 +13,7 @@ import type {
 import type { StorageProvider } from '../types/avatar.types'
 import { validateAvatarBytes } from './asset-validation.service'
 
-const VARIANT_SPECS: Array<{ label: string; suffix: string }> = [
+const VARIANT_SPECS: Array<{ label: string, suffix: string }> = [
   { label: 'original', suffix: '' },
   { label: 'thumb', suffix: '_thumb' },
   { label: 'medium', suffix: '_medium' },
@@ -45,7 +44,6 @@ export class AvatarService {
     }
 
     const id = crypto.randomUUID()
-    const timestamp = Date.now()
     const safeName = (originalName ?? 'avatar').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80)
     const storageKey = `avatars/${userId}/${id}/${safeName}`
 
@@ -110,6 +108,7 @@ export class AvatarService {
       const actual = crypto.createHash('sha256').update(data).digest('hex')
       if (actual !== sha256) {
         await this.markFailed(avatar.id, 'Integrity check failed (SHA-256 mismatch)')
+
         throw new AvatarValidationError('Integrity check failed', 422)
       }
     }
@@ -118,6 +117,7 @@ export class AvatarService {
     const validation = validateAvatarBytes(data, avatar.contentType, avatar.originalBytes || undefined)
     if (!validation.ok) {
       await this.markFailed(avatar.id, validation.error ?? 'Validation failed')
+
       throw new AvatarValidationError(validation.error ?? 'Validation failed', 422)
     }
 
@@ -230,7 +230,9 @@ export class AvatarService {
       include: { variants: true },
     })
 
-    if (!avatar) return null
+    if (!avatar) {
+      return null
+    }
 
     return {
       id: avatar.id,

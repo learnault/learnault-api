@@ -58,11 +58,18 @@ function makeValidPng(): Buffer {
   // Minimal 1×1 PNG — 67 bytes, valid magic + IHDR
   const buf = Buffer.alloc(2048)
   // PNG signature
-  buf[0] = 0x89; buf[1] = 0x50; buf[2] = 0x4e; buf[3] = 0x47
-  buf[4] = 0x0d; buf[5] = 0x0a; buf[6] = 0x1a; buf[7] = 0x0a
+  buf[0] = 0x89
+  buf[1] = 0x50
+  buf[2] = 0x4e
+  buf[3] = 0x47
+  buf[4] = 0x0d
+  buf[5] = 0x0a
+  buf[6] = 0x1a
+  buf[7] = 0x0a
   // IHDR width/height at offsets 16-23
   buf.writeUInt32BE(100, 16)
   buf.writeUInt32BE(80, 20)
+
   return buf
 }
 
@@ -141,7 +148,7 @@ describe('AvatarService', () => {
     it('normalises Content-Type parameters', async () => {
       mockCreate.mockResolvedValue({ id: 'avatar-1', userId, status: 'PENDING' })
 
-      const result = await service.createUploadIntent(userId, 'image/png; charset=binary')
+      await service.createUploadIntent(userId, 'image/png; charset=binary')
       expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ contentType: 'image/png' }),
@@ -228,8 +235,6 @@ describe('AvatarService', () => {
     it('marks avatar as FAILED on validation failure', async () => {
       // Put invalid data that looks like PNG header but is garbage
       storage.put(uploadKey, Buffer.alloc(2048, 0xff))
-      // Override the stored data so validation sees the garbage
-      // The mock returns PENDING with the key pointing to the garbage
 
       await expect(service.finalize(userId, uploadKey)).rejects.toThrow(AvatarValidationError)
     })

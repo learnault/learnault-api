@@ -2,14 +2,13 @@ import {
   AVATAR_ALLOWED_MIME_TYPES,
   AVATAR_MAX_BYTES,
   AVATAR_MIN_BYTES,
-  type AvatarAllowedMime,
 } from '../types/avatar.types'
 import { sniffMimeType, extractImageDimensions } from './storage/in-memory-storage'
 
 export interface ValidationResult {
   ok: boolean
   detectedMime: string | null
-  dimensions: { width: number; height: number } | null
+  dimensions: { width: number, height: number } | null
   error?: string
 }
 

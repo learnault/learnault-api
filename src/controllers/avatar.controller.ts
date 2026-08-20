@@ -67,6 +67,7 @@ export class AvatarController {
       const userId = req.user?.id
       if (!userId) {
         res.status(401).json({ error: 'Unauthorized' })
+
         return
       }
 
@@ -76,6 +77,7 @@ export class AvatarController {
           error: 'Validation failed',
           details: validation.error.format(),
         })
+
         return
       }
 
@@ -90,6 +92,7 @@ export class AvatarController {
     } catch (error) {
       if (error instanceof AvatarValidationError) {
         res.status(error.statusCode).json({ error: error.message })
+
         return
       }
       console.error('Upload intent error:', error)
@@ -138,6 +141,7 @@ export class AvatarController {
       const userId = req.user?.id
       if (!userId) {
         res.status(401).json({ error: 'Unauthorized' })
+
         return
       }
 
@@ -147,6 +151,7 @@ export class AvatarController {
           error: 'Validation failed',
           details: validation.error.format(),
         })
+
         return
       }
 
@@ -160,6 +165,7 @@ export class AvatarController {
     } catch (error) {
       if (error instanceof AvatarValidationError) {
         res.status(error.statusCode).json({ error: error.message })
+
         return
       }
       console.error('Avatar finalize error:', error)
@@ -188,6 +194,7 @@ export class AvatarController {
       const userId = req.user?.id
       if (!userId) {
         res.status(401).json({ error: 'Unauthorized' })
+
         return
       }
 
@@ -196,6 +203,7 @@ export class AvatarController {
     } catch (error) {
       if (error instanceof AvatarValidationError) {
         res.status(error.statusCode).json({ error: error.message })
+
         return
       }
       console.error('Avatar delete error:', error)
@@ -222,6 +230,7 @@ export class AvatarController {
       const userId = req.user?.id
       if (!userId) {
         res.status(401).json({ error: 'Unauthorized' })
+
         return
       }
 
@@ -229,6 +238,7 @@ export class AvatarController {
 
       if (!avatar) {
         res.status(200).json({ data: null })
+
         return
       }
 

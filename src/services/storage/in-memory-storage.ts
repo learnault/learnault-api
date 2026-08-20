@@ -12,7 +12,7 @@ export class InMemoryStorageProvider implements StorageProvider {
   private readonly objects = new Map<string, Buffer>()
 
   async createSignedUpload(
-    userId: string,
+    _userId: string,
     key: string,
     _contentType: string,
     expiresMs: number,
@@ -31,6 +31,7 @@ export class InMemoryStorageProvider implements StorageProvider {
     if (!buf) {
       throw new Error(`Object not found: ${storageKey}`)
     }
+
     return Buffer.from(buf)
   }
 
@@ -83,12 +84,15 @@ const JPEG_SOI = Buffer.from([0xff, 0xd8])
  * Returns null when the format is unrecognised or the header is truncated.
  */
 export function extractImageDimensions(data: Buffer): ImageDimensions | null {
-  if (data.length < 24) return null
+  if (data.length < 24) {
+    return null
+  }
 
   // PNG — IHDR chunk at offset 16 (after 8-byte signature + 4-byte length + 4-byte "IHDR")
   if (data.subarray(0, 8).equals(PNG_IHDR_SIGNATURE)) {
     const width = data.readUInt32BE(16)
     const height = data.readUInt32BE(20)
+
     return { width, height }
   }
 
@@ -96,6 +100,7 @@ export function extractImageDimensions(data: Buffer): ImageDimensions | null {
   if (data.subarray(0, 6).equals(GIF87A) || data.subarray(0, 6).equals(GIF89A)) {
     const width = data.readUInt16LE(6)
     const height = data.readUInt16LE(8)
+
     return { width, height }
   }
 
@@ -115,55 +120,84 @@ export function extractImageDimensions(data: Buffer): ImageDimensions | null {
 function parseJpegDimensions(data: Buffer): ImageDimensions | null {
   let offset = 2
   while (offset < data.length - 1) {
-    if (data[offset] !== 0xff) return null
+    if (data[offset] !== 0xff) {
+      return null
+    }
     const marker = data[offset + 1]
     // SOF0–SOF3, SOF5–SOF7, SOF9–SOF11, SOF13–SOF15
-    if ((marker >= 0xc0 && marker <= 0xc3) || (marker >= 0xc5 && marker <= 0xc7) ||
-        (marker >= 0xc9 && marker <= 0xcb) || (marker >= 0xcd && marker <= 0xcf)) {
-      if (offset + 9 >= data.length) return null
+    if (
+      (marker >= 0xc0 && marker <= 0xc3)
+      || (marker >= 0xc5 && marker <= 0xc7)
+      || (marker >= 0xc9 && marker <= 0xcb)
+      || (marker >= 0xcd && marker <= 0xcf)
+    ) {
+      if (offset + 9 >= data.length) {
+        return null
+      }
       const height = data.readUInt16BE(offset + 5)
       const width = data.readUInt16BE(offset + 7)
+
       return { width, height }
     }
-    if (marker === 0xda) break // SOS — start of scan, no more markers
-    if (marker === 0xd9) break // EOI
-    if (marker === 0x00) { offset++; continue }
-    if (offset + 3 >= data.length) return null
+    if (marker === 0xda) {
+      break // SOS — start of scan, no more markers
+    }
+    if (marker === 0xd9) {
+      break // EOI
+    }
+    if (marker === 0x00) {
+      offset++
+      continue
+    }
+    if (offset + 3 >= data.length) {
+      return null
+    }
     const segLen = data.readUInt16BE(offset + 2)
     offset += 2 + segLen
   }
+
   return null
 }
 
 function parseWebpDimensions(data: Buffer): ImageDimensions | null {
   // VP8 lossy — width/height stored as (actual - 1)
   if (data.subarray(12, 16).equals(Buffer.from('VP8 '))) {
-    if (data.length < 30) return null
+    if (data.length < 30) {
+      return null
+    }
     const width = (data.readUInt16LE(26) & 0x3fff) + 1
     const height = (data.readUInt16LE(28) & 0x3fff) + 1
+
     return { width, height }
   }
   // VP8L lossless — already stored as (actual - 1)
   if (data.subarray(12, 16).equals(Buffer.from('VP8L'))) {
-    if (data.length < 25) return null
+    if (data.length < 25) {
+      return null
+    }
     const bits = data.readUInt32LE(21)
     const width = (bits & 0x3fff) + 1
     const height = ((bits >> 14) & 0x3fff) + 1
+
     return { width, height }
   }
   // VP8X extended — stored as (actual - 1)
   if (data.subarray(12, 16).equals(Buffer.from('VP8X'))) {
-    if (data.length < 30) return null
+    if (data.length < 30) {
+      return null
+    }
     const width = data.readUInt32LE(20) + 1
     const height = data.readUInt32LE(24) + 1
+
     return { width, height }
   }
+
   return null
 }
 
 // ── MIME sniffing from magic bytes ────────────────────────────────
 
-const MIME_SIGNATURES: Array<{ bytes: Uint8Array; mime: string }> = [
+const MIME_SIGNATURES: Array<{ bytes: Uint8Array, mime: string }> = [
   { bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), mime: 'image/png' },
   { bytes: new Uint8Array([0xff, 0xd8, 0xff]), mime: 'image/jpeg' },
   { bytes: new Uint8Array([0x47, 0x49, 0x46, 0x38]), mime: 'image/gif' },
@@ -179,10 +213,16 @@ export function sniffMimeType(data: Buffer): string | null {
     if (data.length >= sig.bytes.length) {
       let match = true
       for (let i = 0; i < sig.bytes.length; i++) {
-        if (data[i] !== sig.bytes[i]) { match = false; break }
+        if (data[i] !== sig.bytes[i]) {
+          match = false
+          break
+        }
       }
-      if (match) return sig.mime
+      if (match) {
+        return sig.mime
+      }
     }
   }
+
   return null
 }
