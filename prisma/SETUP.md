@@ -46,13 +46,18 @@ Populate the database with mock data for development:
 npm run seed
 ```
 
-This will create:
-- 2 test users
-- 4 sample modules with different difficulties
-- 3 module completions
-- 2 credentials
-- 3 transactions
+This will create deterministic local-only fixtures:
+- 6 test users (including admin, verified learner, unverified learner, disabled learner, instructor, employer)
+- 8 sample modules with different difficulties
+- Module completions and credentials for testing success/empty/pending states
+- Transactions for rewards, referrals, and adjustments
 - 1 webhook endpoint
+
+> **Note**: All fixture identities are strictly local-only and idempotent. Running `npm run seed` multiple times will not duplicate records.
+> To explicitly reset the database before seeding, use:
+> ```bash
+> npm run seed:reset
+> ```
 
 ### 5. Verify Setup
 
