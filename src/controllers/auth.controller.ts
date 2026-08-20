@@ -1,16 +1,13 @@
 import crypto from 'crypto'
 import { Request, Response } from 'express'
-import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
 import prisma from '../config/database'
+import { issueAccessToken } from '../config/jwt'
 import { loginSchema, registerSchema, verifyEmailSchema, resendVerificationSchema, forgotPasswordSchema, resetPasswordSchema, otpRequestSchema, otpVerifySchema } from '../schemas/auth.schema'
 import { UserRole } from '../types/user.types'
 import { emailService } from '../services/email.service'
 import { otpService, normalizePhone, OtpPurpose } from '../services/otp.service'
+import { comparePassword, hashPassword, needsRehash } from '../utils/password'
 import logger from '../utils/logger'
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-default-secret'
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d'
 
 const VERIFICATION_TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000 // 24 hours
 const PASSWORD_RESET_TOKEN_EXPIRY_MS = 30 * 60 * 1000 // 30 minutes
@@ -154,8 +151,7 @@ export class AuthController {
                 return
             }
 
-            const salt = await bcrypt.genSalt(10)
-            const hashedPassword = await bcrypt.hash(password, salt)
+            const hashedPassword = await hashPassword(password)
 
             const user = await prisma.user.create({
                 data: {
@@ -490,7 +486,7 @@ export class AuthController {
                 return
             }
 
-            const isMatch = await bcrypt.compare(password, user.password)
+            const isMatch = await comparePassword(password, user.password)
             if (!isMatch) {
                 res.status(401).json({ error: 'Invalid credentials' })
 
@@ -504,9 +500,15 @@ export class AuthController {
                 return
             }
 
+            // Transparently upgrade the stored hash if it was made under a
+            // weaker cost factor than the current configuration.
+            const passwordUpdate = needsRehash(user.password)
+                ? { password: await hashPassword(password) }
+                : {}
+
             await prisma.user.update({
                 where: { id: user.id },
-                data: { lastLoginAt: new Date() }
+                data: { ...passwordUpdate, lastLoginAt: new Date() }
             })
 
             const token = this.generateToken(user.id, user.role)
@@ -730,8 +732,7 @@ export class AuthController {
                 return
             }
 
-            const salt = await bcrypt.genSalt(10)
-            const hashedPassword = await bcrypt.hash(newPassword, salt)
+            const hashedPassword = await hashPassword(newPassword)
 
             const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
                 || (req.headers['x-real-ip'] as string)
@@ -1098,11 +1099,7 @@ export class AuthController {
     }
 
     private generateToken(userId: string, role: string): string {
-        return jwt.sign(
-            { id: userId, role },
-            JWT_SECRET as string,
-            { expiresIn: JWT_EXPIRES_IN as any }
-        )
+        return issueAccessToken({ id: userId, role })
     }
 
     private isRateLimited(key: string, windowMs: number): boolean {
