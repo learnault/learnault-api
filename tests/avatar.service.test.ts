@@ -79,10 +79,26 @@ describe('AvatarService', () => {
     storage = new InMemoryStorageProvider()
     service = new AvatarService(storage)
 
-    // Default $transaction mock: execute the callback with the mock tx
-    mockTransaction.mockImplementation(async (fns: any[]) => {
-      for (const fn of fns) {
-        await fn
+    // Default $transaction mock: Prisma interactive transactions pass
+    // a callback receiving tx (which behaves like PrismaClient).
+    // Batch transactions pass an array of PrismaPromises.
+    const fakeTx = {
+      avatar: {
+        updateMany: mockUpdateMany,
+        update: mockUpdate,
+        delete: mockDelete,
+      },
+      avatarVariant: {
+        createMany: mockCreateMany,
+      },
+    }
+    mockTransaction.mockImplementation(async (fnOrFns: any) => {
+      if (typeof fnOrFns === 'function') {
+        await fnOrFns(fakeTx)
+      } else if (Array.isArray(fnOrFns)) {
+        for (const fn of fnOrFns) {
+          await fn
+        }
       }
     })
   })

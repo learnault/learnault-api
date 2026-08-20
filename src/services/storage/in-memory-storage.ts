@@ -1,4 +1,4 @@
-import type { ImageDimensions, SignedUploadUrl, StorageProvider } from '../types/avatar.types'
+import type { ImageDimensions, SignedUploadUrl, StorageProvider } from '../../types/avatar.types'
 
 /**
  * In-memory storage provider for development and testing.
@@ -136,14 +136,14 @@ function parseJpegDimensions(data: Buffer): ImageDimensions | null {
 }
 
 function parseWebpDimensions(data: Buffer): ImageDimensions | null {
-  // VP8 lossy
+  // VP8 lossy — width/height stored as (actual - 1)
   if (data.subarray(12, 16).equals(Buffer.from('VP8 '))) {
     if (data.length < 30) return null
-    const width = data.readUInt16LE(26) & 0x3fff
-    const height = data.readUInt16LE(28) & 0x3fff
+    const width = (data.readUInt16LE(26) & 0x3fff) + 1
+    const height = (data.readUInt16LE(28) & 0x3fff) + 1
     return { width, height }
   }
-  // VP8L lossless
+  // VP8L lossless — already stored as (actual - 1)
   if (data.subarray(12, 16).equals(Buffer.from('VP8L'))) {
     if (data.length < 25) return null
     const bits = data.readUInt32LE(21)
@@ -151,7 +151,7 @@ function parseWebpDimensions(data: Buffer): ImageDimensions | null {
     const height = ((bits >> 14) & 0x3fff) + 1
     return { width, height }
   }
-  // VP8X extended
+  // VP8X extended — stored as (actual - 1)
   if (data.subarray(12, 16).equals(Buffer.from('VP8X'))) {
     if (data.length < 30) return null
     const width = data.readUInt32LE(20) + 1

@@ -66,7 +66,7 @@ function makeGif(width = 20, height = 10): Buffer {
   const buf = Buffer.alloc(13)
   buf.write('GIF89a', 0, 'ascii')
   buf.writeUInt16LE(width, 6)
-  buf.writeUInt16LE(10, 8) // height at offset 8
+  buf.writeUInt16LE(height, 8)
   return buf
 }
 
@@ -78,7 +78,7 @@ function makeWebp(width = 80, height = 60): Buffer {
   buf.write('WEBP', 8, 'ascii')
   buf.write('VP8 ', 12, 'ascii')
   buf.writeUInt32LE(30, 16) // chunk size
-  // VP8 bitstream header: width/height at offset 26-29
+  // VP8 bitstream header stores (actual - 1) at offsets 26-29
   buf.writeUInt16LE(width - 1, 26)
   buf.writeUInt16LE(height - 1, 28)
   return buf

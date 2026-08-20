@@ -133,7 +133,10 @@ describe('extractImageDimensions', () => {
   it('extracts PNG dimensions from IHDR', () => {
     // Build minimal PNG with 300×200 dimensions
     const buf = Buffer.alloc(64)
-    buf.writeUInt32BE(300, 16) // width after 8-byte sig + 4 len + 4 type
+    // PNG signature (8 bytes) + IHDR length (4) + IHDR type (4) + data starts at 16
+    buf[0] = 0x89; buf[1] = 0x50; buf[2] = 0x4e; buf[3] = 0x47
+    buf[4] = 0x0d; buf[5] = 0x0a; buf[6] = 0x1a; buf[7] = 0x0a
+    buf.writeUInt32BE(300, 16) // width
     buf.writeUInt32BE(200, 20) // height
     const dims = extractImageDimensions(buf)
     expect(dims).toEqual({ width: 300, height: 200 })
@@ -152,7 +155,7 @@ describe('extractImageDimensions', () => {
   })
 
   it('extracts GIF dimensions', () => {
-    const buf = Buffer.alloc(16)
+    const buf = Buffer.alloc(24)
     buf.write('GIF89a', 0, 'ascii')
     buf.writeUInt16LE(80, 6)
     buf.writeUInt16LE(60, 8)
@@ -166,6 +169,8 @@ describe('extractImageDimensions', () => {
     buf.writeUInt32LE(38, 4)
     buf.write('WEBP', 8, 'ascii')
     buf.write('VP8 ', 12, 'ascii')
+    buf.writeUInt32LE(30, 16) // VP8 chunk size
+    // VP8 stores (actual - 1) at offsets 26-29
     buf.writeUInt16LE(199, 26) // width - 1
     buf.writeUInt16LE(149, 28) // height - 1
     const dims = extractImageDimensions(buf)

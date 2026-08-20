@@ -130,7 +130,7 @@ export class AvatarService {
     }
 
     // ── Atomic promotion + retirement ────────────────────────────
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       // Retire the current active avatar (if any)
       await tx.avatar.updateMany({
         where: { userId, status: 'ACTIVE' },
@@ -234,7 +234,7 @@ export class AvatarService {
 
     return {
       id: avatar.id,
-      variants: avatar.variants.map((v) => ({
+      variants: avatar.variants.map((v: any) => ({
         label: v.label,
         url: this.storage.getServingUrl(v.storageKey),
         width: v.width,
