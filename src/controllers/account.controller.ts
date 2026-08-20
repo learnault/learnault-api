@@ -1,7 +1,6 @@
 import { Request, Response } from 'express'
-import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
 import prisma from '../config/database'
+import { issueAccessToken } from '../config/jwt'
 import logger from '../utils/logger'
 import {
     deactivateSchema,
@@ -14,10 +13,8 @@ import { dataExportService } from '../services/data-export.service'
 import { accountLifecycleService } from '../services/account-lifecycle.service'
 import { auditService } from '../services/audit.service'
 import { emailService } from '../services/email.service'
+import { comparePassword } from '../utils/password'
 import { AccountStatus, AuditAction, ExportStatus, RequestContext } from '../types/account.types'
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-default-secret'
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d'
 
 function buildDeletionRequestedEmail(username: string, scheduledFor: Date): { subject: string; body: string } {
     const subject = 'Your account deletion request'
@@ -577,7 +574,7 @@ export class AccountController {
             return null
         }
 
-        const isMatch = await bcrypt.compare(password, user.password)
+        const isMatch = await comparePassword(password, user.password)
         if (!isMatch) {
             await auditService.record({
                 userId,
@@ -607,7 +604,7 @@ export class AccountController {
             return null
         }
 
-        const isMatch = await bcrypt.compare(password, user.password)
+        const isMatch = await comparePassword(password, user.password)
         if (!isMatch) {
             return null
         }
@@ -629,10 +626,6 @@ export class AccountController {
     }
 
     private generateToken(userId: string, role: string): string {
-        return jwt.sign(
-            { id: userId, role },
-            JWT_SECRET as string,
-            { expiresIn: JWT_EXPIRES_IN as any }
-        )
+        return issueAccessToken({ id: userId, role })
     }
 }

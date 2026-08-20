@@ -29,6 +29,12 @@ vi.mock('../src/config/database', () => ({
         accountDeletionRequest: {
             findFirst: vi.fn(),
         },
+        session: {
+            updateMany: vi.fn(),
+        },
+        auditLog: {
+            create: vi.fn(),
+        },
         $transaction: vi.fn((args: any[]) => Promise.all(args)),
     },
 }))
@@ -161,6 +167,23 @@ describe('AuthController', () => {
                     error: 'Validation failed',
                 })
             )
+        })
+
+        it('should return 400 for a password that meets length but not complexity', async () => {
+            mockRequest.body = {
+                email: 'test@example.com',
+                // 8+ chars but no uppercase/symbol — fails isStrongPassword
+                password: 'alllowercase123',
+                username: 'testuser',
+            }
+
+            await authController.register(mockRequest as Request, mockResponse as Response)
+
+            expect(mockResponse.status).toHaveBeenCalledWith(400)
+            expect(mockResponse.json).toHaveBeenCalledWith(
+                expect.objectContaining({ error: 'Validation failed' })
+            )
+            expect(prisma.user.create).not.toHaveBeenCalled()
         })
 
         it('should return 409 if user already exists', async () => {
@@ -720,6 +743,65 @@ describe('AuthController', () => {
                 error: 'Invalid credentials',
             })
         })
+
+        it('transparently upgrades a hash stored below the current bcrypt cost', async () => {
+            mockRequest.body = {
+                email: 'test@example.com',
+                password: 'Password123!',
+            }
+
+            ;(prisma.user.findUnique as any).mockResolvedValue({
+                id: '1',
+                email: 'test@example.com',
+                // cost 10 — below the default configured cost of 12
+                password: '$2b$10$abcdefghijklmnopqrstuv',
+                username: 'testuser',
+                role: 'LEARNER',
+                status: 'ACTIVE',
+            })
+            ;(bcrypt.compare as any).mockResolvedValue(true)
+            ;(prisma.user.update as any).mockResolvedValue({})
+
+            await authController.login(
+                mockRequest as Request,
+                mockResponse as Response
+            )
+
+            expect(prisma.user.update).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    where: { id: '1' },
+                    data: expect.objectContaining({ password: 'hashed_password' }),
+                })
+            )
+            expect(mockResponse.status).toHaveBeenCalledWith(200)
+        })
+
+        it('does not rewrite a hash that already meets the current bcrypt cost', async () => {
+            mockRequest.body = {
+                email: 'test@example.com',
+                password: 'Password123!',
+            }
+
+            ;(prisma.user.findUnique as any).mockResolvedValue({
+                id: '1',
+                email: 'test@example.com',
+                // cost 12 — matches the default configured cost, no upgrade needed
+                password: '$2b$12$abcdefghijklmnopqrstuv',
+                username: 'testuser',
+                role: 'LEARNER',
+                status: 'ACTIVE',
+            })
+            ;(bcrypt.compare as any).mockResolvedValue(true)
+            ;(prisma.user.update as any).mockResolvedValue({})
+
+            await authController.login(
+                mockRequest as Request,
+                mockResponse as Response
+            )
+
+            const updateCallArgs = (prisma.user.update as any).mock.calls[0][0]
+            expect(updateCallArgs.data).not.toHaveProperty('password')
+        })
     })
 
     describe('logout', () => {
@@ -734,6 +816,56 @@ describe('AuthController', () => {
                 message:
                     'Logged out successfully. Please clear your token client-side.',
             })
+        })
+    })
+
+    describe('resetPassword', () => {
+        const validToken = 'a'.repeat(64)
+
+        it('should return 400 for a new password that fails the strength policy', async () => {
+            mockRequest.body = { token: validToken, newPassword: 'alllowercase123' }
+
+            await authController.resetPassword(mockRequest as Request, mockResponse as Response)
+
+            expect(mockResponse.status).toHaveBeenCalledWith(400)
+            expect(prisma.$transaction).not.toHaveBeenCalled()
+        })
+
+        it('should reset the password, revoke sessions, and revoke pending tokens on success', async () => {
+            mockRequest.body = { token: validToken, newPassword: 'NewStr0ng!Pass' }
+            mockRequest.headers = { 'user-agent': 'vitest' }
+            mockRequest.socket = { remoteAddress: '127.0.0.1' } as any
+
+            ;(prisma.verificationToken.findFirst as any).mockResolvedValue({
+                id: 'vt1',
+                userId: 'u1',
+                status: 'PENDING',
+                type: 'PASSWORD_RESET',
+                expiresAt: new Date(Date.now() + 60000),
+            })
+
+            await authController.resetPassword(mockRequest as Request, mockResponse as Response)
+
+            expect(prisma.$transaction).toHaveBeenCalled()
+            expect(mockResponse.status).toHaveBeenCalledWith(200)
+            expect(mockResponse.json).toHaveBeenCalledWith({ message: 'Password reset successful' })
+        })
+
+        it('should return 400 for an expired token', async () => {
+            mockRequest.body = { token: validToken, newPassword: 'NewStr0ng!Pass' }
+
+            ;(prisma.verificationToken.findFirst as any).mockResolvedValue({
+                id: 'vt1',
+                userId: 'u1',
+                status: 'PENDING',
+                type: 'PASSWORD_RESET',
+                expiresAt: new Date(Date.now() - 60000),
+            })
+
+            await authController.resetPassword(mockRequest as Request, mockResponse as Response)
+
+            expect(mockResponse.status).toHaveBeenCalledWith(400)
+            expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Token expired' })
         })
     })
 

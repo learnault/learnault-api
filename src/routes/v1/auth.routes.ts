@@ -11,7 +11,7 @@ const authController = new AuthController()
  * @desc Register a new user
  * @access Public
  */
-router.post('/register', authController.register.bind(authController))
+router.post('/register', authLimiter, authController.register.bind(authController))
 
 /**
  * @route POST /api/v1/auth/login
@@ -53,7 +53,7 @@ router.post('/forgot-password', authLimiter, authController.forgotPassword.bind(
  * @desc Reset password with token
  * @access Public
  */
-router.post('/reset-password', authController.resetPassword.bind(authController))
+router.post('/reset-password', authLimiter, authController.resetPassword.bind(authController))
 
 /**
  * @route POST /api/v1/auth/otp/request

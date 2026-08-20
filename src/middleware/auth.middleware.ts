@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express'
 
 import jwt from 'jsonwebtoken'
 import prisma from '../config/database'
+import { verifyAccessToken } from '../config/jwt'
 
 export type UserRole = 'learner' | 'employer';
 
@@ -22,14 +23,10 @@ declare global {
      }
 }
 
-const JWT_SECRET = process.env.JWT_SECRET as string
-
-if (!JWT_SECRET) {
-     throw new Error('JWT_SECRET environment variable is required')
-}
-
 /**
  * Strict authentication — rejects requests without a valid JWT.
+ * Delegates to verifyAccessToken(), which pins algorithm, issuer,
+ * audience, and resolves the signing key via the token's kid header.
  */
 export const authenticate = (
      req: Request,
@@ -47,7 +44,7 @@ export const authenticate = (
      const token = authHeader.split(' ')[1]
 
      try {
-          const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload
+          const decoded = verifyAccessToken(token) as unknown as JwtPayload
           req.user = decoded
           next()
      } catch (err) {
@@ -83,7 +80,7 @@ export const optionalAuthenticate = (
      const token = authHeader.split(' ')[1]
 
      try {
-          const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload
+          const decoded = verifyAccessToken(token) as unknown as JwtPayload
           req.user = decoded
      } catch { /** */ }
 
@@ -144,25 +141,108 @@ export const requireActiveAccount = async (
 }
 
 /**
- * Role-based authorization — must be used after `authenticate`.
- * Restricts access to users with one of the specified roles.
+ * Verified-email gate — must be used after `authenticate`.
+ * Blocks operations that the platform's verification policy (see
+ * docs/AUTH_POLICY.md) requires a confirmed email address for.
  */
-export const authorize = (...roles: UserRole[]) => {
-     return (req: Request, res: Response, next: NextFunction): void => {
-          if (!req.user) {
-               res.status(401).json({ message: 'Authentication required' })
+export const requireVerifiedEmail = async (
+     req: Request,
+     res: Response,
+     next: NextFunction
+): Promise<void> => {
+     if (!req.user) {
+          res.status(401).json({ message: 'Authentication required' })
+
+          return
+     }
+
+     try {
+          const user = await prisma.user.findUnique({
+               where: { id: req.user.id },
+               select: { isVerified: true },
+          })
+
+          if (!user) {
+               res.status(401).json({ message: 'Account not found' })
 
                return
           }
 
-          if (!roles.includes(req.user.role)) {
+          if (!user.isVerified) {
                res.status(403).json({
-                    message: `Access denied. Requires one of the following roles: ${roles.join(', ')}`,
+                    message: 'This action requires a verified email address',
+                    code: 'EMAIL_NOT_VERIFIED',
                })
 
                return
           }
 
           next()
+     } catch {
+          res.status(500).json({ message: 'Internal server error during verification check' })
+     }
+}
+
+/**
+ * Role-based authorization — must be used after `authenticate`.
+ * Re-reads the user's role and status from the database rather than
+ * trusting the JWT claim: a role change or account status change must
+ * take effect immediately, not only once the old token expires.
+ */
+export const authorize = (...roles: UserRole[]) => {
+     return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+          if (!req.user) {
+               res.status(401).json({ message: 'Authentication required' })
+
+               return
+          }
+
+          try {
+               const current = await prisma.user.findUnique({
+                    where: { id: req.user.id },
+                    select: { role: true, status: true },
+               })
+
+               if (!current || current.status === 'DELETED') {
+                    res.status(401).json({ message: 'Account not found' })
+
+                    return
+               }
+
+               if (current.status === 'DEACTIVATED') {
+                    res.status(403).json({
+                         message: 'Account is deactivated',
+                         code: 'ACCOUNT_DEACTIVATED',
+                    })
+
+                    return
+               }
+
+               if (current.status === 'PENDING_DELETION') {
+                    res.status(403).json({
+                         message: 'Account is scheduled for deletion',
+                         code: 'ACCOUNT_PENDING_DELETION',
+                    })
+
+                    return
+               }
+
+               const persistedRole = current.role as UserRole
+
+               if (!roles.includes(persistedRole)) {
+                    res.status(403).json({
+                         message: `Access denied. Requires one of the following roles: ${roles.join(', ')}`,
+                    })
+
+                    return
+               }
+
+               // Keep the persisted role in sync for downstream handlers,
+               // in case it drifted from the (now-stale) JWT claim.
+               req.user.role = persistedRole
+               next()
+          } catch {
+               res.status(500).json({ message: 'Internal server error during authorization' })
+          }
      }
 }
