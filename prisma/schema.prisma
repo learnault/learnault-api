@@ -44,7 +44,7 @@ model User {
   onboarding      OnboardingProgress?
   consentRecords  ConsentRecord[]
   wallet          Wallet?
-  avatar          Avatar?
+  avatars         Avatar[]
 
   @@map("users")
 }
@@ -558,7 +558,7 @@ model WalletProvisioningJob {
 
 model Avatar {
   id            String   @id @default(uuid())
-  userId        String   @unique
+  userId        String
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   storageKey    String
   originalName  String?
@@ -576,8 +576,8 @@ model Avatar {
   finalizedAt   DateTime?
   replacedAt    DateTime?
   replacedById  String?
-  replacedBy    Avatar?  @relation("ReplacedAvatar", fields: [replacedById], references: [id])
-  replacements  Avatar?  @relation("ReplacedAvatar")
+  replacedBy    Avatar?  @relation("AvatarReplacement", fields: [replacedById], references: [id])
+  replacements  Avatar[] @relation("AvatarReplacement")
   variants      AvatarVariant[]
 
   @@index([userId, status])

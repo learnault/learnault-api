@@ -1,0 +1,10 @@
+{
+  "name": "zeptomatch-cjs-shim",
+  "version": "2.1.0",
+  "description": "CJS shim for zeptomatch, used by @prisma/dev on Node 20",
+  "main": "index.js",
+  "type": "commonjs",
+  "exports": {
+    ".": "./index.js"
+  }
+}
