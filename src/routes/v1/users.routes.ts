@@ -4,6 +4,7 @@ import { PreferenceController } from '../../controllers/preference.controller'
 import { ProfileController } from '../../controllers/profile.controller'
 import { authenticate, optionalAuthenticate } from '../../middleware/auth.middleware'
 import { validateProfileUpdate, validatePasswordChange, validateWalletAddress } from '../../middleware/validation.middleware'
+import avatarRoutes from './avatar.routes'
 
 const router: express.Router = Router()
 const userController = new UserController()
@@ -29,5 +30,7 @@ router.get('/:id', userController.getUserById.bind(userController))
 router.patch('/password', authenticate, validatePasswordChange, userController.changePassword.bind(userController))
 
 router.patch('/wallet', authenticate, validateWalletAddress, userController.updateWalletAddress.bind(userController))
+
+router.use('/me/avatar', avatarRoutes)
 
 export default router
