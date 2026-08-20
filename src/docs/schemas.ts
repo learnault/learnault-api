@@ -1150,3 +1150,95 @@
  *           format: date-time
  *           nullable: true
  */
+
+/**
+ * @openapi
+ * components:
+ *   schemas:
+ *
+ *     # ── Sessions ─────────────────────────────────────────────────────────
+ *
+ *     SessionView:
+ *       type: object
+ *       description: >
+ *         A redacted view of a single active session. Tokens and raw IP
+ *         addresses are never included.
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *           description: Session identifier.
+ *           example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+ *         deviceName:
+ *           type: string
+ *           nullable: true
+ *           description: Human-readable device label, e.g. "iPhone 14".
+ *           example: iPhone 14
+ *         browser:
+ *           type: string
+ *           nullable: true
+ *           description: Browser label, e.g. "Chrome 124".
+ *           example: Chrome 124
+ *         os:
+ *           type: string
+ *           nullable: true
+ *           description: Operating system label, e.g. "macOS 14.4".
+ *           example: macOS 14.4
+ *         country:
+ *           type: string
+ *           nullable: true
+ *           description: ISO 3166-1 alpha-2 country code from approximate geo-lookup.
+ *           example: NG
+ *         city:
+ *           type: string
+ *           nullable: true
+ *           description: City name from approximate geo-lookup.
+ *           example: Lagos
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: When the session was first created (initial login).
+ *         lastUsedAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *           description: When the session last consumed a refresh token. Null for sessions that have never refreshed.
+ *         expiresAt:
+ *           type: string
+ *           format: date-time
+ *           description: Absolute session expiry timestamp.
+ *         isCurrent:
+ *           type: boolean
+ *           description: True when this session is associated with the current access token.
+ *           example: true
+ *
+ *     SessionListResponse:
+ *       type: object
+ *       description: Paginated list of active sessions.
+ *       properties:
+ *         sessions:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/SessionView'
+ *         pagination:
+ *           $ref: '#/components/schemas/Pagination'
+ *
+ *     RevokeSessionResponse:
+ *       type: object
+ *       properties:
+ *         message:
+ *           type: string
+ *           example: Session revoked successfully
+ *
+ *     RevokeAllSessionsResponse:
+ *       type: object
+ *       properties:
+ *         message:
+ *           type: string
+ *           example: 3 sessions revoked successfully
+ *         revokedCount:
+ *           type: integer
+ *           description: Number of sessions that were revoked.
+ *           example: 3
+ *
+ */

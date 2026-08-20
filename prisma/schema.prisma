@@ -166,6 +166,17 @@ model Session {
   refreshToken String?   @unique
   userAgent    String?
   ipAddress    String?
+  // Device / browser / OS labels (derived at login time from User-Agent)
+  deviceName   String?
+  browser      String?
+  os           String?
+  // Approximate location (derived at login time from IP geo-lookup)
+  country      String?
+  city         String?
+  // Opaque device fingerprint (e.g. hash of UA + screen-res, never raw)
+  fingerprint  String?
+  // Updated each time a refresh token is consumed on this session
+  lastUsedAt   DateTime?
   expiresAt    DateTime
   isRevoked    Boolean   @default(false)
   revokedAt    DateTime?
@@ -173,6 +184,7 @@ model Session {
   updatedAt    DateTime  @updatedAt
 
   @@index([userId, isRevoked])
+  @@index([userId, isRevoked, lastUsedAt])
   @@map("sessions")
 }
 
