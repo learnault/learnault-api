@@ -11,6 +11,7 @@ import referralRoutes from './v1/referrals.routes'
 import accountRoutes from './v1/account.routes'
 import onboardingRoutes from './v1/onboarding.routes'
 import consentRoutes from './v1/consent.routes'
+import sessionRoutes from './v1/sessions.routes'
 
 const router: Router = Router()
 
@@ -30,5 +31,6 @@ router.use('/v1/referrals', referralRoutes)
 router.use('/v1/account', accountRoutes)
 router.use('/v1/onboarding', onboardingRoutes)
 router.use('/v1/consents', consentRoutes)
+router.use('/v1/sessions', sessionRoutes)
 
 export default router
