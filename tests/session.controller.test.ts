@@ -765,9 +765,10 @@ describe('SessionService', () => {
         expiresAt: future,
       } as any)
 
-      let capturedOps: any[] = []
+      let _capturedOps: any[] = []
       vi.mocked(prisma.$transaction).mockImplementation((ops: any[]) => {
-        capturedOps = ops
+        _capturedOps = ops
+
         return Promise.resolve([{}, {}])
       })
       vi.mocked(prisma.auditLog.create).mockReturnValue({} as any)
@@ -855,6 +856,7 @@ describe('SessionService', () => {
       let auditData: any
       vi.mocked(prisma.auditLog.create).mockImplementation((args: any) => {
         auditData = args.data
+
         return {} as any
       })
 

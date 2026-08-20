@@ -35,6 +35,7 @@ export function redactIp(raw: string | null | undefined): string | null {
  */
 export function redactFingerprint(raw: string | null | undefined): string | null {
   if (!raw) return null
+
   return raw.slice(0, 8)
 }
 
