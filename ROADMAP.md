@@ -15,7 +15,7 @@ Status baseline: 17 July 2026. The present schema supports users, flat modules, 
 ## Current implementation inventory
 
 - [x] Express/TypeScript service, versioned router, Prisma/PostgreSQL setup, security headers, logging, and error middleware exist.
-- [~] JWT registration/login exists; logout is stateless and refresh, verification, recovery, session, and wallet provisioning flows are absent.
+- [~] JWT registration/login exists with rotating refresh sessions, reuse detection, and logout; verification, recovery, session management, and wallet provisioning flows are partly present.
 - [~] User routes exist, but user persistence helpers currently return mock users.
 - [~] Flat module list/detail/start/complete routes exist without Course, LearningPath, Lesson, Quiz, Question, Attempt, Enrollment, or detailed Progress models.
 - [~] Reward, credential, referral, offline-sync, notification, webhook, employer, Stellar, and Soroban services/routes exist at varying levels of completeness.

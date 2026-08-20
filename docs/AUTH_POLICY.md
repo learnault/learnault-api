@@ -81,12 +81,27 @@ All limiters set `X-RateLimit-Limit`, `X-RateLimit-Remaining`,
 `X-RateLimit-Reset`, and — on a 429 — `Retry-After`, so clients get stable
 retry information rather than a bare error.
 
-## 6. Explicitly out of scope here
+## 6. Refresh token rotation & transport
 
-- **Refresh token rotation** — blocked by
-  [#130](https://github.com/learnault/learnault-api/issues/130), which is
-  not yet implemented. No refresh endpoint exists to rate-limit or harden
-  yet; this will need a follow-up once #130 lands.
+Access tokens are short-lived (default 15 minutes); refresh tokens are
+opaque and rotated on every use. The full design — family linkage, reuse
+detection, logout, transport, and the CSRF policy — is documented in
+[`docs/security/refresh-token-rotation.md`](security/refresh-token-rotation.md).
+
+| Token | Transport | Lifetime | Storage |
+| --- | --- | --- | --- |
+| Access token (JWT) | `Authorization: Bearer <token>` header | 15 min (`JWT_ACCESS_TTL_SECONDS`) | client memory only |
+| Refresh token (opaque) | JSON body `refreshToken`, or httpOnly `refresh_token` cookie | 30 days (`REFRESH_TOKEN_TTL_SECONDS`) | SHA-256 hash only (`refresh_tokens.tokenHash`) |
+
+- Refresh tokens are single-use: each successful `POST /auth/refresh`
+  consumes the presented token and returns a new one in the same family.
+- Presenting an already-consumed (ROTATED) token is treated as theft and
+  revokes the entire family plus its parent session (reuse detection).
+- `POST /auth/logout` revokes the current session; `POST /auth/logout/all`
+  revokes every session for the identified user.
+
+## 7. Explicitly out of scope here
+
 - **PIN policy** — no PIN feature exists in the codebase.
 - `user.controller.ts#changePassword` — its `validatePassword` /
   `updateUserPassword` helpers are pre-existing stubs (`mockUser`, `throw

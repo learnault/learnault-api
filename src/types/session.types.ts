@@ -61,6 +61,9 @@ export type RevokeAllResult = {
 export const SessionAuditAction = {
   SESSION_REVOKED: 'SESSION_REVOKED',
   SESSION_ALL_REVOKED: 'SESSION_ALL_REVOKED',
+  SESSION_LOGGED_OUT: 'SESSION_LOGGED_OUT',
+  SESSION_ALL_LOGGED_OUT: 'SESSION_ALL_LOGGED_OUT',
+  REFRESH_REUSE_DETECTED: 'REFRESH_REUSE_DETECTED',
 } as const
 
 export type SessionAuditActionValue = (typeof SessionAuditAction)[keyof typeof SessionAuditAction]

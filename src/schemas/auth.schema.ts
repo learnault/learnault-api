@@ -52,6 +52,16 @@ export const otpVerifySchema = z.object({
     deviceId: z.string().min(1).optional(),
 })
 
+/**
+ * Refresh / logout bodies carry an opaque refresh token. The token is
+ * optional here because it may also arrive via the `refresh_token` httpOnly
+ * cookie; the controller resolves one of the two and rejects when neither is
+ * present.
+ */
+export const refreshTokenSchema = z.object({
+    refreshToken: z.string().min(1, 'refreshToken is required').optional(),
+})
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
@@ -60,3 +70,4 @@ export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type OtpRequestInput = z.infer<typeof otpRequestSchema>;
 export type OtpVerifyInput = z.infer<typeof otpVerifySchema>;
+export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;

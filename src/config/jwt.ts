@@ -6,7 +6,13 @@ import { JWTPayload, signToken, verifyToken } from '../utils/jwt'
 const ALGORITHM: Algorithm = 'HS256'
 const ISSUER = process.env.JWT_ISSUER || 'learnault-api'
 const AUDIENCE = process.env.JWT_AUDIENCE || 'learnault-clients'
-const EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d'
+// Access tokens are short-lived (default 15 minutes); clients exchange an
+// opaque refresh token (see services/refresh-token.service.ts) for a fresh one.
+const ACCESS_TOKEN_TTL_SECONDS = (() => {
+  const parsed = parseInt(process.env.JWT_ACCESS_TTL_SECONDS || '', 10)
+
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 15 * 60
+})()
 const ACTIVE_KEY_ID = process.env.JWT_KEY_ID || 'default'
 const IS_TEST_ENV = process.env.NODE_ENV === 'test'
 
@@ -88,7 +94,7 @@ export function issueAccessToken(
     algorithm: ALGORITHM,
     issuer: ISSUER,
     audience: AUDIENCE,
-    expiresIn: EXPIRES_IN,
+    expiresIn: ACCESS_TOKEN_TTL_SECONDS,
     keyid: ACTIVE_KEY_ID,
   } as SignOptions)
 }
@@ -122,7 +128,10 @@ export const jwtConfig = {
   algorithm: ALGORITHM,
   issuer: ISSUER,
   audience: AUDIENCE,
-  expiresIn: EXPIRES_IN,
+  expiresIn: ACCESS_TOKEN_TTL_SECONDS,
   activeKeyId: ACTIVE_KEY_ID,
   retiredKeyIds: Array.from(RETIRED_KEYS.keys()),
 }
+
+/** Access-token lifetime in seconds, for the `expiresIn` response field. */
+export const accessTokenTtlSeconds = ACCESS_TOKEN_TTL_SECONDS
