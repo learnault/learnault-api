@@ -9,8 +9,8 @@ The Learnault API is a JSON REST API for a decentralized learn-to-earn platform 
 | Item | Value |
 |------|-------|
 | Base URL (production) | `https://api.learnault.io/api/v1` |
-| Base URL (local) | `http://localhost:3000/api/v1` |
-| Auth scheme | JWT Bearer (`Authorization: Bearer <token>`) |
+| Base URL (local) | `http://localhost:3000/api/v1` || Auth scheme | JWT Bearer (`Authorization: Bearer <token>`) |
+| Refresh scheme | Opaque rotating refresh token (`refreshToken` body or `refresh_token` cookie) |
 | Content-Type | `application/json` |
 
 ---
@@ -134,7 +134,10 @@ Register a new user. Queues a verification email.
 ```json
 {
   "message": "User registered successfully",
-  "token": "<jwt>",
+  "accessToken": "<jwt>",
+  "refreshToken": "<opaque-token>",
+  "expiresIn": 900,
+  "tokenType": "Bearer",
   "user": { "id": "...", "email": "...", "username": "...", "role": "learner" }
 }
 ```
@@ -151,11 +154,50 @@ Rate-limited (10 req / 15 min).
 
 ---
 
+### `POST /auth/refresh`
+
+Rotates a refresh token for a new access/refresh pair. The presented token
+is consumed; a replayed (already-rotated) token revokes the whole session
+family and returns `401 REFRESH_REUSE_DETECTED`.
+
+**Request body:** `{ "refreshToken": "<opaque-token>" }` — or send the token
+via an httpOnly `refresh_token` cookie.
+
+```json
+{
+  "message": "Token refreshed successfully",
+  "accessToken": "<new-jwt>",
+  "refreshToken": "<new-opaque-token>",
+  "expiresIn": 900,
+  "tokenType": "Bearer"
+}
+```
+
+**Responses:** 200 (rotated), 400 (missing token), 401 (`REFRESH_INVALID`,
+`REFRESH_EXPIRED`, `REFRESH_REVOKED`, or `REFRESH_REUSE_DETECTED`)
+
+---
+
 ### `POST /auth/logout`
 
-Stateless — no session is stored server-side. Returns a reminder to clear the token client-side.
+Logs out the current session by revoking its refresh-token family. Idempotent.
 
-**Response:** `200 { "message": "Logged out successfully. Please clear your token client-side." }`
+**Request body:** `{ "refreshToken": "<opaque-token>" }` — or via the
+httpOnly `refresh_token` cookie.
+
+**Response:** `200 { "message": "Logged out successfully", "revokedCount": 1 }`
+
+---
+
+### `POST /auth/logout/all`
+
+Logs out every session for the user identified by the refresh token.
+Idempotent.
+
+**Request body:** `{ "refreshToken": "<opaque-token>" }` — or via the
+httpOnly `refresh_token` cookie.
+
+**Response:** `200 { "message": "All sessions logged out", "revokedCount": 3 }`
 
 ---
 

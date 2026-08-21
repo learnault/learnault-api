@@ -116,12 +116,62 @@
  *       properties:
  *         message:
  *           type: string
- *           example: User registered successfully
- *         token:
+ *           example: Login successful
+ *         accessToken:
  *           type: string
- *           description: JWT; pass as Authorization Bearer token.
+ *           description: Short-lived JWT; pass as Authorization Bearer token.
+ *         refreshToken:
+ *           type: string
+ *           description: Opaque token used to obtain a new access/refresh pair.
+ *         expiresIn:
+ *           type: integer
+ *           description: Access-token lifetime in seconds.
+ *           example: 900
+ *         tokenType:
+ *           type: string
+ *           example: Bearer
  *         user:
  *           $ref: '#/components/schemas/AuthUser'
+ *
+ *     TokenResponse:
+ *       type: object
+ *       description: Response from POST /auth/refresh after a successful rotation.
+ *       properties:
+ *         message:
+ *           type: string
+ *           example: Token refreshed successfully
+ *         accessToken:
+ *           type: string
+ *           description: New short-lived JWT.
+ *         refreshToken:
+ *           type: string
+ *           description: New opaque refresh token; the presented one is now consumed.
+ *         expiresIn:
+ *           type: integer
+ *           example: 900
+ *         tokenType:
+ *           type: string
+ *           example: Bearer
+ *
+ *     RefreshTokenInput:
+ *       type: object
+ *       properties:
+ *         refreshToken:
+ *           type: string
+ *           description: >
+ *             Opaque refresh token. Optional in the JSON body when sent via the
+ *             httpOnly `refresh_token` cookie instead.
+ *
+ *     LogoutResponse:
+ *       type: object
+ *       properties:
+ *         message:
+ *           type: string
+ *           example: Logged out successfully
+ *         revokedCount:
+ *           type: integer
+ *           description: Number of sessions revoked (0 when the token was unknown).
+ *           example: 1
  *
  *     VerifyEmailInput:
  *       type: object

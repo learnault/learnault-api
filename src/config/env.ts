@@ -28,6 +28,10 @@ export const env = {
   // SMS provider selection — only "mock" is implemented until a real provider is integrated
   SMS_PROVIDER: process.env.SMS_PROVIDER || 'mock',
 
+  // Token lifetimes
+  ACCESS_TOKEN_TTL_SECONDS: parseInt(process.env.JWT_ACCESS_TTL_SECONDS || '900', 10),
+  REFRESH_TOKEN_TTL_SECONDS: parseInt(process.env.REFRESH_TOKEN_TTL_SECONDS || '2592000', 10), // 30 days
+
   // Account lifecycle configurations
   DELETION_COOLING_OFF_DAYS: parseInt(process.env.DELETION_COOLING_OFF_DAYS || '30', 10),
   EXPORT_TTL_DAYS: parseInt(process.env.EXPORT_TTL_DAYS || '7', 10),

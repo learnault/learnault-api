@@ -48,7 +48,7 @@ const options: swaggerJsdoc.Options = {
     ],
     tags: [
       { name: 'Health', description: 'Service health check' },
-      { name: 'Auth', description: 'Registration, login, email verification, password reset, phone OTP' },
+      { name: 'Auth', description: 'Registration, login, refresh rotation, logout, email verification, password reset, phone OTP' },
       { name: 'Users', description: 'User profile management' },
       { name: 'Modules', description: 'Learning module catalogue and progress tracking' },
       { name: 'Credentials', description: 'On-chain verifiable credentials' },
