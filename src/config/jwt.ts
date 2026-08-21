@@ -1,4 +1,4 @@
-import { Algorithm, JsonWebTokenError, SignOptions, VerifyOptions } from 'jsonwebtoken'
+import jwt, { Algorithm, SignOptions, VerifyOptions } from 'jsonwebtoken'
 import { JWTPayload, signToken, verifyToken } from '../utils/jwt'
 
 // Centralized JWT policy: one algorithm, one issuer/audience pair, and an
@@ -107,7 +107,7 @@ export function verifyAccessToken(token: string, options: VerifyOptions = {}): A
     // Same error type jwt.verify() itself throws for a bad signature, so
     // callers (e.g. authenticate()) treat this as "invalid token" (401)
     // rather than an unexpected server error (500).
-    throw new JsonWebTokenError('Unknown or retired signing key')
+    throw new jwt.JsonWebTokenError('Unknown or retired signing key')
   }
 
   return verifyToken(token, secret, {

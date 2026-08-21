@@ -1,0 +1,33 @@
+# ============================================================================
+# Learnault API — Development Docker Image
+#
+# Used by docker-compose.yml for local development. Installs all dependencies
+# (including dev tooling) and generates the Prisma client. The source tree is
+# bind-mounted from the host at runtime so edits hot-reload via nodemon/tsx.
+#
+# Build:
+#   docker build -f docker/Dockerfile.dev -t learnault-api:dev .
+# ============================================================================
+
+FROM node:20-slim
+
+# OpenSSL is required by Prisma's engine detection
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
+RUN corepack enable && corepack prepare pnpm@10 --activate
+
+WORKDIR /app
+
+# Install ALL dependencies (dev tooling included) in a cached layer
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+# Generate the Prisma client (needed before the app or worker can boot)
+COPY prisma ./prisma
+COPY prisma.config.ts ./
+RUN npx prisma generate
+
+EXPOSE 5000
+
+# Entrypoints are referenced via the bind-mounted ./docker directory at runtime
+CMD ["./docker/entrypoint-dev-api.sh"]
