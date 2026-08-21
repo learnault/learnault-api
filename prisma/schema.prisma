@@ -245,7 +245,15 @@ model Module {
   description     String
   category        String
   difficulty      String         // easy, medium, hard
-  reward          Float
+  /// Reward expressed in whole-integer stroops (1 XLM = 10_000_000 stroops).
+  /// Stored as bigint to eliminate binary floating-point error.
+  rewardStroops   BigInt         @default(0)
+  /// ISO-4217 or Stellar asset code (e.g. "XLM", "USDC").
+  assetCode       String         @default("XLM")
+  /// Stellar issuer public key; NULL for the native XLM asset.
+  assetIssuer     String?
+  /// Stellar network: "testnet" or "mainnet".
+  assetNetwork    String         @default("testnet")
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   completions     Completion[]
@@ -284,7 +292,14 @@ model Transaction {
   id              String         @id @default(uuid())
   userId          String
   user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  amount          Float
+  /// Transaction amount expressed in whole-integer stroops (1 XLM = 10_000_000 stroops).
+  amountStroops   BigInt
+  /// ISO-4217 or Stellar asset code (e.g. "XLM", "USDC").
+  assetCode       String         @default("XLM")
+  /// Stellar issuer public key; NULL for the native XLM asset.
+  assetIssuer     String?
+  /// Stellar network: "testnet" or "mainnet".
+  assetNetwork    String         @default("testnet")
   type            String         // reward, refund, transfer
   status          String         @default("pending") // pending, completed, failed
   createdAt       DateTime       @default(now())
@@ -317,7 +332,8 @@ model Referral {
   codeId        String
   code          ReferralCode @relation(fields: [codeId], references: [id])
   bonusPaid     Boolean      @default(false)
-  bonusAmount   Float?
+  /// Bonus amount expressed in whole-integer stroops; NULL if no bonus has been granted.
+  bonusAmountStroops BigInt?
   bonusPaidAt   DateTime?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
