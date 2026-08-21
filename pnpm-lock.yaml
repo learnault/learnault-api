@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  zeptomatch: file:patches/zeptomatch-cjs-shim
+
 importers:
 
   .:
@@ -1720,12 +1723,6 @@ packages:
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
-  grammex@3.1.12:
-    resolution: {integrity: sha512-6ufJOsSA7LcQehIJNCO7HIBykfM7DXQual0Ny780/DEcJIpBlHRvcqEBWGPYd7hrXL2GJ3oJI1MIhaXjWmLQOQ==}
-
-  graphmatch@1.1.1:
-    resolution: {integrity: sha512-5ykVn/EXM1hF0XCaWh05VbYvEiOL2lY1kBxZtaYsyvjp7cmWOU1XsAdfQBwClraEofXDT197lFbXOEVMHpvQOg==}
-
   gtoken@7.1.0:
     resolution: {integrity: sha512-pCcEwRi+TKpMlxAQObHDQ56KawURgyAf6jtIY046fJ5tIv3zDe/LEIubckAO8fj6JnAxLdmWkUfNyulQ2iKdEw==}
     engines: {node: '>=14.0.0'}
@@ -3027,8 +3024,8 @@ packages:
     engines: {node: '>=8.0.0'}
     hasBin: true
 
-  zeptomatch@2.1.0:
-    resolution: {integrity: sha512-KiGErG2J0G82LSpniV0CtIzjlJ10E04j02VOudJsPyPwNZgGnRKQy7I1R7GMyg/QswnE4l7ohSGrQbQbjXPPDA==}
+  zeptomatch-cjs-shim@file:patches/zeptomatch-cjs-shim:
+    resolution: {directory: patches/zeptomatch-cjs-shim, type: directory}
 
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
@@ -3464,7 +3461,7 @@ snapshots:
       remeda: 2.33.4
       std-env: 3.10.0
       valibot: 1.2.0(typescript@5.9.3)
-      zeptomatch: 2.1.0
+      zeptomatch: zeptomatch-cjs-shim@file:patches/zeptomatch-cjs-shim
     transitivePeerDependencies:
       - typescript
 
@@ -4802,10 +4799,6 @@ snapshots:
   gopd@1.2.0: {}
 
   graceful-fs@4.2.11: {}
-
-  grammex@3.1.12: {}
-
-  graphmatch@1.1.1: {}
 
   gtoken@7.1.0:
     dependencies:
@@ -6319,10 +6312,7 @@ snapshots:
     optionalDependencies:
       commander: 9.5.0
 
-  zeptomatch@2.1.0:
-    dependencies:
-      grammex: 3.1.12
-      graphmatch: 1.1.1
+  zeptomatch-cjs-shim@file:patches/zeptomatch-cjs-shim: {}
 
   zod@3.25.76: {}
 

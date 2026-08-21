@@ -101,6 +101,11 @@
     "doc": "docs",
     "test": "tests"
   },
+  "pnpm": {
+    "overrides": {
+      "zeptomatch": "file:patches/zeptomatch-cjs-shim"
+    }
+  },
   "bugs": {
     "url": "https://github.com/learnault/learnault/issues"
   }

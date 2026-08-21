@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import { RewardService } from '../services/reward.service'
 import { asyncHandler } from '../middleware/error.middleware'
 import { BadRequestError } from '../utils/errors'
+import { stroopsToXlmString, xlmStringToStroops } from '../utils/money'
 
 export class RewardController {
   private rewardService: RewardService
@@ -47,9 +48,11 @@ export class RewardController {
         success: true,
         data: {
           balance: {
-            available: balance.available,
-            pending: balance.pending,
-            lifetime: balance.lifetime,
+            // Serialize BigInt stroops → 7-decimal XLM strings at the API boundary.
+            // Never return raw BigInt or JavaScript number for monetary values.
+            available: stroopsToXlmString(balance.availableStroops),
+            pending: stroopsToXlmString(balance.pendingStroops),
+            lifetime: stroopsToXlmString(balance.lifetimeStroops),
           },
           updatedAt: balance.updatedAt.toISOString(),
         },
@@ -121,7 +124,6 @@ export class RewardController {
         throw new UnauthorizedError('User ID not found')
       }
 
-      // Parse query parameters
       const filters: any = {}
 
       if (req.query.type) {
@@ -190,7 +192,8 @@ export class RewardController {
             id: t.id,
             type: t.type,
             status: t.status,
-            amount: t.amount,
+            // Serialize BigInt stroops → XLM string at the API boundary
+            amount: stroopsToXlmString(t.amountStroops),
             moduleId: t.moduleId,
             stellarTxHash: t.stellarTxHash,
             createdAt: t.createdAt.toISOString(),
@@ -215,7 +218,8 @@ export class RewardController {
    *     summary: Submit a withdrawal request
    *     description: >
    *       Validates the Stellar wallet address (pattern `^G[A-Z0-9]{50,55}$`),
-   *       checks that `amount > 0`, and verifies sufficient balance before processing.
+   *       parses `amount` as a 7-decimal XLM string, converts to exact stroops,
+   *       and verifies sufficient balance before processing.
    *     tags: [Rewards]
    *     security:
    *       - bearerAuth: []
@@ -255,7 +259,6 @@ export class RewardController {
 
       const { walletAddress, amount, memo } = req.body
 
-      // Validate required fields
       if (!walletAddress) {
         throw new BadRequestError('Wallet address is required')
       }
@@ -264,33 +267,49 @@ export class RewardController {
         throw new BadRequestError('Amount is required')
       }
 
-      // Validate amount
-      if (typeof amount !== 'number' || isNaN(amount)) {
-        throw new BadRequestError('Amount must be a valid number')
+      // Amount must be a string to avoid floating-point coercion.
+      // Accept both string and number literals from JSON bodies (client sends "5.5" or 5.5).
+      const amountString =
+        typeof amount === 'string'
+          ? amount
+          : typeof amount === 'number'
+            ? amount.toFixed(7)
+            : null
+
+      if (!amountString) {
+        throw new BadRequestError('Amount must be a numeric string (e.g. "5.0000000")')
       }
 
-      if (amount <= 0) {
+      // Parse the XLM string into exact stroops — throws MoneyError on bad format
+      let amountStroops: bigint
+      try {
+        amountStroops = xlmStringToStroops(amountString)
+      } catch {
+        throw new BadRequestError(
+          'Invalid amount: must be a decimal with at most 7 fractional digits (e.g. "5.0000000")',
+        )
+      }
+
+      if (amountStroops <= 0n) {
         throw new BadRequestError('Amount must be greater than 0')
       }
 
-      // Validate Stellar wallet address format
       if (!this.isValidStellarAddress(walletAddress)) {
         throw new BadRequestError('Invalid Stellar wallet address format')
       }
 
-      // Check if user has sufficient balance
-      if (!this.rewardService.hasSufficientBalance(userId, amount)) {
+      if (!this.rewardService.hasSufficientBalance(userId, amountStroops)) {
         const balance = this.rewardService.getBalance(userId)
         throw new BadRequestError(
-          `Insufficient balance. Available: ${balance.available} XLM, Requested: ${amount} XLM`,
+          `Insufficient balance. Available: ${stroopsToXlmString(balance.availableStroops)} XLM, ` +
+            `Requested: ${stroopsToXlmString(amountStroops)} XLM`,
         )
       }
 
-      // Process withdrawal
       const result = await this.rewardService.processWithdrawal({
         userId,
         walletAddress,
-        amount,
+        amountStroops,
         memo,
       })
 
@@ -299,7 +318,8 @@ export class RewardController {
         message: 'Withdrawal processed successfully',
         data: {
           transactionId: result.transactionId,
-          amount: result.amount,
+          // Serialize BigInt stroops → XLM string at the API boundary
+          amount: stroopsToXlmString(result.amountStroops),
           stellarTxHash: result.stellarTxHash,
           status: result.status,
           requestedAt: result.requestedAt.toISOString(),
@@ -309,9 +329,6 @@ export class RewardController {
     },
   )
 
-  /**
-   * Validate Stellar wallet address format
-   */
   private isValidStellarAddress(address: string): boolean {
     return /^G[A-Z0-9]{50,55}$/.test(address)
   }

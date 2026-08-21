@@ -5,6 +5,7 @@ import prisma from '../src/config/database'
 import bcrypt from 'bcryptjs'
 import { emailService } from '../src/services/email.service'
 import { otpService } from '../src/services/otp.service'
+import { refreshTokenService } from '../src/services/refresh-token.service'
 
 const mockTokenHash = 'abc123def456hash'
 const mockRawToken = 'aaabbbcccddd00112233445566778899aabbccddeeff00112233445566778899'
@@ -81,6 +82,15 @@ vi.mock('../src/services/otp.service', async () => {
     }
 })
 
+vi.mock('../src/services/refresh-token.service', () => ({
+    refreshTokenService: {
+        issueSession: vi.fn(),
+        rotate: vi.fn(),
+        revokeByRefreshToken: vi.fn(),
+        revokeAllByRefreshToken: vi.fn(),
+    },
+}))
+
 describe('AuthController', () => {
     let authController: AuthController
     let mockRequest: Partial<Request>
@@ -101,6 +111,13 @@ describe('AuthController', () => {
         otpPhoneCounts.clear()
         otpDeviceCounts.clear()
         vi.clearAllMocks()
+
+        vi.mocked(refreshTokenService.issueSession).mockResolvedValue({
+            sessionId: 'session-1',
+            accessToken: 'mock_access_token',
+            refreshToken: 'mock_refresh_token',
+            expiresIn: 900,
+        })
     })
 
     describe('register', () => {
@@ -148,8 +165,14 @@ describe('AuthController', () => {
             expect(mockResponse.json).toHaveBeenCalledWith(
                 expect.objectContaining({
                     message: 'User registered successfully',
-                    token: 'mock_token',
+                    accessToken: 'mock_access_token',
+                    refreshToken: 'mock_refresh_token',
+                    expiresIn: 900,
+                    tokenType: 'Bearer',
                 })
+            )
+            expect(refreshTokenService.issueSession).toHaveBeenCalledWith(
+                expect.objectContaining({ userId: '1', role: 'LEARNER' })
             )
         })
 
@@ -631,8 +654,14 @@ describe('AuthController', () => {
             expect(mockResponse.json).toHaveBeenCalledWith(
                 expect.objectContaining({
                     message: 'Login successful',
-                    token: 'mock_token',
+                    accessToken: 'mock_access_token',
+                    refreshToken: 'mock_refresh_token',
+                    expiresIn: 900,
+                    tokenType: 'Bearer',
                 })
+            )
+            expect(refreshTokenService.issueSession).toHaveBeenCalledWith(
+                expect.objectContaining({ userId: '1', role: 'LEARNER' })
             )
         })
 
@@ -804,18 +833,169 @@ describe('AuthController', () => {
         })
     })
 
-    describe('logout', () => {
-        it('should return success message', async () => {
-            await authController.logout(
-                mockRequest as Request,
-                mockResponse as Response
-            )
+    describe('refresh', () => {
+        it('rotates a valid refresh token and returns a new access/refresh pair', async () => {
+            mockRequest.body = { refreshToken: 'old-refresh-token' }
 
+            vi.mocked(refreshTokenService.rotate).mockResolvedValue({
+                kind: 'ok',
+                accessToken: 'new_access_token',
+                refreshToken: 'new_refresh_token',
+                expiresIn: 900,
+            })
+
+            await authController.refresh(mockRequest as Request, mockResponse as Response)
+
+            expect(refreshTokenService.rotate).toHaveBeenCalledWith(
+                'old-refresh-token',
+                expect.objectContaining({ ipAddress: '127.0.0.1' })
+            )
+            expect(mockResponse.status).toHaveBeenCalledWith(200)
+            expect(mockResponse.json).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    accessToken: 'new_access_token',
+                    refreshToken: 'new_refresh_token',
+                    expiresIn: 900,
+                    tokenType: 'Bearer',
+                })
+            )
+        })
+
+        it('reads the refresh token from the httpOnly cookie when the body is absent', async () => {
+            mockRequest.body = {}
+            mockRequest.headers = { cookie: 'refresh_token=cookie-refresh-token' }
+
+            vi.mocked(refreshTokenService.rotate).mockResolvedValue({
+                kind: 'ok',
+                accessToken: 'new_access_token',
+                refreshToken: 'new_refresh_token',
+                expiresIn: 900,
+            })
+
+            await authController.refresh(mockRequest as Request, mockResponse as Response)
+
+            expect(refreshTokenService.rotate).toHaveBeenCalledWith(
+                'cookie-refresh-token',
+                expect.anything()
+            )
+            expect(mockResponse.status).toHaveBeenCalledWith(200)
+        })
+
+        it('returns 400 when no refresh token is provided', async () => {
+            mockRequest.body = {}
+
+            await authController.refresh(mockRequest as Request, mockResponse as Response)
+
+            expect(mockResponse.status).toHaveBeenCalledWith(400)
+            expect(mockResponse.json).toHaveBeenCalledWith({ error: 'refreshToken is required' })
+            expect(refreshTokenService.rotate).not.toHaveBeenCalled()
+        })
+
+        it('returns 401 REFRESH_REUSE_DETECTED when a replayed token is detected', async () => {
+            mockRequest.body = { refreshToken: 'replayed-token' }
+
+            vi.mocked(refreshTokenService.rotate).mockResolvedValue({ kind: 'reuse' })
+
+            await authController.refresh(mockRequest as Request, mockResponse as Response)
+
+            expect(mockResponse.status).toHaveBeenCalledWith(401)
+            expect(mockResponse.json).toHaveBeenCalledWith(
+                expect.objectContaining({ code: 'REFRESH_REUSE_DETECTED' })
+            )
+        })
+
+        it('returns 401 for invalid, expired, and revoked tokens', async () => {
+            const cases = [
+                { kind: 'invalid' as const, code: 'REFRESH_INVALID' },
+                { kind: 'expired' as const, code: 'REFRESH_EXPIRED' },
+                { kind: 'revoked' as const, code: 'REFRESH_REVOKED' },
+            ]
+
+            for (const c of cases) {
+                vi.clearAllMocks()
+                mockRequest.body = { refreshToken: 'some-token' }
+                vi.mocked(refreshTokenService.rotate).mockResolvedValue({ kind: c.kind })
+
+                await authController.refresh(mockRequest as Request, mockResponse as Response)
+
+                expect(mockResponse.status).toHaveBeenCalledWith(401)
+                expect(mockResponse.json).toHaveBeenCalledWith(
+                    expect.objectContaining({ code: c.code })
+                )
+            }
+        })
+    })
+
+    describe('logout', () => {
+        it('revokes the session identified by the refresh token', async () => {
+            mockRequest.body = { refreshToken: 'current-refresh-token' }
+
+            vi.mocked(refreshTokenService.revokeByRefreshToken).mockResolvedValue({ revokedCount: 1 })
+
+            await authController.logout(mockRequest as Request, mockResponse as Response)
+
+            expect(refreshTokenService.revokeByRefreshToken).toHaveBeenCalledWith(
+                'current-refresh-token',
+                expect.anything()
+            )
             expect(mockResponse.status).toHaveBeenCalledWith(200)
             expect(mockResponse.json).toHaveBeenCalledWith({
-                message:
-                    'Logged out successfully. Please clear your token client-side.',
+                message: 'Logged out successfully',
+                revokedCount: 1,
             })
+        })
+
+        it('reads the refresh token from the cookie when the body is absent', async () => {
+            mockRequest.body = {}
+            mockRequest.headers = { cookie: 'refresh_token=cookie-refresh-token' }
+
+            vi.mocked(refreshTokenService.revokeByRefreshToken).mockResolvedValue({ revokedCount: 1 })
+
+            await authController.logout(mockRequest as Request, mockResponse as Response)
+
+            expect(refreshTokenService.revokeByRefreshToken).toHaveBeenCalledWith(
+                'cookie-refresh-token',
+                expect.anything()
+            )
+            expect(mockResponse.status).toHaveBeenCalledWith(200)
+        })
+
+        it('returns 400 when no refresh token is provided', async () => {
+            mockRequest.body = {}
+
+            await authController.logout(mockRequest as Request, mockResponse as Response)
+
+            expect(mockResponse.status).toHaveBeenCalledWith(400)
+            expect(mockResponse.json).toHaveBeenCalledWith({ error: 'refreshToken is required' })
+        })
+    })
+
+    describe('logoutAll', () => {
+        it('revokes all sessions for the user identified by the refresh token', async () => {
+            mockRequest.body = { refreshToken: 'any-refresh-token' }
+
+            vi.mocked(refreshTokenService.revokeAllByRefreshToken).mockResolvedValue({ revokedCount: 3 })
+
+            await authController.logoutAll(mockRequest as Request, mockResponse as Response)
+
+            expect(refreshTokenService.revokeAllByRefreshToken).toHaveBeenCalledWith(
+                'any-refresh-token',
+                expect.anything()
+            )
+            expect(mockResponse.status).toHaveBeenCalledWith(200)
+            expect(mockResponse.json).toHaveBeenCalledWith({
+                message: 'All sessions logged out',
+                revokedCount: 3,
+            })
+        })
+
+        it('returns 400 when no refresh token is provided', async () => {
+            mockRequest.body = {}
+
+            await authController.logoutAll(mockRequest as Request, mockResponse as Response)
+
+            expect(mockResponse.status).toHaveBeenCalledWith(400)
+            expect(mockResponse.json).toHaveBeenCalledWith({ error: 'refreshToken is required' })
         })
     })
 
@@ -1036,7 +1216,14 @@ describe('AuthController', () => {
 
             expect(mockResponse.status).toHaveBeenCalledWith(200)
             expect(mockResponse.json).toHaveBeenCalledWith(
-                expect.objectContaining({ message: 'Login successful', token: 'mock_token' })
+                expect.objectContaining({
+                    message: 'Login successful',
+                    accessToken: 'mock_access_token',
+                    refreshToken: 'mock_refresh_token',
+                })
+            )
+            expect(refreshTokenService.issueSession).toHaveBeenCalledWith(
+                expect.objectContaining({ userId: 'user1', role: 'LEARNER' })
             )
         })
 
