@@ -35,6 +35,7 @@ export default defineConfig(
             'bin/**',
             'dist/**',
             'build/**',
+            'patches/**',
             'node_modules/**',
         ])
     ],

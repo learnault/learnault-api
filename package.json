@@ -29,11 +29,13 @@
     "test:ci": "vitest run",
     "test:integration": "vitest run --reporter=verbose tests/integration/",
     "test:integration:watch": "vitest tests/integration/",
-    "db:migrate": "prisma migrate dev",
+    "prisma": "tsx node_modules/prisma/build/index.js",
+    "prisma:generate": "tsx node_modules/prisma/build/index.js generate",
+    "db:migrate": "tsx node_modules/prisma/build/index.js migrate dev",
     "seed": "tsx prisma/seed.ts",
     "seed:reset": "tsx prisma/seed.ts --reset",
     "db:seed": "npm run seed",
-    "db:studio": "prisma studio"
+    "db:studio": "tsx node_modules/prisma/build/index.js studio"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.4.2",
@@ -89,6 +91,11 @@
   "directories": {
     "doc": "docs",
     "test": "tests"
+  },
+  "pnpm": {
+    "overrides": {
+      "zeptomatch": "file:patches/zeptomatch-cjs-shim"
+    }
   },
   "bugs": {
     "url": "https://github.com/learnault/learnault/issues"
