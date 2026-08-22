@@ -1,12 +1,46 @@
+import type { TransitionMap } from '../utils/transitions'
+import { canTransition } from '../utils/transitions'
+
 export const WALLET_STATUSES = [
   'RESERVED',
   'PROVISIONING',
   'RETRYABLE',
   'ACTIVE',
+  'EXPORTING',
+  'MIGRATED',
   'FAILED',
+  'DISABLED',
 ] as const
 
 export type WalletStatus = (typeof WALLET_STATUSES)[number]
+
+export const WALLET_TRANSITIONS: TransitionMap<WalletStatus> = {
+  RESERVED: ['PROVISIONING', 'FAILED'],
+  PROVISIONING: ['ACTIVE', 'RETRYABLE', 'FAILED'],
+  RETRYABLE: ['PROVISIONING', 'FAILED'],
+  ACTIVE: ['EXPORTING', 'DISABLED'],
+  EXPORTING: ['ACTIVE', 'MIGRATED', 'FAILED'],
+  MIGRATED: ['DISABLED'],
+  FAILED: ['RESERVED'],
+  DISABLED: [],
+} as const
+
+export function canTransitionWallet(from: WalletStatus, to: WalletStatus): boolean {
+  return canTransition(WALLET_TRANSITIONS, from, to)
+}
+
+export class InvalidWalletTransitionError extends Error {
+  constructor(readonly from: WalletStatus, readonly to: WalletStatus) {
+    super(`Cannot transition wallet status from '${from}' to '${to}'`)
+    this.name = 'InvalidWalletTransitionError'
+  }
+}
+
+export function assertValidWalletTransition(from: WalletStatus, to: WalletStatus): void {
+  if (!canTransitionWallet(from, to)) {
+    throw new InvalidWalletTransitionError(from, to)
+  }
+}
 
 export const WALLET_JOB_STATUSES = [
   'PENDING',
