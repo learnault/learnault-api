@@ -5,7 +5,6 @@ import {
   InvalidWalletTransitionError,
   WALLET_STATUSES,
   WALLET_TRANSITIONS,
-  type WalletStatus,
 } from '../../src/types/wallet-provisioning.types'
 
 describe('wallet status transitions and lifecycle guards', () => {
@@ -66,7 +65,7 @@ describe('wallet status transitions and lifecycle guards', () => {
       InvalidWalletTransitionError,
     )
     expect(() => assertValidWalletTransition('DISABLED', 'ACTIVE')).toThrow(
-      "Cannot transition wallet status from 'DISABLED' to 'ACTIVE'",
+      'Cannot transition wallet status from \'DISABLED\' to \'ACTIVE\'',
     )
     expect(() => assertValidWalletTransition('ACTIVE', 'EXPORTING')).not.toThrow()
   })
