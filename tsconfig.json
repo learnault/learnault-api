@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "es2023",
     "module": "esnext",
-    "lib": ["ES2020"],
+    "lib": ["ES2023"],
     "rootDir": "./src",
     "outDir": "./dist",
     "strict": true,

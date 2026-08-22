@@ -635,3 +635,117 @@ model AvatarVariant {
   @@index([avatarId])
   @@map("avatar_variants")
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OUTBOX PATTERN: Transaction & Event Delivery Foundation
+// ─────────────────────────────────────────────────────────────────────────────
+// Implements Transactional Outbox pattern for work spanning:
+// - PostgreSQL domain changes (Prisma models)
+// - Asynchronous job queues (wallet provisioning, email, rewards, etc.)
+// - Third-party notifications and blockchain providers
+//
+// Key invariants:
+// - Outbox events are written in same transaction as domain changes
+// - JobAttempt rows track lease, retry, backoff, and idempotent completion
+// - Abandoned leases (leasedUntil in past) become retryable
+// - Dead-letter rows survive transient failures and support manual recovery
+// - Event payloads are versioned and validated before delivery
+
+model OutboxEvent {
+  id                String     @id @default(uuid())
+  aggregateId       String     // UUID of the root aggregate (e.g. userId, walletId)
+  aggregateType     String     // e.g. "User", "Wallet", "Completion"
+  eventType         String     // e.g. "UserCreated", "WalletProvisioned", "RewardClaimed"
+  eventVersion      Int        @default(1) // Schema version for event payload
+  payload           String     // JSON event data; validated against eventVersion schema
+  
+  // Outbox status: tracks delivery to all job queues and notification channels
+  status            String     @default("PENDING") // PENDING, PROCESSING, PUBLISHED, DEAD_LETTER, ROLLED_BACK
+  publishedAt       DateTime?  // Set when all JobAttempts for this event succeed
+  
+  // Source context: helps trace event causation and multi-domain workflows
+  source            String?    // e.g. "api.reward.claim", "worker.wallet-provisioning", "sync.module-completion"
+  causedBy          String?    // Foreign key to OutboxEvent.id if this event was triggered by another
+  
+  // Audit trail
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  // Relation to job attempts for this event
+  jobAttempts       JobAttempt[]
+
+  @@index([aggregateId, aggregateType])
+  @@index([eventType, status])
+  @@index([status, publishedAt]) // For polling workers
+  @@index([status, createdAt]) // For dead-letter queue recovery
+  @@index([createdAt]) // For bulk operations and migrations
+  @@map("outbox_events")
+}
+
+model JobAttempt {
+  id                String     @id @default(uuid())
+  outboxEventId     String     // FK to OutboxEvent
+  outboxEvent       OutboxEvent @relation(fields: [outboxEventId], references: [id], onDelete: Cascade)
+  
+  // Job identity: determines which worker processes this attempt
+  jobType           String     // e.g. "wallet.provision", "email.send", "reward.distribute", "notification.push"
+  jobName           String     // Human-readable identifier for monitoring
+  
+  // Lease-based concurrency control: ensures only one worker processes this job at a time
+  status            String     @default("PENDING") // PENDING, LEASED, COMPLETED, FAILED, DEAD_LETTER, ROLLED_BACK
+  leaseToken        String?    @unique // Opaque token held by worker; null if not leased
+  leasedUntil       DateTime?  // Lease expiration; null if not leased
+  
+  // Retry configuration: exponential backoff, max attempts, dead-lettering
+  availableAt       DateTime   @default(now()) // When job becomes available to lease
+  attempt           Int        @default(0) // 0-indexed attempt number
+  maxAttempts       Int        @default(3) // Configurable per job type
+  backoffMultiplier Float      @default(2.0) // Exponential backoff factor
+  backoffBaseMs     Int        @default(1000) // Base delay in milliseconds
+  
+  // Failure tracking
+  lastError         String?    // Last failure reason or stack trace
+  lastAttemptAt     DateTime?  // Timestamp of most recent attempt
+  
+  // Idempotent completion: prevents duplicate side effects from retries
+  // If a job succeeds but worker crashes before releasing lease,
+  // retry will see idempotencyKey in Completed entry and skip re-execution
+  idempotencyKey    String?    @unique // Optional; worker-defined for idempotent jobs
+  completedAt       DateTime?  // Set when job succeeds
+  result            String?    // JSON result payload (e.g. transaction hash)
+  
+  // Audit trail
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@index([outboxEventId, status])
+  @@index([jobType, status])
+  @@index([status, availableAt]) // For worker polling: PENDING jobs ready to lease
+  @@index([status, leasedUntil]) // For worker cleanup: find abandoned leases
+  @@index([status, createdAt]) // For dead-letter queue recovery
+  @@index([createdAt]) // For bulk operations and migrations
+  @@map("job_attempts")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ROLLED_BACK RECORDS: Markers for rolled-back events and jobs
+// ─────────────────────────────────────────────────────────────────────────────
+// When a domain transaction rolls back, outbox events must be marked as
+// ROLLED_BACK to prevent workers from processing them. This marker is written
+// in a separate transaction to avoid circular dependencies on the original
+// transaction.
+//
+// Workers periodically prune ROLLED_BACK records after sufficient time has
+// passed to ensure no in-flight attempts reference them.
+
+model RolledBackRecord {
+  id                String     @id @default(uuid())
+  recordType        String     // "OutboxEvent" or "JobAttempt"
+  recordId          String     // ID of OutboxEvent or JobAttempt that was rolled back
+  reason            String?    // Optional reason for rollback
+  createdAt         DateTime   @default(now())
+
+  @@index([recordType, recordId])
+  @@index([createdAt]) // For periodic cleanup
+  @@map("rolled_back_records")
+}
