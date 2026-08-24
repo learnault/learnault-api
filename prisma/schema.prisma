@@ -99,12 +99,19 @@ model LearnerProfile {
 
   visibility    String   @default("private") // private, employer, public
 
+  // Archive (soft delete). Reads exclude archived rows by default — see
+  // src/audit/archive.ts. Purged 365 days after archivedAt.
+  archivedAt      DateTime?
+  archivedById    String?
+  archivedReason  String?
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@index([country])
   @@index([level])
   @@index([visibility])
+  @@index([archivedAt])
   @@map("learner_profiles")
 }
 
@@ -210,6 +217,60 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
+/// Immutable audit spine for security-, money-, credential-, and
+/// content-sensitive mutations. See docs/DATA_LIFECYCLE.md.
+///
+/// Append-only: a database trigger rejects every UPDATE, and rejects DELETE
+/// unless the retention purge has set the `learnault.audit_purge` session
+/// variable. There is no code path that edits a row here.
+///
+/// Erasure-safe by construction. Nothing in this table needs scrubbing when a
+/// subject is erased, because nothing identifying is stored in the first place:
+/// actor and target are opaque ids, the request IP is kept only as a keyed
+/// hash, the User-Agent only as a coarse family, and `metadata` passes through
+/// the redaction filter in src/audit/redaction.ts on the way in.
+///
+/// Deliberately has no relation to User. A foreign key would need either
+/// `onDelete: Cascade` (erasure destroys the trail) or `onDelete: SetNull`
+/// (erasure mutates an immutable row). `actorId` is a soft reference instead.
+model AuditEvent {
+  id              String   @id @default(uuid())
+
+  // ── Actor: who caused the change ──
+  actorType       String   // USER, ADMIN, SYSTEM, WORKER, ANONYMOUS
+  actorId         String?  // opaque id; null for SYSTEM and ANONYMOUS actors
+  actorRole       String?  // role held at the time of the action, not now
+
+  // ── Action and target: what changed ──
+  action          String   // e.g. "account.deactivated", "wallet.provisioned"
+  recordClass     String   // MUTABLE, ARCHIVABLE, DELETABLE, IMMUTABLE
+  targetType      String   // Prisma model name, e.g. "User", "Wallet"
+  targetId        String?  // primary key of the affected row
+
+  // ── Justification and correlation ──
+  reason          String?  // caller-supplied; required for ADMIN actors
+  requestId       String?  // x-request-id, correlates to request logs
+  correlationId   String?  // outbox event or job id for async changes
+  source          String?  // e.g. "api.account.deactivate", "worker.sweep"
+
+  // ── Safe context: redacted, hashed, coarsened ──
+  metadata        String?  // redacted JSON; never secrets, never raw PII
+  actorIpHash     String?  // keyed SHA-256 of the request IP, never the raw IP
+  userAgentFamily String?  // e.g. "Chrome", "Android"; never the raw UA
+
+  occurredAt      DateTime @default(now())
+
+  @@index([targetType, targetId, occurredAt])
+  @@index([actorType, actorId, occurredAt])
+  @@index([action, occurredAt])
+  @@index([requestId])
+  @@index([occurredAt])
+  @@map("audit_events")
+}
+
+/// Superseded by AuditEvent, and retained only for the trail written before the
+/// data-lifecycle policy landed. Unlike AuditEvent it holds a raw IP and
+/// User-Agent, so erasure scrubs those columns.
 model AuditLog {
   id        String   @id @default(uuid())
   userId    String?
@@ -276,10 +337,18 @@ model Module {
   assetIssuer     String?
   /// Stellar network: "testnet" or "mainnet".
   assetNetwork    String         @default("testnet")
+  /// Archive (soft delete). Withdrawn content is archived, never deleted:
+  /// completions and credentials reference the module a learner actually took.
+  /// Reads exclude archived rows by default — see src/audit/archive.ts.
+  archivedAt      DateTime?
+  archivedById    String?
+  archivedReason  String?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   completions     Completion[]
   credentials     Credential[]
+
+  @@index([archivedAt])
 }
 
 model Completion {
@@ -339,9 +408,16 @@ model ReferralCode {
   code      String     @unique
   userId    String     @unique
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Archive (soft delete). Retiring a code archives it so the Referral rows
+  /// pointing at it keep a valid referent. Reads exclude archived rows by
+  /// default — see src/audit/archive.ts.
+  archivedAt     DateTime?
+  archivedById   String?
+  archivedReason String?
   createdAt DateTime   @default(now())
   referrals Referral[]
 
+  @@index([archivedAt])
   @@map("referral_codes")
 }
 
@@ -390,9 +466,17 @@ model WebhookEndpoint {
   description String?
   isActive    Boolean          @default(true)
   events      String           // Comma-separated list of events: "module.completed,reward.issued"
+  /// Archive (soft delete), distinct from isActive: isActive pauses delivery,
+  /// archiving retires the endpoint while its delivery history keeps a valid
+  /// referent. Reads exclude archived rows by default — see src/audit/archive.ts.
+  archivedAt     DateTime?
+  archivedById   String?
+  archivedReason String?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   deliveries  WebhookDelivery[]
+
+  @@index([archivedAt])
 }
 
 model WebhookDelivery {
@@ -616,8 +700,16 @@ model Avatar {
   replacedBy    Avatar?  @relation("AvatarReplacement", fields: [replacedById], references: [id])
   replacements  Avatar[] @relation("AvatarReplacement")
   variants      AvatarVariant[]
+  /// Archive (soft delete), distinct from replacedAt: replacedAt records that a
+  /// newer avatar superseded this one, archivedAt records that it was withdrawn
+  /// (by the learner or by moderation). Reads exclude archived rows by default —
+  /// see src/audit/archive.ts.
+  archivedAt     DateTime?
+  archivedById   String?
+  archivedReason String?
 
   @@index([userId, status])
+  @@index([archivedAt])
   @@map("avatars")
 }
 
