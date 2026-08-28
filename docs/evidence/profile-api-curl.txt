@@ -1,0 +1,473 @@
+Profile API — redacted curl transcript
+Issue: Phase 1 / "Replace Mock User Helpers with Profile API"
+See docs/decisions/0004-profile-api.md
+
+Captured 2026-08-28 against a locally running server (NODE_ENV=test) on a
+dedicated, disposable Postgres test database seeded with three learners:
+  11111111-…  owner: empty profile, onboarding started, ToS granted
+  22222222-…  visibility: public, fully filled profile
+  33333333-…  visibility: private, holds wallet address GBBB…
+
+Bearer tokens and passwords are redacted in the echoed commands; the real
+values were used. Responses are verbatim, only pretty-printed.
+
+
+======================================================================
+1. Authentication
+======================================================================
+
+### GET /users/me with no token → 401
+$ curl $B/users/me
+HTTP 401
+{
+    "message": "Authorization token required"
+}
+
+### GET /users/me with a bad token → 401
+$ curl -H 'Authorization: Bearer not-a-jwt' $B/users/me
+HTTP 401
+{
+    "message": "Invalid token"
+}
+
+======================================================================
+2. Owner account/profile aggregate — real persisted rows, no fixture
+======================================================================
+
+### GET /users/me → 200
+$ curl -H 'Authorization: Bearer <REDACTED_JWT>' $B/users/me
+HTTP 200
+{
+    "data": {
+        "account": {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "email": "ada@example.com",
+            "username": "ada_learner",
+            "role": "LEARNER",
+            "status": "ACTIVE",
+            "isVerified": true,
+            "phoneVerifiedAt": null,
+            "walletAddress": null,
+            "createdAt": "2026-08-28T18:31:53.293Z",
+            "updatedAt": "2026-08-28T18:31:53.293Z",
+            "lastLoginAt": null
+        },
+        "profile": {
+            "id": "25bfdbe5-d872-4c01-bc28-73b00bd281d9",
+            "userId": "11111111-1111-4111-8111-111111111111",
+            "displayName": null,
+            "bio": null,
+            "avatarUrl": null,
+            "country": null,
+            "timezone": null,
+            "languages": [],
+            "level": "beginner",
+            "interests": [],
+            "goals": [],
+            "visibility": "private",
+            "createdAt": "2026-08-28T18:32:07.014Z",
+            "updatedAt": "2026-08-28T18:32:07.014Z"
+        },
+        "completion": {
+            "percent": 0,
+            "missingFields": [
+                "displayName",
+                "bio",
+                "avatarUrl",
+                "country",
+                "timezone",
+                "languages",
+                "interests",
+                "goals"
+            ]
+        },
+        "onboarding": {
+            "version": "v1",
+            "status": "in_progress",
+            "currentStep": "profile_basics",
+            "completedSteps": [
+                "profile_basics"
+            ],
+            "requiredStepsRemaining": [
+                "consent"
+            ],
+            "startedAt": "2026-08-28T18:31:54.799Z",
+            "completedAt": null
+        },
+        "consents": [
+            {
+                "purpose": "terms_of_service",
+                "status": "granted",
+                "required": true,
+                "policyVersion": "2026-01",
+                "grantedAt": "2026-08-28T18:31:54.806Z",
+                "withdrawnAt": null
+            }
+        ],
+        "requiredConsentsGranted": false
+    }
+}
+
+======================================================================
+3. Owners update only allow-listed fields
+======================================================================
+
+### PATCH /users/me {role, isVerified} → 400 (account fields refused)
+$ curl -X PATCH -H 'Authorization: Bearer <REDACTED_JWT>' -H 'Content-Type: application/json' -d '{"role":"ADMIN","isVerified":true}' $B/users/me
+HTTP 400
+{
+    "error": "Validation failed",
+    "details": {
+        "_errors": [
+            "Unrecognized key(s) in object: 'role', 'isVerified'",
+            "At least one profile field is required"
+        ]
+    }
+}
+
+### PATCH /users/me {walletAddress} → 400 (not a profile field)
+$ curl -X PATCH -H 'Authorization: Bearer <REDACTED_JWT>' -H 'Content-Type: application/json' -d '{"walletAddress":"GAAA…"}' $B/users/me
+HTTP 400
+{
+    "error": "Validation failed",
+    "details": {
+        "_errors": [
+            "Unrecognized key(s) in object: 'walletAddress'",
+            "At least one profile field is required"
+        ]
+    }
+}
+
+### PATCH /users/me {} → 400 (at least one field required)
+$ curl -X PATCH -H 'Authorization: Bearer <REDACTED_JWT>' -H 'Content-Type: application/json' -d '{}' $B/users/me
+HTTP 400
+{
+    "error": "Validation failed",
+    "details": {
+        "_errors": [
+            "At least one profile field is required"
+        ]
+    }
+}
+
+### PATCH /users/me {level: wizard} → 400 (bounded enum)
+$ curl -X PATCH -H 'Authorization: Bearer <REDACTED_JWT>' -H 'Content-Type: application/json' -d '{"level":"wizard"}' $B/users/me
+HTTP 400
+{
+    "error": "Validation failed",
+    "details": {
+        "_errors": [],
+        "level": {
+            "_errors": [
+                "Level must be one of: beginner, intermediate, advanced, expert"
+            ]
+        }
+    }
+}
+
+### PATCH /users/me {displayName, bio, country, interests} → 200 (audited write)
+$ curl -X PATCH -H 'Authorization: Bearer <REDACTED_JWT>' -H 'Content-Type: application/json' -d '{"displayName":"Ada L.","bio":"Building on Stellar","country":"NG","interests":["soroban"]}' $B/users/me
+HTTP 200
+{
+    "message": "Profile updated successfully",
+    "data": {
+        "account": {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "email": "ada@example.com",
+            "username": "ada_learner",
+            "role": "LEARNER",
+            "status": "ACTIVE",
+            "isVerified": true,
+            "phoneVerifiedAt": null,
+            "walletAddress": null,
+            "createdAt": "2026-08-28T18:31:53.293Z",
+            "updatedAt": "2026-08-28T18:31:53.293Z",
+            "lastLoginAt": null
+        },
+        "profile": {
+            "id": "25bfdbe5-d872-4c01-bc28-73b00bd281d9",
+            "userId": "11111111-1111-4111-8111-111111111111",
+            "displayName": "Ada L.",
+            "bio": "Building on Stellar",
+            "avatarUrl": null,
+            "country": "NG",
+            "timezone": null,
+            "languages": [],
+            "level": "beginner",
+            "interests": [
+                "soroban"
+            ],
+            "goals": [],
+            "visibility": "private",
+            "createdAt": "2026-08-28T18:32:07.014Z",
+            "updatedAt": "2026-08-28T18:32:09.201Z"
+        },
+        "completion": {
+            "percent": 50,
+            "missingFields": [
+                "avatarUrl",
+                "timezone",
+                "languages",
+                "goals"
+            ]
+        },
+        "onboarding": {
+            "version": "v1",
+            "status": "in_progress",
+            "currentStep": "profile_basics",
+            "completedSteps": [
+                "profile_basics"
+            ],
+            "requiredStepsRemaining": [
+                "consent"
+            ],
+            "startedAt": "2026-08-28T18:31:54.799Z",
+            "completedAt": null
+        },
+        "consents": [
+            {
+                "purpose": "terms_of_service",
+                "status": "granted",
+                "required": true,
+                "policyVersion": "2026-01",
+                "grantedAt": "2026-08-28T18:31:54.806Z",
+                "withdrawnAt": null
+            }
+        ],
+        "requiredConsentsGranted": false
+    }
+}
+
+======================================================================
+4. Private data never enters a public response
+======================================================================
+
+### GET /users/{public-profile id} anonymous → 200, public subset only
+$ curl $B/users/$PUB_ID
+HTTP 200
+{
+    "data": {
+        "id": "d1589aaf-c46b-4a9c-bb99-6597c7550db9",
+        "displayName": "Grace H.",
+        "bio": "Learning Soroban",
+        "avatarUrl": null,
+        "country": "NG",
+        "level": "intermediate",
+        "interests": [
+            "soroban",
+            "stellar"
+        ],
+        "visible": true
+    }
+}
+
+### GET /users/{private-profile id} anonymous → 200, redacted stub
+$ curl $B/users/$PRIV_ID
+HTTP 200
+{
+    "data": {
+        "id": "ea2039b1-7a93-4644-8a78-28541d2d244b",
+        "visible": false
+    }
+}
+
+### GET /users/{owner id} with the owner's own token → 200, still the public view
+$ curl -H 'Authorization: Bearer <REDACTED_JWT>' $B/users/$OWNER_ID
+HTTP 200
+{
+    "data": {
+        "id": "25bfdbe5-d872-4c01-bc28-73b00bd281d9",
+        "visible": false
+    }
+}
+
+### GET /users/not-a-uuid → 400
+$ curl $B/users/not-a-uuid
+HTTP 400
+{
+    "error": "Validation failed",
+    "details": {
+        "_errors": [],
+        "id": {
+            "_errors": [
+                "Invalid user id"
+            ]
+        }
+    }
+}
+
+### GET /users/{unknown uuid} → 404
+$ curl $B/users/00000000-0000-4000-8000-000000000000
+HTTP 404
+{
+    "error": "User not found"
+}
+
+======================================================================
+5. Password change — step-up, revocation, no plaintext echoed
+======================================================================
+
+### PATCH /users/password wrong current password → 401
+$ curl -X PATCH -H 'Authorization: Bearer <REDACTED_JWT>' -H 'Content-Type: application/json' -d '{"currentPassword":"<REDACTED>","newPassword":"<REDACTED>"}' $B/users/password
+HTTP 401
+{
+    "error": "Current password is incorrect",
+    "code": "STEP_UP_FAILED"
+}
+
+### PATCH /users/password weak new password → 400
+$ curl -X PATCH -H 'Authorization: Bearer <REDACTED_JWT>' -H 'Content-Type: application/json' -d '{"currentPassword":"<REDACTED>","newPassword":"weak"}' $B/users/password
+HTTP 400
+{
+    "error": "Validation failed",
+    "details": {
+        "_errors": [],
+        "newPassword": {
+            "_errors": [
+                "Password must be at least 8 characters long",
+                "Password must contain at least one uppercase letter",
+                "Password must contain at least one number",
+                "Password must contain at least one special character"
+            ]
+        }
+    }
+}
+
+======================================================================
+6. Wallet address — validation, conflict, idempotence
+======================================================================
+
+### PATCH /users/wallet malformed address → 400
+$ curl -X PATCH -H 'Authorization: Bearer <REDACTED_JWT>' -H 'Content-Type: application/json' -d '{"walletAddress":"invalid-address"}' $B/users/wallet
+HTTP 400
+{
+    "error": "Validation failed",
+    "details": {
+        "_errors": [],
+        "walletAddress": {
+            "_errors": [
+                "Invalid Stellar wallet address format"
+            ]
+        }
+    }
+}
+
+### PATCH /users/wallet secret seed in the address field → 400
+$ curl -X PATCH -H 'Authorization: Bearer <REDACTED_JWT>' -H 'Content-Type: application/json' -d '{"walletAddress":"S…(seed)"}' $B/users/wallet
+HTTP 400
+{
+    "error": "Validation failed",
+    "details": {
+        "_errors": [],
+        "walletAddress": {
+            "_errors": [
+                "Invalid Stellar wallet address format"
+            ]
+        }
+    }
+}
+
+### PATCH /users/wallet valid public key → 200 (audited)
+$ curl -X PATCH -H 'Authorization: Bearer <REDACTED_JWT>' -H 'Content-Type: application/json' -d '{"walletAddress":"GAAA…"}' $B/users/wallet
+HTTP 200
+{
+    "message": "Wallet address updated successfully",
+    "data": {
+        "walletAddress": "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    }
+}
+
+### PATCH /users/wallet same address again → 200, no-op
+$ curl -X PATCH -H 'Authorization: Bearer <REDACTED_JWT>' -H 'Content-Type: application/json' -d '{"walletAddress":"GAAA…"}' $B/users/wallet
+HTTP 200
+{
+    "message": "Wallet address unchanged",
+    "data": {
+        "walletAddress": "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    }
+}
+
+### PATCH /users/wallet address held by another account → 409
+$ curl -X PATCH -H 'Authorization: Bearer <REDACTED_JWT>' -H 'Content-Type: application/json' -d '{"walletAddress":"GBBB…"}' $B/users/wallet
+HTTP 409
+{
+    "error": "Wallet address is already associated with another account",
+    "code": "WALLET_ADDRESS_TAKEN"
+}
+
+======================================================================
+7. GET /users/me after the updates — completion and wallet reflected
+======================================================================
+
+### GET /users/me → 200
+$ curl -H 'Authorization: Bearer <REDACTED_JWT>' $B/users/me
+HTTP 200
+{
+    "data": {
+        "account": {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "email": "ada@example.com",
+            "username": "ada_learner",
+            "role": "LEARNER",
+            "status": "ACTIVE",
+            "isVerified": true,
+            "phoneVerifiedAt": null,
+            "walletAddress": "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "createdAt": "2026-08-28T18:31:53.293Z",
+            "updatedAt": "2026-08-28T18:32:12.118Z",
+            "lastLoginAt": null
+        },
+        "profile": {
+            "id": "25bfdbe5-d872-4c01-bc28-73b00bd281d9",
+            "userId": "11111111-1111-4111-8111-111111111111",
+            "displayName": "Ada L.",
+            "bio": "Building on Stellar",
+            "avatarUrl": null,
+            "country": "NG",
+            "timezone": null,
+            "languages": [],
+            "level": "beginner",
+            "interests": [
+                "soroban"
+            ],
+            "goals": [],
+            "visibility": "private",
+            "createdAt": "2026-08-28T18:32:07.014Z",
+            "updatedAt": "2026-08-28T18:32:09.201Z"
+        },
+        "completion": {
+            "percent": 50,
+            "missingFields": [
+                "avatarUrl",
+                "timezone",
+                "languages",
+                "goals"
+            ]
+        },
+        "onboarding": {
+            "version": "v1",
+            "status": "in_progress",
+            "currentStep": "profile_basics",
+            "completedSteps": [
+                "profile_basics"
+            ],
+            "requiredStepsRemaining": [
+                "consent"
+            ],
+            "startedAt": "2026-08-28T18:31:54.799Z",
+            "completedAt": null
+        },
+        "consents": [
+            {
+                "purpose": "terms_of_service",
+                "status": "granted",
+                "required": true,
+                "policyVersion": "2026-01",
+                "grantedAt": "2026-08-28T18:31:54.806Z",
+                "withdrawnAt": null
+            }
+        ],
+        "requiredConsentsGranted": false
+    }
+}
+

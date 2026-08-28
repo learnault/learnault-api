@@ -16,7 +16,7 @@ Status baseline: 17 July 2026. The present schema supports users, flat modules, 
 
 - [x] Express/TypeScript service, versioned router, Prisma/PostgreSQL setup, security headers, logging, and error middleware exist.
 - [~] JWT registration/login exists with rotating refresh sessions, reuse detection, and logout; verification, recovery, session management, and wallet provisioning flows are partly present.
-- [~] User routes exist, but user persistence helpers currently return mock users.
+- [x] User routes are Prisma-backed: account/profile aggregate read, validated and audited profile update, consent-aware public profile read, real password change with session revocation, and wallet address persistence. No mock user helpers remain.
 - [~] Flat module list/detail/start/complete routes exist without Course, LearningPath, Lesson, Quiz, Question, Attempt, Enrollment, or detailed Progress models.
 - [~] Reward, credential, referral, offline-sync, notification, webhook, employer, Stellar, and Soroban services/routes exist at varying levels of completeness.
 - [~] 155 tests currently pass, but seven suites fail to load in the local environment.
@@ -65,7 +65,7 @@ Status baseline: 17 July 2026. The present schema supports users, flat modules, 
 - [ ] Extend `User` with account status and verification fields; separate private identity from public profile data.
 - [ ] Add `LearnerProfile` for display name, bio, avatar, country, timezone, languages, skill level, interests, goals, and profile visibility.
 - [ ] Add onboarding state/version, consent records, terms/privacy versions, analytics consent, and data-sharing consent.
-- [ ] Add account/profile read and update endpoints using Prisma; remove all mock user helpers.
+- [x] Add account/profile read and update endpoints using Prisma; remove all mock user helpers — owner account/profile aggregate on `GET /users/me` (identity, profile, completion, onboarding, consents), allow-listed audited update on `PATCH /users/me`, consent-aware public read on `GET /users/{id}`, real password change with in-transaction session revocation, and wallet address persistence with conflict handling. See [`docs/decisions/0004-profile-api.md`](docs/decisions/0004-profile-api.md).
 - [ ] Add preferences endpoints for locale, timezone, low-data mode, accessibility, content, notifications, and privacy.
 - [ ] Add avatar signed-upload/finalization/delete flow with validation and image processing.
 - [ ] Add data export, account deactivation, deletion request, retention, and irreversible deletion workflows.

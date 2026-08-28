@@ -247,10 +247,14 @@
  * components:
  *   schemas:
  *
- *     # ── Users ─────────────────────────────────────────────────────────────
+ *     # ── Users, accounts and profiles ───────────────────────────────────────
  *
- *     User:
+ *     AccountSummary:
  *       type: object
+ *       description: >
+ *         Owner-only view of the `User` row. Served exclusively through
+ *         `GET /users/me`; none of these fields appears in a public or
+ *         employer-facing response.
  *       properties:
  *         id:
  *           type: string
@@ -260,28 +264,79 @@
  *           format: email
  *         username:
  *           type: string
- *         firstName:
+ *         role:
  *           type: string
- *           nullable: true
- *         lastName:
+ *           enum: [ADMIN, LEARNER, INSTRUCTOR]
+ *         status:
  *           type: string
- *           nullable: true
- *         bio:
+ *           enum: [ACTIVE, DEACTIVATED, PENDING_DELETION, DELETED]
+ *         isVerified:
+ *           type: boolean
+ *         phoneVerifiedAt:
  *           type: string
- *           nullable: true
- *         avatar:
- *           type: string
- *           format: uri
+ *           format: date-time
  *           nullable: true
  *         walletAddress:
  *           type: string
  *           nullable: true
  *           example: GABC1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGH
- *         isActive:
- *           type: boolean
- *         role:
+ *         createdAt:
  *           type: string
- *           enum: [learner, employer, admin]
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *         lastLoginAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *
+ *     LearnerProfile:
+ *       type: object
+ *       description: The learner-authored profile record, in full (owner view).
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *         userId:
+ *           type: string
+ *           format: uuid
+ *         displayName:
+ *           type: string
+ *           nullable: true
+ *           maxLength: 80
+ *         bio:
+ *           type: string
+ *           nullable: true
+ *           maxLength: 1000
+ *         avatarUrl:
+ *           type: string
+ *           format: uri
+ *           nullable: true
+ *         country:
+ *           type: string
+ *           nullable: true
+ *         timezone:
+ *           type: string
+ *           nullable: true
+ *         languages:
+ *           type: array
+ *           items:
+ *             type: string
+ *         level:
+ *           type: string
+ *           enum: [beginner, intermediate, advanced, expert]
+ *         interests:
+ *           type: array
+ *           items:
+ *             type: string
+ *         goals:
+ *           type: array
+ *           items:
+ *             type: string
+ *         visibility:
+ *           type: string
+ *           enum: [private, employer, public]
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -289,52 +344,185 @@
  *           type: string
  *           format: date-time
  *
- *     PublicUser:
+ *     ProfileCompletion:
  *       type: object
- *       description: Publicly visible subset of a user profile.
+ *       description: Computed on read, never stored, so it cannot drift.
  *       properties:
- *         id:
+ *         percent:
+ *           type: integer
+ *           minimum: 0
+ *           maximum: 100
+ *         missingFields:
+ *           type: array
+ *           items:
+ *             type: string
+ *
+ *     OnboardingSummary:
+ *       type: object
+ *       nullable: true
+ *       description: Null when the learner has never started onboarding.
+ *       properties:
+ *         version:
  *           type: string
- *           format: uuid
- *         username:
+ *         status:
  *           type: string
- *         firstName:
+ *           enum: [in_progress, completed]
+ *         currentStep:
  *           type: string
- *           nullable: true
- *         lastName:
- *           type: string
- *           nullable: true
- *         avatar:
- *           type: string
- *           format: uri
- *           nullable: true
- *         role:
- *           type: string
- *           enum: [learner, employer, admin]
- *         createdAt:
+ *           enum: [profile_basics, consent, preferences]
+ *         completedSteps:
+ *           type: array
+ *           items:
+ *             type: string
+ *         requiredStepsRemaining:
+ *           type: array
+ *           items:
+ *             type: string
+ *         startedAt:
  *           type: string
  *           format: date-time
+ *         completedAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
  *
- *     UpdateUserInput:
+ *     ConsentSummary:
  *       type: object
- *       description: All fields are optional; send only what you want to change.
+ *       description: Current state of one consent purpose. History lives at /consents/history.
  *       properties:
- *         username:
+ *         purpose:
  *           type: string
- *           minLength: 3
- *           maxLength: 30
- *         firstName:
+ *           enum: [terms_of_service, privacy_policy, marketing_emails, analytics, data_sharing, custodial_wallet]
+ *         status:
  *           type: string
- *           maxLength: 50
- *         lastName:
+ *           enum: [granted, withdrawn]
+ *         required:
+ *           type: boolean
+ *         policyVersion:
  *           type: string
- *           maxLength: 50
+ *         grantedAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *         withdrawnAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *
+ *     OwnerAccountProfile:
+ *       type: object
+ *       description: The aggregate returned by GET and PATCH /users/me.
+ *       properties:
+ *         account:
+ *           $ref: '#/components/schemas/AccountSummary'
+ *         profile:
+ *           $ref: '#/components/schemas/LearnerProfile'
+ *         completion:
+ *           $ref: '#/components/schemas/ProfileCompletion'
+ *         onboarding:
+ *           $ref: '#/components/schemas/OnboardingSummary'
+ *         consents:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/ConsentSummary'
+ *         requiredConsentsGranted:
+ *           type: boolean
+ *
+ *     PublicProfile:
+ *       description: >
+ *         Either the public field subset or the redacted stub
+ *         `{ id, visible: false }`. The stub is returned identically for a
+ *         non-public profile, a withdrawn data-sharing consent, and an inactive
+ *         account, so the refusal itself discloses nothing.
+ *       oneOf:
+ *         - type: object
+ *           properties:
+ *             id:
+ *               type: string
+ *               format: uuid
+ *             displayName:
+ *               type: string
+ *               nullable: true
+ *             bio:
+ *               type: string
+ *               nullable: true
+ *             avatarUrl:
+ *               type: string
+ *               format: uri
+ *               nullable: true
+ *             country:
+ *               type: string
+ *               nullable: true
+ *             level:
+ *               type: string
+ *               enum: [beginner, intermediate, advanced, expert]
+ *             interests:
+ *               type: array
+ *               items:
+ *                 type: string
+ *             visible:
+ *               type: boolean
+ *               enum: [true]
+ *         - type: object
+ *           properties:
+ *             id:
+ *               type: string
+ *               format: uuid
+ *             visible:
+ *               type: boolean
+ *               enum: [false]
+ *
+ *     UpdateProfileInput:
+ *       type: object
+ *       additionalProperties: false
+ *       description: >
+ *         Partial update. Every field is optional but at least one is required,
+ *         and any property not listed here is rejected with a 400 — this object
+ *         is the complete set of fields an owner may write.
+ *       minProperties: 1
+ *       properties:
+ *         displayName:
+ *           type: string
+ *           nullable: true
+ *           minLength: 1
+ *           maxLength: 80
  *         bio:
  *           type: string
- *           maxLength: 500
- *         avatar:
+ *           nullable: true
+ *           maxLength: 1000
+ *         avatarUrl:
  *           type: string
  *           format: uri
+ *           nullable: true
+ *         country:
+ *           type: string
+ *           nullable: true
+ *           minLength: 2
+ *           maxLength: 60
+ *         timezone:
+ *           type: string
+ *           nullable: true
+ *         languages:
+ *           type: array
+ *           maxItems: 20
+ *           items:
+ *             type: string
+ *         level:
+ *           type: string
+ *           enum: [beginner, intermediate, advanced, expert]
+ *         interests:
+ *           type: array
+ *           maxItems: 50
+ *           items:
+ *             type: string
+ *         goals:
+ *           type: array
+ *           maxItems: 20
+ *           items:
+ *             type: string
+ *         visibility:
+ *           type: string
+ *           enum: [private, employer, public]
  *
  *     ChangePasswordInput:
  *       type: object

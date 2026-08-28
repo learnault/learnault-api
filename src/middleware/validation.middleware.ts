@@ -132,7 +132,13 @@ export const validate = (schemas: ValidationSchemas) => {
   }
 }
 
-// Specific validation middlewares for backward compatibility
+// Specific validation middlewares for backward compatibility.
+//
+// `validateProfileUpdate` is **deprecated and no longer mounted on any route**.
+// It validates the mock-era `firstName`/`lastName`/`bio`/`avatar` body, none of
+// which is a persisted column: learner profile data lives on `LearnerProfile`.
+// The live allow-list is `updateProfileSchema` in src/schemas/profile.schema.ts,
+// applied inside the controller. Do not wire this back up.
 export const validateProfileUpdate = validate({
   body: z.object({
     username: commonSchemas.username.optional(),

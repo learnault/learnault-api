@@ -1,29 +1,12 @@
 import { Request, Response } from 'express'
-import { z } from 'zod'
 import { ProfileService } from '../services/profile.service'
-import { LEARNER_LEVELS, PROFILE_VISIBILITIES } from '../types/profile.types'
+import { requestAuditContext } from '../utils/audit-context'
+// One allow-list for owner-updatable profile fields, shared with
+// `PATCH /users/me` — two copies would drift, and a drifted copy is how a
+// field becomes writable on one route and not the other.
+import { updateProfileSchema } from '../schemas/profile.schema'
 
 const profileService = new ProfileService()
-
-const updateProfileSchema = z
-  .object({
-    displayName: z.string().min(1).max(80).nullable().optional(),
-    bio: z.string().max(1000).nullable().optional(),
-    avatarUrl: z.string().url().nullable().optional(),
-    country: z.string().min(2).max(60).nullable().optional(),
-    timezone: z.string().nullable().optional(),
-    languages: z.array(z.string().min(1)).max(20).optional(),
-    level: z.enum(LEARNER_LEVELS, {
-      errorMap: () => ({ message: `Level must be one of: ${LEARNER_LEVELS.join(', ')}` }),
-    }).optional(),
-    interests: z.array(z.string().min(1)).max(50).optional(),
-    goals: z.array(z.string().min(1)).max(20).optional(),
-    visibility: z.enum(PROFILE_VISIBILITIES, {
-      errorMap: () => ({ message: `Visibility must be one of: ${PROFILE_VISIBILITIES.join(', ')}` }),
-    }).optional(),
-  })
-  .strict()
-  .refine(data => Object.keys(data).length > 0, { message: 'At least one profile field is required' })
 
 export class ProfileController {
   /**
@@ -63,9 +46,18 @@ export class ProfileController {
    * /users/me/profile:
    *   patch:
    *     summary: Partially update the authenticated user's learner profile
+   *     description: >
+   *       Closed body: only owner-updatable profile fields are accepted, and the
+   *       change is written together with its audit event in one transaction.
    *     tags: [Profiles]
    *     security:
    *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/UpdateProfileInput'
    *     responses:
    *       200:
    *         description: Profile updated successfully
@@ -93,7 +85,7 @@ export class ProfileController {
         return
       }
 
-      await profileService.updateProfile(userId, validation.data)
+      await profileService.updateProfileAudited(userId, validation.data, requestAuditContext(req))
       const profile = await profileService.getOwnerView(userId)
 
       res.status(200).json({
