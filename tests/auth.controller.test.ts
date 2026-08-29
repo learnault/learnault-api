@@ -5,6 +5,7 @@ import prisma from '../src/config/database'
 import bcrypt from 'bcryptjs'
 import { emailService } from '../src/services/email.service'
 import { otpService } from '../src/services/otp.service'
+import { refreshTokenService } from '../src/services/refresh-token.service'
 
 const mockTokenHash = 'abc123def456hash'
 const mockRawToken = 'aaabbbcccddd00112233445566778899aabbccddeeff00112233445566778899'
@@ -28,6 +29,12 @@ vi.mock('../src/config/database', () => ({
         },
         accountDeletionRequest: {
             findFirst: vi.fn(),
+        },
+        session: {
+            updateMany: vi.fn(),
+        },
+        auditLog: {
+            create: vi.fn(),
         },
         $transaction: vi.fn((args: any[]) => Promise.all(args)),
     },
@@ -75,6 +82,15 @@ vi.mock('../src/services/otp.service', async () => {
     }
 })
 
+vi.mock('../src/services/refresh-token.service', () => ({
+    refreshTokenService: {
+        issueSession: vi.fn(),
+        rotate: vi.fn(),
+        revokeByRefreshToken: vi.fn(),
+        revokeAllByRefreshToken: vi.fn(),
+    },
+}))
+
 describe('AuthController', () => {
     let authController: AuthController
     let mockRequest: Partial<Request>
@@ -95,6 +111,13 @@ describe('AuthController', () => {
         otpPhoneCounts.clear()
         otpDeviceCounts.clear()
         vi.clearAllMocks()
+
+        vi.mocked(refreshTokenService.issueSession).mockResolvedValue({
+            sessionId: 'session-1',
+            accessToken: 'mock_access_token',
+            refreshToken: 'mock_refresh_token',
+            expiresIn: 900,
+        })
     })
 
     describe('register', () => {
@@ -142,8 +165,14 @@ describe('AuthController', () => {
             expect(mockResponse.json).toHaveBeenCalledWith(
                 expect.objectContaining({
                     message: 'User registered successfully',
-                    token: 'mock_token',
+                    accessToken: 'mock_access_token',
+                    refreshToken: 'mock_refresh_token',
+                    expiresIn: 900,
+                    tokenType: 'Bearer',
                 })
+            )
+            expect(refreshTokenService.issueSession).toHaveBeenCalledWith(
+                expect.objectContaining({ userId: '1', role: 'LEARNER' })
             )
         })
 
@@ -161,6 +190,23 @@ describe('AuthController', () => {
                     error: 'Validation failed',
                 })
             )
+        })
+
+        it('should return 400 for a password that meets length but not complexity', async () => {
+            mockRequest.body = {
+                email: 'test@example.com',
+                // 8+ chars but no uppercase/symbol — fails isStrongPassword
+                password: 'alllowercase123',
+                username: 'testuser',
+            }
+
+            await authController.register(mockRequest as Request, mockResponse as Response)
+
+            expect(mockResponse.status).toHaveBeenCalledWith(400)
+            expect(mockResponse.json).toHaveBeenCalledWith(
+                expect.objectContaining({ error: 'Validation failed' })
+            )
+            expect(prisma.user.create).not.toHaveBeenCalled()
         })
 
         it('should return 409 if user already exists', async () => {
@@ -608,8 +654,14 @@ describe('AuthController', () => {
             expect(mockResponse.json).toHaveBeenCalledWith(
                 expect.objectContaining({
                     message: 'Login successful',
-                    token: 'mock_token',
+                    accessToken: 'mock_access_token',
+                    refreshToken: 'mock_refresh_token',
+                    expiresIn: 900,
+                    tokenType: 'Bearer',
                 })
+            )
+            expect(refreshTokenService.issueSession).toHaveBeenCalledWith(
+                expect.objectContaining({ userId: '1', role: 'LEARNER' })
             )
         })
 
@@ -720,20 +772,280 @@ describe('AuthController', () => {
                 error: 'Invalid credentials',
             })
         })
-    })
 
-    describe('logout', () => {
-        it('should return success message', async () => {
-            await authController.logout(
+        it('transparently upgrades a hash stored below the current bcrypt cost', async () => {
+            mockRequest.body = {
+                email: 'test@example.com',
+                password: 'Password123!',
+            }
+
+            ;(prisma.user.findUnique as any).mockResolvedValue({
+                id: '1',
+                email: 'test@example.com',
+                // cost 10 — below the default configured cost of 12
+                password: '$2b$10$abcdefghijklmnopqrstuv',
+                username: 'testuser',
+                role: 'LEARNER',
+                status: 'ACTIVE',
+            })
+            ;(bcrypt.compare as any).mockResolvedValue(true)
+            ;(prisma.user.update as any).mockResolvedValue({})
+
+            await authController.login(
                 mockRequest as Request,
                 mockResponse as Response
             )
 
+            expect(prisma.user.update).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    where: { id: '1' },
+                    data: expect.objectContaining({ password: 'hashed_password' }),
+                })
+            )
+            expect(mockResponse.status).toHaveBeenCalledWith(200)
+        })
+
+        it('does not rewrite a hash that already meets the current bcrypt cost', async () => {
+            mockRequest.body = {
+                email: 'test@example.com',
+                password: 'Password123!',
+            }
+
+            ;(prisma.user.findUnique as any).mockResolvedValue({
+                id: '1',
+                email: 'test@example.com',
+                // cost 12 — matches the default configured cost, no upgrade needed
+                password: '$2b$12$abcdefghijklmnopqrstuv',
+                username: 'testuser',
+                role: 'LEARNER',
+                status: 'ACTIVE',
+            })
+            ;(bcrypt.compare as any).mockResolvedValue(true)
+            ;(prisma.user.update as any).mockResolvedValue({})
+
+            await authController.login(
+                mockRequest as Request,
+                mockResponse as Response
+            )
+
+            const updateCallArgs = (prisma.user.update as any).mock.calls[0][0]
+            expect(updateCallArgs.data).not.toHaveProperty('password')
+        })
+    })
+
+    describe('refresh', () => {
+        it('rotates a valid refresh token and returns a new access/refresh pair', async () => {
+            mockRequest.body = { refreshToken: 'old-refresh-token' }
+
+            vi.mocked(refreshTokenService.rotate).mockResolvedValue({
+                kind: 'ok',
+                accessToken: 'new_access_token',
+                refreshToken: 'new_refresh_token',
+                expiresIn: 900,
+            })
+
+            await authController.refresh(mockRequest as Request, mockResponse as Response)
+
+            expect(refreshTokenService.rotate).toHaveBeenCalledWith(
+                'old-refresh-token',
+                expect.objectContaining({ ipAddress: '127.0.0.1' })
+            )
+            expect(mockResponse.status).toHaveBeenCalledWith(200)
+            expect(mockResponse.json).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    accessToken: 'new_access_token',
+                    refreshToken: 'new_refresh_token',
+                    expiresIn: 900,
+                    tokenType: 'Bearer',
+                })
+            )
+        })
+
+        it('reads the refresh token from the httpOnly cookie when the body is absent', async () => {
+            mockRequest.body = {}
+            mockRequest.headers = { cookie: 'refresh_token=cookie-refresh-token' }
+
+            vi.mocked(refreshTokenService.rotate).mockResolvedValue({
+                kind: 'ok',
+                accessToken: 'new_access_token',
+                refreshToken: 'new_refresh_token',
+                expiresIn: 900,
+            })
+
+            await authController.refresh(mockRequest as Request, mockResponse as Response)
+
+            expect(refreshTokenService.rotate).toHaveBeenCalledWith(
+                'cookie-refresh-token',
+                expect.anything()
+            )
+            expect(mockResponse.status).toHaveBeenCalledWith(200)
+        })
+
+        it('returns 400 when no refresh token is provided', async () => {
+            mockRequest.body = {}
+
+            await authController.refresh(mockRequest as Request, mockResponse as Response)
+
+            expect(mockResponse.status).toHaveBeenCalledWith(400)
+            expect(mockResponse.json).toHaveBeenCalledWith({ error: 'refreshToken is required' })
+            expect(refreshTokenService.rotate).not.toHaveBeenCalled()
+        })
+
+        it('returns 401 REFRESH_REUSE_DETECTED when a replayed token is detected', async () => {
+            mockRequest.body = { refreshToken: 'replayed-token' }
+
+            vi.mocked(refreshTokenService.rotate).mockResolvedValue({ kind: 'reuse' })
+
+            await authController.refresh(mockRequest as Request, mockResponse as Response)
+
+            expect(mockResponse.status).toHaveBeenCalledWith(401)
+            expect(mockResponse.json).toHaveBeenCalledWith(
+                expect.objectContaining({ code: 'REFRESH_REUSE_DETECTED' })
+            )
+        })
+
+        it('returns 401 for invalid, expired, and revoked tokens', async () => {
+            const cases = [
+                { kind: 'invalid' as const, code: 'REFRESH_INVALID' },
+                { kind: 'expired' as const, code: 'REFRESH_EXPIRED' },
+                { kind: 'revoked' as const, code: 'REFRESH_REVOKED' },
+            ]
+
+            for (const c of cases) {
+                vi.clearAllMocks()
+                mockRequest.body = { refreshToken: 'some-token' }
+                vi.mocked(refreshTokenService.rotate).mockResolvedValue({ kind: c.kind })
+
+                await authController.refresh(mockRequest as Request, mockResponse as Response)
+
+                expect(mockResponse.status).toHaveBeenCalledWith(401)
+                expect(mockResponse.json).toHaveBeenCalledWith(
+                    expect.objectContaining({ code: c.code })
+                )
+            }
+        })
+    })
+
+    describe('logout', () => {
+        it('revokes the session identified by the refresh token', async () => {
+            mockRequest.body = { refreshToken: 'current-refresh-token' }
+
+            vi.mocked(refreshTokenService.revokeByRefreshToken).mockResolvedValue({ revokedCount: 1 })
+
+            await authController.logout(mockRequest as Request, mockResponse as Response)
+
+            expect(refreshTokenService.revokeByRefreshToken).toHaveBeenCalledWith(
+                'current-refresh-token',
+                expect.anything()
+            )
             expect(mockResponse.status).toHaveBeenCalledWith(200)
             expect(mockResponse.json).toHaveBeenCalledWith({
-                message:
-                    'Logged out successfully. Please clear your token client-side.',
+                message: 'Logged out successfully',
+                revokedCount: 1,
             })
+        })
+
+        it('reads the refresh token from the cookie when the body is absent', async () => {
+            mockRequest.body = {}
+            mockRequest.headers = { cookie: 'refresh_token=cookie-refresh-token' }
+
+            vi.mocked(refreshTokenService.revokeByRefreshToken).mockResolvedValue({ revokedCount: 1 })
+
+            await authController.logout(mockRequest as Request, mockResponse as Response)
+
+            expect(refreshTokenService.revokeByRefreshToken).toHaveBeenCalledWith(
+                'cookie-refresh-token',
+                expect.anything()
+            )
+            expect(mockResponse.status).toHaveBeenCalledWith(200)
+        })
+
+        it('returns 400 when no refresh token is provided', async () => {
+            mockRequest.body = {}
+
+            await authController.logout(mockRequest as Request, mockResponse as Response)
+
+            expect(mockResponse.status).toHaveBeenCalledWith(400)
+            expect(mockResponse.json).toHaveBeenCalledWith({ error: 'refreshToken is required' })
+        })
+    })
+
+    describe('logoutAll', () => {
+        it('revokes all sessions for the user identified by the refresh token', async () => {
+            mockRequest.body = { refreshToken: 'any-refresh-token' }
+
+            vi.mocked(refreshTokenService.revokeAllByRefreshToken).mockResolvedValue({ revokedCount: 3 })
+
+            await authController.logoutAll(mockRequest as Request, mockResponse as Response)
+
+            expect(refreshTokenService.revokeAllByRefreshToken).toHaveBeenCalledWith(
+                'any-refresh-token',
+                expect.anything()
+            )
+            expect(mockResponse.status).toHaveBeenCalledWith(200)
+            expect(mockResponse.json).toHaveBeenCalledWith({
+                message: 'All sessions logged out',
+                revokedCount: 3,
+            })
+        })
+
+        it('returns 400 when no refresh token is provided', async () => {
+            mockRequest.body = {}
+
+            await authController.logoutAll(mockRequest as Request, mockResponse as Response)
+
+            expect(mockResponse.status).toHaveBeenCalledWith(400)
+            expect(mockResponse.json).toHaveBeenCalledWith({ error: 'refreshToken is required' })
+        })
+    })
+
+    describe('resetPassword', () => {
+        const validToken = 'a'.repeat(64)
+
+        it('should return 400 for a new password that fails the strength policy', async () => {
+            mockRequest.body = { token: validToken, newPassword: 'alllowercase123' }
+
+            await authController.resetPassword(mockRequest as Request, mockResponse as Response)
+
+            expect(mockResponse.status).toHaveBeenCalledWith(400)
+            expect(prisma.$transaction).not.toHaveBeenCalled()
+        })
+
+        it('should reset the password, revoke sessions, and revoke pending tokens on success', async () => {
+            mockRequest.body = { token: validToken, newPassword: 'NewStr0ng!Pass' }
+            mockRequest.headers = { 'user-agent': 'vitest' }
+            mockRequest.socket = { remoteAddress: '127.0.0.1' } as any
+
+            ;(prisma.verificationToken.findFirst as any).mockResolvedValue({
+                id: 'vt1',
+                userId: 'u1',
+                status: 'PENDING',
+                type: 'PASSWORD_RESET',
+                expiresAt: new Date(Date.now() + 60000),
+            })
+
+            await authController.resetPassword(mockRequest as Request, mockResponse as Response)
+
+            expect(prisma.$transaction).toHaveBeenCalled()
+            expect(mockResponse.status).toHaveBeenCalledWith(200)
+            expect(mockResponse.json).toHaveBeenCalledWith({ message: 'Password reset successful' })
+        })
+
+        it('should return 400 for an expired token', async () => {
+            mockRequest.body = { token: validToken, newPassword: 'NewStr0ng!Pass' }
+
+            ;(prisma.verificationToken.findFirst as any).mockResolvedValue({
+                id: 'vt1',
+                userId: 'u1',
+                status: 'PENDING',
+                type: 'PASSWORD_RESET',
+                expiresAt: new Date(Date.now() - 60000),
+            })
+
+            await authController.resetPassword(mockRequest as Request, mockResponse as Response)
+
+            expect(mockResponse.status).toHaveBeenCalledWith(400)
+            expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Token expired' })
         })
     })
 
@@ -904,7 +1216,14 @@ describe('AuthController', () => {
 
             expect(mockResponse.status).toHaveBeenCalledWith(200)
             expect(mockResponse.json).toHaveBeenCalledWith(
-                expect.objectContaining({ message: 'Login successful', token: 'mock_token' })
+                expect.objectContaining({
+                    message: 'Login successful',
+                    accessToken: 'mock_access_token',
+                    refreshToken: 'mock_refresh_token',
+                })
+            )
+            expect(refreshTokenService.issueSession).toHaveBeenCalledWith(
+                expect.objectContaining({ userId: 'user1', role: 'LEARNER' })
             )
         })
 

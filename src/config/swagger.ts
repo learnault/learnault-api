@@ -22,10 +22,6 @@ const options: swaggerJsdoc.Options = {
         '```json',
         '{ "success": false, "error": { "message": "...", "code": 500 } }',
         '```',
-        '',
-        '> ⚠️ **Preview / not-yet-implemented routes** — `PATCH /api/v1/users/password` and',
-        '> `PATCH /api/v1/users/wallet` are wired but their underlying service methods are stubs.',
-        '> They will return errors in production until the service layer is completed.',
       ].join('\n'),
       contact: {
         name: 'Learnault Contributors',
@@ -48,7 +44,7 @@ const options: swaggerJsdoc.Options = {
     ],
     tags: [
       { name: 'Health', description: 'Service health check' },
-      { name: 'Auth', description: 'Registration, login, email verification, password reset, phone OTP' },
+      { name: 'Auth', description: 'Registration, login, refresh rotation, logout, email verification, password reset, phone OTP' },
       { name: 'Users', description: 'User profile management' },
       { name: 'Modules', description: 'Learning module catalogue and progress tracking' },
       { name: 'Credentials', description: 'On-chain verifiable credentials' },

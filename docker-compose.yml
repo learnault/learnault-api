@@ -1,0 +1,122 @@
+# ============================================================================
+# Learnault API — Local Development Stack
+#
+# One command starts a healthy stack (API + wallet worker + PostgreSQL + Redis):
+#   docker compose up -d --build
+#
+# The API container applies migrations and seeds deterministic fixtures on
+# boot (see docker/entrypoint-dev-api.sh). The worker drains the idempotent
+# wallet-provisioning outbox (see src/workers/wallet-provisioning.worker.ts).
+#
+# Useful commands:
+#   docker compose ps            → service status + health
+#   docker compose logs -f       → follow logs (all services)
+#   docker compose down          → stop the stack (keeps data volumes)
+#   docker compose down -v       → stop and delete data volumes (project-scoped reset)
+#   pnpm stack:smoke             → validate config + run the smoke test
+#
+# Docs: docs/DEVELOPMENT_STACK.md
+# ============================================================================
+
+name: learnault-dev
+
+services:
+  # --------------------------------------------------------------------------
+  # PostgreSQL — primary datastore
+  # --------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-learnault}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-learnault}
+      POSTGRES_DB: ${POSTGRES_DB:-learnault_dev}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-learnault} -d ${POSTGRES_DB:-learnault_dev}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # --------------------------------------------------------------------------
+  # Redis — cache/queue (reserved for upcoming queue-backed work)
+  # --------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # --------------------------------------------------------------------------
+  # API — Express server (nodemon, hot reload)
+  # --------------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-learnault}:${POSTGRES_PASSWORD:-learnault}@db:5432/${POSTGRES_DB:-learnault_dev}?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me}
+      JWT_ISSUER: ${JWT_ISSUER:-learnault-api}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-learnault-clients}
+      RUN_MIGRATIONS: 'true'
+      RUN_SEED: 'true'
+    ports:
+      - '${API_PORT:-5000}:5000'
+    volumes:
+      # Bind-mount source for hot reload; keep the image's node_modules
+      - .:/app
+      - /app/node_modules
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://localhost:5000/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    stop_grace_period: 30s
+
+  # --------------------------------------------------------------------------
+  # Worker — drains the wallet-provisioning outbox
+  # --------------------------------------------------------------------------
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://${POSTGRES_USER:-learnault}:${POSTGRES_PASSWORD:-learnault}@db:5432/${POSTGRES_DB:-learnault_dev}?schema=public
+      RUN_MIGRATIONS: 'true'
+      WORKER_POLL_INTERVAL_MS: ${WORKER_POLL_INTERVAL_MS:-5000}
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: ['./docker/entrypoint-dev-worker.sh']
+    stop_grace_period: 30s
+
+volumes:
+  pgdata:
+  redisdata:

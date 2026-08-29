@@ -116,12 +116,62 @@
  *       properties:
  *         message:
  *           type: string
- *           example: User registered successfully
- *         token:
+ *           example: Login successful
+ *         accessToken:
  *           type: string
- *           description: JWT; pass as Authorization Bearer token.
+ *           description: Short-lived JWT; pass as Authorization Bearer token.
+ *         refreshToken:
+ *           type: string
+ *           description: Opaque token used to obtain a new access/refresh pair.
+ *         expiresIn:
+ *           type: integer
+ *           description: Access-token lifetime in seconds.
+ *           example: 900
+ *         tokenType:
+ *           type: string
+ *           example: Bearer
  *         user:
  *           $ref: '#/components/schemas/AuthUser'
+ *
+ *     TokenResponse:
+ *       type: object
+ *       description: Response from POST /auth/refresh after a successful rotation.
+ *       properties:
+ *         message:
+ *           type: string
+ *           example: Token refreshed successfully
+ *         accessToken:
+ *           type: string
+ *           description: New short-lived JWT.
+ *         refreshToken:
+ *           type: string
+ *           description: New opaque refresh token; the presented one is now consumed.
+ *         expiresIn:
+ *           type: integer
+ *           example: 900
+ *         tokenType:
+ *           type: string
+ *           example: Bearer
+ *
+ *     RefreshTokenInput:
+ *       type: object
+ *       properties:
+ *         refreshToken:
+ *           type: string
+ *           description: >
+ *             Opaque refresh token. Optional in the JSON body when sent via the
+ *             httpOnly `refresh_token` cookie instead.
+ *
+ *     LogoutResponse:
+ *       type: object
+ *       properties:
+ *         message:
+ *           type: string
+ *           example: Logged out successfully
+ *         revokedCount:
+ *           type: integer
+ *           description: Number of sessions revoked (0 when the token was unknown).
+ *           example: 1
  *
  *     VerifyEmailInput:
  *       type: object
@@ -197,10 +247,14 @@
  * components:
  *   schemas:
  *
- *     # ── Users ─────────────────────────────────────────────────────────────
+ *     # ── Users, accounts and profiles ───────────────────────────────────────
  *
- *     User:
+ *     AccountSummary:
  *       type: object
+ *       description: >
+ *         Owner-only view of the `User` row. Served exclusively through
+ *         `GET /users/me`; none of these fields appears in a public or
+ *         employer-facing response.
  *       properties:
  *         id:
  *           type: string
@@ -210,28 +264,79 @@
  *           format: email
  *         username:
  *           type: string
- *         firstName:
+ *         role:
  *           type: string
- *           nullable: true
- *         lastName:
+ *           enum: [ADMIN, LEARNER, INSTRUCTOR]
+ *         status:
  *           type: string
- *           nullable: true
- *         bio:
+ *           enum: [ACTIVE, DEACTIVATED, PENDING_DELETION, DELETED]
+ *         isVerified:
+ *           type: boolean
+ *         phoneVerifiedAt:
  *           type: string
- *           nullable: true
- *         avatar:
- *           type: string
- *           format: uri
+ *           format: date-time
  *           nullable: true
  *         walletAddress:
  *           type: string
  *           nullable: true
  *           example: GABC1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGH
- *         isActive:
- *           type: boolean
- *         role:
+ *         createdAt:
  *           type: string
- *           enum: [learner, employer, admin]
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *         lastLoginAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *
+ *     LearnerProfile:
+ *       type: object
+ *       description: The learner-authored profile record, in full (owner view).
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *         userId:
+ *           type: string
+ *           format: uuid
+ *         displayName:
+ *           type: string
+ *           nullable: true
+ *           maxLength: 80
+ *         bio:
+ *           type: string
+ *           nullable: true
+ *           maxLength: 1000
+ *         avatarUrl:
+ *           type: string
+ *           format: uri
+ *           nullable: true
+ *         country:
+ *           type: string
+ *           nullable: true
+ *         timezone:
+ *           type: string
+ *           nullable: true
+ *         languages:
+ *           type: array
+ *           items:
+ *             type: string
+ *         level:
+ *           type: string
+ *           enum: [beginner, intermediate, advanced, expert]
+ *         interests:
+ *           type: array
+ *           items:
+ *             type: string
+ *         goals:
+ *           type: array
+ *           items:
+ *             type: string
+ *         visibility:
+ *           type: string
+ *           enum: [private, employer, public]
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -239,52 +344,185 @@
  *           type: string
  *           format: date-time
  *
- *     PublicUser:
+ *     ProfileCompletion:
  *       type: object
- *       description: Publicly visible subset of a user profile.
+ *       description: Computed on read, never stored, so it cannot drift.
  *       properties:
- *         id:
+ *         percent:
+ *           type: integer
+ *           minimum: 0
+ *           maximum: 100
+ *         missingFields:
+ *           type: array
+ *           items:
+ *             type: string
+ *
+ *     OnboardingSummary:
+ *       type: object
+ *       nullable: true
+ *       description: Null when the learner has never started onboarding.
+ *       properties:
+ *         version:
  *           type: string
- *           format: uuid
- *         username:
+ *         status:
  *           type: string
- *         firstName:
+ *           enum: [in_progress, completed]
+ *         currentStep:
  *           type: string
- *           nullable: true
- *         lastName:
- *           type: string
- *           nullable: true
- *         avatar:
- *           type: string
- *           format: uri
- *           nullable: true
- *         role:
- *           type: string
- *           enum: [learner, employer, admin]
- *         createdAt:
+ *           enum: [profile_basics, consent, preferences]
+ *         completedSteps:
+ *           type: array
+ *           items:
+ *             type: string
+ *         requiredStepsRemaining:
+ *           type: array
+ *           items:
+ *             type: string
+ *         startedAt:
  *           type: string
  *           format: date-time
+ *         completedAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
  *
- *     UpdateUserInput:
+ *     ConsentSummary:
  *       type: object
- *       description: All fields are optional; send only what you want to change.
+ *       description: Current state of one consent purpose. History lives at /consents/history.
  *       properties:
- *         username:
+ *         purpose:
  *           type: string
- *           minLength: 3
- *           maxLength: 30
- *         firstName:
+ *           enum: [terms_of_service, privacy_policy, marketing_emails, analytics, data_sharing, custodial_wallet]
+ *         status:
  *           type: string
- *           maxLength: 50
- *         lastName:
+ *           enum: [granted, withdrawn]
+ *         required:
+ *           type: boolean
+ *         policyVersion:
  *           type: string
- *           maxLength: 50
+ *         grantedAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *         withdrawnAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *
+ *     OwnerAccountProfile:
+ *       type: object
+ *       description: The aggregate returned by GET and PATCH /users/me.
+ *       properties:
+ *         account:
+ *           $ref: '#/components/schemas/AccountSummary'
+ *         profile:
+ *           $ref: '#/components/schemas/LearnerProfile'
+ *         completion:
+ *           $ref: '#/components/schemas/ProfileCompletion'
+ *         onboarding:
+ *           $ref: '#/components/schemas/OnboardingSummary'
+ *         consents:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/ConsentSummary'
+ *         requiredConsentsGranted:
+ *           type: boolean
+ *
+ *     PublicProfile:
+ *       description: >
+ *         Either the public field subset or the redacted stub
+ *         `{ id, visible: false }`. The stub is returned identically for a
+ *         non-public profile, a withdrawn data-sharing consent, and an inactive
+ *         account, so the refusal itself discloses nothing.
+ *       oneOf:
+ *         - type: object
+ *           properties:
+ *             id:
+ *               type: string
+ *               format: uuid
+ *             displayName:
+ *               type: string
+ *               nullable: true
+ *             bio:
+ *               type: string
+ *               nullable: true
+ *             avatarUrl:
+ *               type: string
+ *               format: uri
+ *               nullable: true
+ *             country:
+ *               type: string
+ *               nullable: true
+ *             level:
+ *               type: string
+ *               enum: [beginner, intermediate, advanced, expert]
+ *             interests:
+ *               type: array
+ *               items:
+ *                 type: string
+ *             visible:
+ *               type: boolean
+ *               enum: [true]
+ *         - type: object
+ *           properties:
+ *             id:
+ *               type: string
+ *               format: uuid
+ *             visible:
+ *               type: boolean
+ *               enum: [false]
+ *
+ *     UpdateProfileInput:
+ *       type: object
+ *       additionalProperties: false
+ *       description: >
+ *         Partial update. Every field is optional but at least one is required,
+ *         and any property not listed here is rejected with a 400 — this object
+ *         is the complete set of fields an owner may write.
+ *       minProperties: 1
+ *       properties:
+ *         displayName:
+ *           type: string
+ *           nullable: true
+ *           minLength: 1
+ *           maxLength: 80
  *         bio:
  *           type: string
- *           maxLength: 500
- *         avatar:
+ *           nullable: true
+ *           maxLength: 1000
+ *         avatarUrl:
  *           type: string
  *           format: uri
+ *           nullable: true
+ *         country:
+ *           type: string
+ *           nullable: true
+ *           minLength: 2
+ *           maxLength: 60
+ *         timezone:
+ *           type: string
+ *           nullable: true
+ *         languages:
+ *           type: array
+ *           maxItems: 20
+ *           items:
+ *             type: string
+ *         level:
+ *           type: string
+ *           enum: [beginner, intermediate, advanced, expert]
+ *         interests:
+ *           type: array
+ *           maxItems: 50
+ *           items:
+ *             type: string
+ *         goals:
+ *           type: array
+ *           maxItems: 20
+ *           items:
+ *             type: string
+ *         visibility:
+ *           type: string
+ *           enum: [private, employer, public]
  *
  *     ChangePasswordInput:
  *       type: object
@@ -1149,4 +1387,96 @@
  *           type: string
  *           format: date-time
  *           nullable: true
+ */
+
+/**
+ * @openapi
+ * components:
+ *   schemas:
+ *
+ *     # ── Sessions ─────────────────────────────────────────────────────────
+ *
+ *     SessionView:
+ *       type: object
+ *       description: >
+ *         A redacted view of a single active session. Tokens and raw IP
+ *         addresses are never included.
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *           description: Session identifier.
+ *           example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+ *         deviceName:
+ *           type: string
+ *           nullable: true
+ *           description: Human-readable device label, e.g. "iPhone 14".
+ *           example: iPhone 14
+ *         browser:
+ *           type: string
+ *           nullable: true
+ *           description: Browser label, e.g. "Chrome 124".
+ *           example: Chrome 124
+ *         os:
+ *           type: string
+ *           nullable: true
+ *           description: Operating system label, e.g. "macOS 14.4".
+ *           example: macOS 14.4
+ *         country:
+ *           type: string
+ *           nullable: true
+ *           description: ISO 3166-1 alpha-2 country code from approximate geo-lookup.
+ *           example: NG
+ *         city:
+ *           type: string
+ *           nullable: true
+ *           description: City name from approximate geo-lookup.
+ *           example: Lagos
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: When the session was first created (initial login).
+ *         lastUsedAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *           description: When the session last consumed a refresh token. Null for sessions that have never refreshed.
+ *         expiresAt:
+ *           type: string
+ *           format: date-time
+ *           description: Absolute session expiry timestamp.
+ *         isCurrent:
+ *           type: boolean
+ *           description: True when this session is associated with the current access token.
+ *           example: true
+ *
+ *     SessionListResponse:
+ *       type: object
+ *       description: Paginated list of active sessions.
+ *       properties:
+ *         sessions:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/SessionView'
+ *         pagination:
+ *           $ref: '#/components/schemas/Pagination'
+ *
+ *     RevokeSessionResponse:
+ *       type: object
+ *       properties:
+ *         message:
+ *           type: string
+ *           example: Session revoked successfully
+ *
+ *     RevokeAllSessionsResponse:
+ *       type: object
+ *       properties:
+ *         message:
+ *           type: string
+ *           example: 3 sessions revoked successfully
+ *         revokedCount:
+ *           type: integer
+ *           description: Number of sessions that were revoked.
+ *           example: 3
+ *
  */

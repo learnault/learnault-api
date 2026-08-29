@@ -11,7 +11,7 @@ const authController = new AuthController()
  * @desc Register a new user
  * @access Public
  */
-router.post('/register', authController.register.bind(authController))
+router.post('/register', authLimiter, authController.register.bind(authController))
 
 /**
  * @route POST /api/v1/auth/login
@@ -21,11 +21,25 @@ router.post('/register', authController.register.bind(authController))
 router.post('/login', authLimiter, authController.login.bind(authController))
 
 /**
+ * @route POST /api/v1/auth/refresh
+ * @desc Rotate a refresh token for a new access/refresh pair
+ * @access Public (refresh-token possession)
+ */
+router.post('/refresh', authController.refresh.bind(authController))
+
+/**
  * @route POST /api/v1/auth/logout
- * @desc Logout user
- * @access Public
+ * @desc Logout current session (revoke its refresh-token family)
+ * @access Public (refresh-token possession)
  */
 router.post('/logout', authController.logout.bind(authController))
+
+/**
+ * @route POST /api/v1/auth/logout/all
+ * @desc Logout all sessions for the user identified by the refresh token
+ * @access Public (refresh-token possession)
+ */
+router.post('/logout/all', authController.logoutAll.bind(authController))
 
 /**
  * @route POST /api/v1/auth/verify-email
@@ -53,7 +67,7 @@ router.post('/forgot-password', authLimiter, authController.forgotPassword.bind(
  * @desc Reset password with token
  * @access Public
  */
-router.post('/reset-password', authController.resetPassword.bind(authController))
+router.post('/reset-password', authLimiter, authController.resetPassword.bind(authController))
 
 /**
  * @route POST /api/v1/auth/otp/request

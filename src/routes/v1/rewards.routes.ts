@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { RewardController } from '../../controllers/reward.controller'
-import { authenticate } from '../../middleware/auth.middleware'
+import { authenticate, requireVerifiedEmail } from '../../middleware/auth.middleware'
 
 const router: Router = Router()
 const rewardController = new RewardController()
@@ -39,11 +39,12 @@ router.get(
  * @body    walletAddress - Stellar wallet address (required)
  * @body    amount - Amount to withdraw in XLM (required)
  * @body    memo - Optional memo for the transaction
- * @access  Private (requires authentication)
+ * @access  Private (requires authentication + verified email — see docs/AUTH_POLICY.md)
  */
 router.post(
   '/withdraw',
   authenticate,
+  requireVerifiedEmail,
   rewardController.withdraw.bind(rewardController),
 )
 

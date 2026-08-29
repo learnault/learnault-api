@@ -1,9 +1,20 @@
 import { z } from 'zod'
 import { UserRole } from '../types/user.types'
+import { isStrongPassword } from '../utils/password'
+
+// Shared password policy: 8+ chars, upper, lower, number, symbol. Applied
+// wherever a new credential is set (register, reset) so the rule can't
+// drift between entry points.
+const strongPassword = z
+    .string()
+    .min(8, 'Password must be at least 8 characters long')
+    .refine(isStrongPassword, {
+        message: 'Password must include an uppercase letter, a lowercase letter, a number, and a symbol',
+    })
 
 export const registerSchema = z.object({
     email: z.string().email('Invalid email address'),
-    password: z.string().min(8, 'Password must be at least 8 characters long'),
+    password: strongPassword,
     username: z.string().min(3, 'Username must be at least 3 characters long'),
     role: z.nativeEnum(UserRole).optional().default(UserRole.LEARNER),
 })
@@ -27,7 +38,7 @@ export const forgotPasswordSchema = z.object({
 
 export const resetPasswordSchema = z.object({
     token: z.string().min(1, 'Token is required'),
-    newPassword: z.string().min(8, 'Password must be at least 8 characters long'),
+    newPassword: strongPassword,
 })
 
 export const otpRequestSchema = z.object({
@@ -41,6 +52,16 @@ export const otpVerifySchema = z.object({
     deviceId: z.string().min(1).optional(),
 })
 
+/**
+ * Refresh / logout bodies carry an opaque refresh token. The token is
+ * optional here because it may also arrive via the `refresh_token` httpOnly
+ * cookie; the controller resolves one of the two and rejects when neither is
+ * present.
+ */
+export const refreshTokenSchema = z.object({
+    refreshToken: z.string().min(1, 'refreshToken is required').optional(),
+})
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
@@ -49,3 +70,4 @@ export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type OtpRequestInput = z.infer<typeof otpRequestSchema>;
 export type OtpVerifyInput = z.infer<typeof otpVerifySchema>;
+export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;

@@ -21,6 +21,14 @@ vi.mock('@prisma/client', () => ({
     PrismaClient: class {
         webhookEndpoint = mockPrismaInstance.webhookEndpoint
         webhookDelivery = mockPrismaInstance.webhookDelivery
+
+        // src/config/database.ts applies the archive-exclusion extension. This
+        // mock returns itself: WebhookEndpoint is archivable, but every
+        // expectation here asserts on the delegate calls rather than on the
+        // `where` the extension would add.
+        $extends() {
+            return this
+        }
     },
 }))
 

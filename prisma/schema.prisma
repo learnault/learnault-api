@@ -35,11 +35,16 @@ model User {
   emailDeliveries EmailDelivery[]
   learnerPreference LearnerPreference?
   preferenceAuditLogs PreferenceAuditLog[]
+  learnerProfile  LearnerProfile?
   sessions        Session[]
   audits          AuditLog[]
   dataExports     DataExportRequest[]
   deletionRequests AccountDeletionRequest[]
   otpChallenges   OtpChallenge[]
+  onboarding      OnboardingProgress?
+  consentRecords  ConsentRecord[]
+  wallet          Wallet?
+  avatars         Avatar[]
 
   @@map("users")
 }
@@ -77,6 +82,77 @@ model LearnerPreference {
   @@map("learner_preferences")
 }
 
+model LearnerProfile {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  displayName   String?
+  bio           String?
+  avatarUrl     String?
+  country       String?
+  timezone      String?
+  languages     String[] @default([])
+  level         String   @default("beginner") // beginner, intermediate, advanced, expert
+  interests     String[] @default([])
+  goals         String[] @default([])
+
+  visibility    String   @default("private") // private, employer, public
+
+  // Archive (soft delete). Reads exclude archived rows by default — see
+  // src/audit/archive.ts. Purged 365 days after archivedAt.
+  archivedAt      DateTime?
+  archivedById    String?
+  archivedReason  String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([country])
+  @@index([level])
+  @@index([visibility])
+  @@index([archivedAt])
+  @@map("learner_profiles")
+}
+
+model OnboardingProgress {
+  id             String    @id @default(uuid())
+  userId         String    @unique
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  version        String   @default("v1")
+  currentStep    String
+  completedSteps String[] @default([])
+  status         String   @default("in_progress") // in_progress, completed
+
+  startedAt      DateTime @default(now())
+  completedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status])
+  @@map("onboarding_progress")
+}
+
+model ConsentRecord {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  purpose       String   // terms_of_service, privacy_policy, marketing_emails, analytics, data_sharing, custodial_wallet
+  required      Boolean  @default(false)
+  policyVersion String
+  status        String   // granted, withdrawn
+  source        String   // onboarding, settings, api
+  grantedAt     DateTime?
+  withdrawnAt   DateTime?
+
+  createdAt     DateTime @default(now())
+
+  @@index([userId, purpose, createdAt])
+  @@map("consent_records")
+}
+
 model PreferenceAuditLog {
   id        String   @id @default(uuid())
   userId    String
@@ -98,16 +174,103 @@ model Session {
   refreshToken String?   @unique
   userAgent    String?
   ipAddress    String?
+  // Device / browser / OS labels (derived at login time from User-Agent)
+  deviceName   String?
+  browser      String?
+  os           String?
+  // Approximate location (derived at login time from IP geo-lookup)
+  country      String?
+  city         String?
+  // Opaque device fingerprint (e.g. hash of UA + screen-res, never raw)
+  fingerprint  String?
+  // Updated each time a refresh token is consumed on this session
+  lastUsedAt   DateTime?
   expiresAt    DateTime
   isRevoked    Boolean   @default(false)
   revokedAt    DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  refreshTokens RefreshToken[]
 
   @@index([userId, isRevoked])
+  @@index([userId, isRevoked, lastUsedAt])
   @@map("sessions")
 }
 
+// One row per opaque refresh token. Rows sharing a `familyId` form a rotation
+// family: each successful refresh consumes the presented token (ACTIVE →
+// ROTATED) and mints a new ACTIVE row in the same family. Presenting an already
+// ROTATED token is treated as theft and revokes the entire family + session.
+model RefreshToken {
+  id        String   @id @default(uuid())
+  sessionId String
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  familyId  String
+  tokenHash String   @unique
+  status    String   @default("ACTIVE") // ACTIVE, ROTATED, REVOKED
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([familyId, status])
+  @@index([sessionId, status])
+  @@map("refresh_tokens")
+}
+
+/// Immutable audit spine for security-, money-, credential-, and
+/// content-sensitive mutations. See docs/DATA_LIFECYCLE.md.
+///
+/// Append-only: a database trigger rejects every UPDATE, and rejects DELETE
+/// unless the retention purge has set the `learnault.audit_purge` session
+/// variable. There is no code path that edits a row here.
+///
+/// Erasure-safe by construction. Nothing in this table needs scrubbing when a
+/// subject is erased, because nothing identifying is stored in the first place:
+/// actor and target are opaque ids, the request IP is kept only as a keyed
+/// hash, the User-Agent only as a coarse family, and `metadata` passes through
+/// the redaction filter in src/audit/redaction.ts on the way in.
+///
+/// Deliberately has no relation to User. A foreign key would need either
+/// `onDelete: Cascade` (erasure destroys the trail) or `onDelete: SetNull`
+/// (erasure mutates an immutable row). `actorId` is a soft reference instead.
+model AuditEvent {
+  id              String   @id @default(uuid())
+
+  // ── Actor: who caused the change ──
+  actorType       String   // USER, ADMIN, SYSTEM, WORKER, ANONYMOUS
+  actorId         String?  // opaque id; null for SYSTEM and ANONYMOUS actors
+  actorRole       String?  // role held at the time of the action, not now
+
+  // ── Action and target: what changed ──
+  action          String   // e.g. "account.deactivated", "wallet.provisioned"
+  recordClass     String   // MUTABLE, ARCHIVABLE, DELETABLE, IMMUTABLE
+  targetType      String   // Prisma model name, e.g. "User", "Wallet"
+  targetId        String?  // primary key of the affected row
+
+  // ── Justification and correlation ──
+  reason          String?  // caller-supplied; required for ADMIN actors
+  requestId       String?  // x-request-id, correlates to request logs
+  correlationId   String?  // outbox event or job id for async changes
+  source          String?  // e.g. "api.account.deactivate", "worker.sweep"
+
+  // ── Safe context: redacted, hashed, coarsened ──
+  metadata        String?  // redacted JSON; never secrets, never raw PII
+  actorIpHash     String?  // keyed SHA-256 of the request IP, never the raw IP
+  userAgentFamily String?  // e.g. "Chrome", "Android"; never the raw UA
+
+  occurredAt      DateTime @default(now())
+
+  @@index([targetType, targetId, occurredAt])
+  @@index([actorType, actorId, occurredAt])
+  @@index([action, occurredAt])
+  @@index([requestId])
+  @@index([occurredAt])
+  @@map("audit_events")
+}
+
+/// Superseded by AuditEvent, and retained only for the trail written before the
+/// data-lifecycle policy landed. Unlike AuditEvent it holds a raw IP and
+/// User-Agent, so erasure scrubs those columns.
 model AuditLog {
   id        String   @id @default(uuid())
   userId    String?
@@ -165,11 +328,27 @@ model Module {
   description     String
   category        String
   difficulty      String         // easy, medium, hard
-  reward          Float
+  /// Reward expressed in whole-integer stroops (1 XLM = 10_000_000 stroops).
+  /// Stored as bigint to eliminate binary floating-point error.
+  rewardStroops   BigInt         @default(0)
+  /// ISO-4217 or Stellar asset code (e.g. "XLM", "USDC").
+  assetCode       String         @default("XLM")
+  /// Stellar issuer public key; NULL for the native XLM asset.
+  assetIssuer     String?
+  /// Stellar network: "testnet" or "mainnet".
+  assetNetwork    String         @default("testnet")
+  /// Archive (soft delete). Withdrawn content is archived, never deleted:
+  /// completions and credentials reference the module a learner actually took.
+  /// Reads exclude archived rows by default — see src/audit/archive.ts.
+  archivedAt      DateTime?
+  archivedById    String?
+  archivedReason  String?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   completions     Completion[]
   credentials     Credential[]
+
+  @@index([archivedAt])
 }
 
 model Completion {
@@ -204,7 +383,14 @@ model Transaction {
   id              String         @id @default(uuid())
   userId          String
   user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  amount          Float
+  /// Transaction amount expressed in whole-integer stroops (1 XLM = 10_000_000 stroops).
+  amountStroops   BigInt
+  /// ISO-4217 or Stellar asset code (e.g. "XLM", "USDC").
+  assetCode       String         @default("XLM")
+  /// Stellar issuer public key; NULL for the native XLM asset.
+  assetIssuer     String?
+  /// Stellar network: "testnet" or "mainnet".
+  assetNetwork    String         @default("testnet")
   type            String         // reward, refund, transfer
   status          String         @default("pending") // pending, completed, failed
   createdAt       DateTime       @default(now())
@@ -222,9 +408,16 @@ model ReferralCode {
   code      String     @unique
   userId    String     @unique
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Archive (soft delete). Retiring a code archives it so the Referral rows
+  /// pointing at it keep a valid referent. Reads exclude archived rows by
+  /// default — see src/audit/archive.ts.
+  archivedAt     DateTime?
+  archivedById   String?
+  archivedReason String?
   createdAt DateTime   @default(now())
   referrals Referral[]
 
+  @@index([archivedAt])
   @@map("referral_codes")
 }
 
@@ -237,7 +430,8 @@ model Referral {
   codeId        String
   code          ReferralCode @relation(fields: [codeId], references: [id])
   bonusPaid     Boolean      @default(false)
-  bonusAmount   Float?
+  /// Bonus amount expressed in whole-integer stroops; NULL if no bonus has been granted.
+  bonusAmountStroops BigInt?
   bonusPaidAt   DateTime?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
@@ -272,9 +466,17 @@ model WebhookEndpoint {
   description String?
   isActive    Boolean          @default(true)
   events      String           // Comma-separated list of events: "module.completed,reward.issued"
+  /// Archive (soft delete), distinct from isActive: isActive pauses delivery,
+  /// archiving retires the endpoint while its delivery history keeps a valid
+  /// referent. Reads exclude archived rows by default — see src/audit/archive.ts.
+  archivedAt     DateTime?
+  archivedById   String?
+  archivedReason String?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   deliveries  WebhookDelivery[]
+
+  @@index([archivedAt])
 }
 
 model WebhookDelivery {
@@ -417,4 +619,225 @@ model AccountDeletionRequest {
   @@index([userId, status])
   @@index([status, scheduledFor])
   @@map("account_deletion_requests")
+}
+
+model ManagedKeyReference {
+  id              String   @id @default(uuid())
+  provider        String
+  opaqueReference String   @unique
+  keyVersion      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  wallet Wallet?
+
+  @@map("managed_key_references")
+}
+
+model Wallet {
+  id                    String               @id @default(uuid())
+  userId                String               @unique
+  user                  User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  network               String
+  custody               String               @default("MANAGED")
+  publicKey             String?              @unique
+  status                String               @default("RESERVED")
+  managedKeyReferenceId String?              @unique
+  managedKeyReference   ManagedKeyReference? @relation(fields: [managedKeyReferenceId], references: [id], onDelete: Restrict)
+  failureCode           String?
+  attemptCount          Int                  @default(0)
+  provisionedAt         DateTime?
+  statusChangedAt       DateTime             @default(now())
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  provisioningJob WalletProvisioningJob?
+
+  @@index([status, updatedAt])
+  @@map("wallets")
+}
+
+model WalletProvisioningJob {
+  id              String    @id @default(uuid())
+  walletId        String    @unique
+  wallet          Wallet    @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  status          String    @default("PENDING")
+  availableAt     DateTime  @default(now())
+  leaseToken      String?
+  leasedUntil     DateTime?
+  attempts        Int       @default(0)
+  maxAttempts     Int       @default(8)
+  lastFailureCode String?
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([status, availableAt])
+  @@index([status, leasedUntil])
+  @@map("wallet_provisioning_jobs")
+}
+
+model Avatar {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storageKey    String
+  originalName  String?
+  contentType   String   // declared MIME from upload intent
+  detectedMime  String?  // MIME after server-side sniffing (null before finalize)
+  originalBytes Int      @default(0)
+  status        String   @default("PENDING") // PENDING, PROCESSING, ACTIVE, FAILED
+  scanResult    String?  // clean, rejected, error
+  scanReason    String?
+  width         Int?
+  height        Int?
+  variantCount  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  finalizedAt   DateTime?
+  replacedAt    DateTime?
+  replacedById  String?
+  replacedBy    Avatar?  @relation("AvatarReplacement", fields: [replacedById], references: [id])
+  replacements  Avatar[] @relation("AvatarReplacement")
+  variants      AvatarVariant[]
+  /// Archive (soft delete), distinct from replacedAt: replacedAt records that a
+  /// newer avatar superseded this one, archivedAt records that it was withdrawn
+  /// (by the learner or by moderation). Reads exclude archived rows by default —
+  /// see src/audit/archive.ts.
+  archivedAt     DateTime?
+  archivedById   String?
+  archivedReason String?
+
+  @@index([userId, status])
+  @@index([archivedAt])
+  @@map("avatars")
+}
+
+model AvatarVariant {
+  id         String   @id @default(uuid())
+  avatarId   String
+  avatar     Avatar   @relation(fields: [avatarId], references: [id], onDelete: Cascade)
+  label      String   // original, thumb, medium
+  storageKey String
+  bytes      Int      @default(0)
+  width      Int?
+  height     Int?
+  createdAt  DateTime @default(now())
+
+  @@index([avatarId])
+  @@map("avatar_variants")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OUTBOX PATTERN: Transaction & Event Delivery Foundation
+// ─────────────────────────────────────────────────────────────────────────────
+// Implements Transactional Outbox pattern for work spanning:
+// - PostgreSQL domain changes (Prisma models)
+// - Asynchronous job queues (wallet provisioning, email, rewards, etc.)
+// - Third-party notifications and blockchain providers
+//
+// Key invariants:
+// - Outbox events are written in same transaction as domain changes
+// - JobAttempt rows track lease, retry, backoff, and idempotent completion
+// - Abandoned leases (leasedUntil in past) become retryable
+// - Dead-letter rows survive transient failures and support manual recovery
+// - Event payloads are versioned and validated before delivery
+
+model OutboxEvent {
+  id                String     @id @default(uuid())
+  aggregateId       String     // UUID of the root aggregate (e.g. userId, walletId)
+  aggregateType     String     // e.g. "User", "Wallet", "Completion"
+  eventType         String     // e.g. "UserCreated", "WalletProvisioned", "RewardClaimed"
+  eventVersion      Int        @default(1) // Schema version for event payload
+  payload           String     // JSON event data; validated against eventVersion schema
+  
+  // Outbox status: tracks delivery to all job queues and notification channels
+  status            String     @default("PENDING") // PENDING, PROCESSING, PUBLISHED, DEAD_LETTER, ROLLED_BACK
+  publishedAt       DateTime?  // Set when all JobAttempts for this event succeed
+  
+  // Source context: helps trace event causation and multi-domain workflows
+  source            String?    // e.g. "api.reward.claim", "worker.wallet-provisioning", "sync.module-completion"
+  causedBy          String?    // Foreign key to OutboxEvent.id if this event was triggered by another
+  
+  // Audit trail
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  // Relation to job attempts for this event
+  jobAttempts       JobAttempt[]
+
+  @@index([aggregateId, aggregateType])
+  @@index([eventType, status])
+  @@index([status, publishedAt]) // For polling workers
+  @@index([status, createdAt]) // For dead-letter queue recovery
+  @@index([createdAt]) // For bulk operations and migrations
+  @@map("outbox_events")
+}
+
+model JobAttempt {
+  id                String     @id @default(uuid())
+  outboxEventId     String     // FK to OutboxEvent
+  outboxEvent       OutboxEvent @relation(fields: [outboxEventId], references: [id], onDelete: Cascade)
+  
+  // Job identity: determines which worker processes this attempt
+  jobType           String     // e.g. "wallet.provision", "email.send", "reward.distribute", "notification.push"
+  jobName           String     // Human-readable identifier for monitoring
+  
+  // Lease-based concurrency control: ensures only one worker processes this job at a time
+  status            String     @default("PENDING") // PENDING, LEASED, COMPLETED, FAILED, DEAD_LETTER, ROLLED_BACK
+  leaseToken        String?    @unique // Opaque token held by worker; null if not leased
+  leasedUntil       DateTime?  // Lease expiration; null if not leased
+  
+  // Retry configuration: exponential backoff, max attempts, dead-lettering
+  availableAt       DateTime   @default(now()) // When job becomes available to lease
+  attempt           Int        @default(0) // 0-indexed attempt number
+  maxAttempts       Int        @default(3) // Configurable per job type
+  backoffMultiplier Float      @default(2.0) // Exponential backoff factor
+  backoffBaseMs     Int        @default(1000) // Base delay in milliseconds
+  
+  // Failure tracking
+  lastError         String?    // Last failure reason or stack trace
+  lastAttemptAt     DateTime?  // Timestamp of most recent attempt
+  
+  // Idempotent completion: prevents duplicate side effects from retries
+  // If a job succeeds but worker crashes before releasing lease,
+  // retry will see idempotencyKey in Completed entry and skip re-execution
+  idempotencyKey    String?    @unique // Optional; worker-defined for idempotent jobs
+  completedAt       DateTime?  // Set when job succeeds
+  result            String?    // JSON result payload (e.g. transaction hash)
+  
+  // Audit trail
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@index([outboxEventId, status])
+  @@index([jobType, status])
+  @@index([status, availableAt]) // For worker polling: PENDING jobs ready to lease
+  @@index([status, leasedUntil]) // For worker cleanup: find abandoned leases
+  @@index([status, createdAt]) // For dead-letter queue recovery
+  @@index([createdAt]) // For bulk operations and migrations
+  @@map("job_attempts")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ROLLED_BACK RECORDS: Markers for rolled-back events and jobs
+// ─────────────────────────────────────────────────────────────────────────────
+// When a domain transaction rolls back, outbox events must be marked as
+// ROLLED_BACK to prevent workers from processing them. This marker is written
+// in a separate transaction to avoid circular dependencies on the original
+// transaction.
+//
+// Workers periodically prune ROLLED_BACK records after sufficient time has
+// passed to ensure no in-flight attempts reference them.
+
+model RolledBackRecord {
+  id                String     @id @default(uuid())
+  recordType        String     // "OutboxEvent" or "JobAttempt"
+  recordId          String     // ID of OutboxEvent or JobAttempt that was rolled back
+  reason            String?    // Optional reason for rollback
+  createdAt         DateTime   @default(now())
+
+  @@index([recordType, recordId])
+  @@index([createdAt]) // For periodic cleanup
+  @@map("rolled_back_records")
 }

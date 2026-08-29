@@ -1,11 +1,13 @@
 import { Router } from 'express'
 import { contactCandidate, getCandidateProfile, searchTalent } from '../../controllers/employer.controller'
-import { authenticate, authorize } from '../../middleware/auth.middleware'
+import { authenticate, authorize, requireVerifiedEmail } from '../../middleware/auth.middleware'
 import { employerLimiter } from '../../middleware/rate-limit.middleware'
 
 const router: Router = Router()
 
-router.use(authenticate, authorize('employer'), employerLimiter)
+// requireVerifiedEmail: employer actions touch candidate PII, so the
+// employer's own email must be confirmed — see docs/AUTH_POLICY.md.
+router.use(authenticate, authorize('employer'), requireVerifiedEmail, employerLimiter)
 
 // GET /employer/search - search talent with filters
 router.get('/search', searchTalent)

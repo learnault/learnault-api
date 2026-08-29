@@ -75,6 +75,19 @@ pnpm db:seed
 pnpm dev
 ```
 
+### Run the full stack with Docker Compose (recommended)
+
+The local stack — API, wallet worker, PostgreSQL, and Redis — starts with one command:
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
+
+Migrations and deterministic seed fixtures run automatically on boot. See
+[Local Development Stack](./docs/DEVELOPMENT_STACK.md) for health checks, logs,
+reset, and the smoke test (`pnpm stack:smoke`).
+
 For detailed database setup instructions, see [Prisma Setup Guide](./prisma/SETUP.md)
 
 ### Development Workflow

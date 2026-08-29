@@ -57,10 +57,11 @@ describe('RewardController', () => {
 
   describe('getBalance', () => {
     it('should return balance for authenticated user', async () => {
+      // Balance uses BigInt stroops internally; controller serialises to XLM strings
       const mockBalance = {
-        available: 100.5,
-        pending: 10,
-        lifetime: 150,
+        availableStroops: 1_005_000_000n, // 100.5 XLM
+        pendingStroops:   100_000_000n,   // 10 XLM
+        lifetimeStroops:  1_500_000_000n, // 150 XLM
         updatedAt: new Date(),
       }
 
@@ -79,9 +80,10 @@ describe('RewardController', () => {
           success: true,
           data: expect.objectContaining({
             balance: {
-              available: 100.5,
-              pending: 10,
-              lifetime: 150,
+              // Amounts are serialised to 7-decimal XLM strings at the API boundary
+              available: '100.5000000',
+              pending:   '10.0000000',
+              lifetime:  '150.0000000',
             },
           }),
         }),
@@ -112,7 +114,7 @@ describe('RewardController', () => {
             id: 'txn-1',
             type: 'module_reward',
             status: 'completed',
-            amount: 5,
+            amountStroops: 50_000_000n, // 5 XLM in stroops
             createdAt: new Date(),
           },
         ],
@@ -302,7 +304,7 @@ describe('RewardController', () => {
     it('should process valid withdrawal request', async () => {
       const withdrawalData = {
         walletAddress: 'GABC1234567890123456789012345678901234567890123456789',
-        amount: 50,
+        amount: '50.0000000', // XLM string (new API)
         memo: 'Test withdrawal',
       }
 
@@ -311,7 +313,7 @@ describe('RewardController', () => {
       processWithdrawalSpy.mockResolvedValue({
         transactionId: 'txn-withdrawal-123',
         userId: 'user-123',
-        amount: 50,
+        amountStroops: 500_000_000n, // 50 XLM in stroops
         stellarTxHash: 'stellar-hash-xyz',
         status: 'completed',
         requestedAt: new Date(),
@@ -321,12 +323,13 @@ describe('RewardController', () => {
 
       await controller.withdraw(mockRequest as any, mockResponse as any, nextFn)
 
-      expect(hasSufficientBalanceSpy).toHaveBeenCalledWith('user-123', 50)
+      // Controller converts XLM string → stroops and passes BigInt to service
+      expect(hasSufficientBalanceSpy).toHaveBeenCalledWith('user-123', 500_000_000n)
       expect(processWithdrawalSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: 'user-123',
           walletAddress: withdrawalData.walletAddress,
-          amount: 50,
+          amountStroops: 500_000_000n,
           memo: 'Test withdrawal',
         }),
       )
@@ -373,11 +376,14 @@ describe('RewardController', () => {
       await controller.withdraw(mockRequest as any, mockResponse as any, nextFn)
 
       expect(nextFn).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'Amount must be a valid number' }),
+        expect.objectContaining({
+          message: expect.stringContaining('Invalid amount'),
+        }),
       )
     })
 
     it('should reject withdrawal if amount is zero or negative', async () => {
+      // amount: 0 → parses to 0n stroops → "Amount must be greater than 0"
       mockRequest.body = {
         walletAddress: 'GABC1234567890123456789012345678901234567890123456789',
         amount: 0,
@@ -390,6 +396,7 @@ describe('RewardController', () => {
         expect.objectContaining({ message: 'Amount must be greater than 0' }),
       )
 
+      // amount: -10 → toFixed(7) → "-10.0000000" → MoneyError (negative) → "Invalid amount"
       mockRequest.body = {
         walletAddress: 'GABC1234567890123456789012345678901234567890123456789',
         amount: -10,
@@ -398,7 +405,9 @@ describe('RewardController', () => {
       await controller.withdraw(mockRequest as any, mockResponse as any, nextFn)
 
       expect(nextFn).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'Amount must be greater than 0' }),
+        expect.objectContaining({
+          message: expect.stringMatching(/Amount must be greater than 0|Invalid amount/),
+        }),
       )
     })
 
@@ -421,14 +430,15 @@ describe('RewardController', () => {
     it('should reject withdrawal if insufficient balance', async () => {
       mockRequest.body = {
         walletAddress: 'GABC1234567890123456789012345678901234567890123456789',
-        amount: 1000,
+        amount: '1000.0000000',
       }
 
       hasSufficientBalanceSpy.mockReturnValue(false)
+      // getBalance is called to format the error message — return BigInt stroops
       getBalanceSpy.mockReturnValue({
-        available: 50,
-        pending: 0,
-        lifetime: 100,
+        availableStroops: 500_000_000n, // 50 XLM
+        pendingStroops:   0n,
+        lifetimeStroops:  1_000_000_000n,
       })
       const nextFn = createNextFunction()
 
@@ -444,7 +454,7 @@ describe('RewardController', () => {
     it('should handle withdrawal failure gracefully', async () => {
       mockRequest.body = {
         walletAddress: 'GABC1234567890123456789012345678901234567890123456789',
-        amount: 50,
+        amount: '50.0000000', // XLM string (new API)
       }
 
       hasSufficientBalanceSpy.mockReturnValue(true)

@@ -81,7 +81,7 @@ export async function truncateAllTables(
 }
 
 export function applyMigrations(databaseUrl: string): void {
-  execSync('npx prisma db push --accept-data-loss', {
+  execSync('npx tsx node_modules/prisma/build/index.js db push --accept-data-loss', {
     env: { ...process.env, DATABASE_URL: databaseUrl },
     stdio: 'pipe',
     cwd: process.cwd(),
@@ -89,7 +89,7 @@ export function applyMigrations(databaseUrl: string): void {
 }
 
 export function runMigrations(databaseUrl: string): void {
-  execSync('npx prisma migrate deploy', {
+  execSync('npx tsx node_modules/prisma/build/index.js migrate deploy', {
     env: { ...process.env, DATABASE_URL: databaseUrl },
     stdio: 'pipe',
     cwd: process.cwd(),

@@ -4,25 +4,13 @@ import { PrismaPg } from '@prisma/adapter-pg'
 import { Pool } from 'pg'
 import { hash } from 'bcryptjs'
 
+import { seedUserFixtures } from './fixtures/users'
+import { seedModuleFixtures } from './fixtures/modules'
+import type { SeedModule } from './fixtures/modules'
+
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
-
-type SeedUser = {
-  id: string
-  email: string
-  name: string
-  walletAddress: string | null
-}
-
-type SeedModule = {
-  id: string
-  title: string
-  description: string
-  category: string
-  difficulty: string
-  reward: number
-}
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
 const DIFFICULTY_MULTIPLIER: Record<string, number> = {
@@ -31,118 +19,6 @@ const DIFFICULTY_MULTIPLIER: Record<string, number> = {
   advanced: 1.9,
   expert: 2.5,
 }
-
-const seedUserFixtures: SeedUser[] = [
-  {
-    id: 'seed-user-admin-ada',
-    email: 'ada.admin+seed@learnault.dev',
-    name: 'Ada Admin',
-    walletAddress: 'GD6QK3H5MYYXQUDMVDGLDZ4E2IWXQ7N5SLW7PZBLW4D5YV3V2NFH8A1A',
-  },
-  {
-    id: 'seed-user-learner-alice',
-    email: 'alice.learner+seed@learnault.dev',
-    name: 'Alice Learner',
-    walletAddress: 'GBUQWP3BOUZX34ULNQG23RQ6F4BFSRJ4HBSNF63YLIXLQ5EDLF274Y6C',
-  },
-  {
-    id: 'seed-user-learner-bob',
-    email: 'bob.learner+seed@learnault.dev',
-    name: 'Bob Learner',
-    walletAddress: 'GB7YLLICSMNYWJ46NWYCBTGXD54FPPWFY3YQYBFJFTQ6B2N3WHAL5V4K',
-  },
-  {
-    id: 'seed-user-learner-carla',
-    email: 'carla.learner+seed@learnault.dev',
-    name: 'Carla Learner',
-    walletAddress: 'GA5N2IBQ2J5KVSBBR6K7D6JQ3Y7L46BP3I7WNIPXQ2XH2WQOTJXK5C2Z',
-  },
-  {
-    id: 'seed-user-learner-deepak',
-    email: 'deepak.learner+seed@learnault.dev',
-    name: 'Deepak Learner',
-    walletAddress: 'GDVXG4D7WQ3WWT3S3Q6L2J5KLC2TSGBYHYQ4M4U7QWEK3J75VYLPQ9U2',
-  },
-  {
-    id: 'seed-user-employer-acme',
-    email: 'acme.employer+seed@learnault.dev',
-    name: 'Acme Talent Team',
-    walletAddress: null,
-  },
-  {
-    id: 'seed-user-employer-globex',
-    email: 'globex.employer+seed@learnault.dev',
-    name: 'Globex Hiring Ops',
-    walletAddress: null,
-  },
-]
-
-const seedModuleFixtures: SeedModule[] = [
-  {
-    id: 'seed-module-blockchain-101',
-    title: 'Stellar Fundamentals',
-    description: 'Core ledger concepts, accounts, trustlines, and transaction flow on Stellar.',
-    category: 'blockchain',
-    difficulty: 'beginner',
-    reward: 10,
-  },
-  {
-    id: 'seed-module-finance-101',
-    title: 'Understanding Stablecoins',
-    description: 'How fiat-backed and crypto-backed stablecoins work across global payment rails.',
-    category: 'finance',
-    difficulty: 'beginner',
-    reward: 12,
-  },
-  {
-    id: 'seed-module-security-201',
-    title: 'Wallet Security & Key Management',
-    description: 'Threat modeling, custody approaches, and secure key handling in production systems.',
-    category: 'security',
-    difficulty: 'intermediate',
-    reward: 18,
-  },
-  {
-    id: 'seed-module-development-301',
-    title: 'Build with Soroban',
-    description: 'Develop and test smart contracts using practical Soroban development workflows.',
-    category: 'development',
-    difficulty: 'advanced',
-    reward: 30,
-  },
-  {
-    id: 'seed-module-compliance-201',
-    title: 'AML/KYC for Digital Finance',
-    description: 'Compliance basics, sanctions screening, and regulated onboarding for fintech teams.',
-    category: 'compliance',
-    difficulty: 'intermediate',
-    reward: 20,
-  },
-  {
-    id: 'seed-module-identity-301',
-    title: 'Decentralized Identity in Practice',
-    description: 'Verifiable credentials, selective disclosure, and identity portability patterns.',
-    category: 'identity',
-    difficulty: 'advanced',
-    reward: 28,
-  },
-  {
-    id: 'seed-module-development-401',
-    title: 'Production API Hardening',
-    description: 'Rate limiting, auth patterns, observability, and safe rollout practices.',
-    category: 'development',
-    difficulty: 'expert',
-    reward: 40,
-  },
-  {
-    id: 'seed-module-blockchain-202',
-    title: 'Stellar Asset Issuance',
-    description: 'Issue and manage custom assets with issuer/distributor architecture.',
-    category: 'blockchain',
-    difficulty: 'intermediate',
-    reward: 22,
-  },
-]
 
 function createPrng(seed: number) {
   let state = seed >>> 0
@@ -162,7 +38,6 @@ function scoreFor(module: SeedModule, rand: () => number) {
 }
 
 function xlmAmount(module: SeedModule, rand: () => number) {
-
   return Number((module.reward * (1 + rand() * 0.3)).toFixed(2))
 }
 
@@ -184,16 +59,22 @@ async function upsertUsers(passwordHash: string) {
       where: { id: user.id },
       update: {
         email: user.email,
-        name: user.name,
+        username: user.username,
+        role: user.role,
+        status: user.status,
+        isVerified: user.isVerified,
         walletAddress: user.walletAddress,
-        passwordHash,
+        password: passwordHash,
       },
       create: {
         id: user.id,
         email: user.email,
-        name: user.name,
+        username: user.username,
+        role: user.role,
+        status: user.status,
+        isVerified: user.isVerified,
         walletAddress: user.walletAddress,
-        passwordHash,
+        password: passwordHash,
       },
     })
   }

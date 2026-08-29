@@ -1,16 +1,14 @@
 import crypto from 'crypto'
 import { Request, Response } from 'express'
-import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
 import prisma from '../config/database'
-import { loginSchema, registerSchema, verifyEmailSchema, resendVerificationSchema, forgotPasswordSchema, resetPasswordSchema, otpRequestSchema, otpVerifySchema } from '../schemas/auth.schema'
+import { loginSchema, registerSchema, verifyEmailSchema, resendVerificationSchema, forgotPasswordSchema, resetPasswordSchema, otpRequestSchema, otpVerifySchema, refreshTokenSchema } from '../schemas/auth.schema'
 import { UserRole } from '../types/user.types'
 import { emailService } from '../services/email.service'
 import { otpService, normalizePhone, OtpPurpose } from '../services/otp.service'
+import { refreshTokenService } from '../services/refresh-token.service'
+import { comparePassword, hashPassword, needsRehash } from '../utils/password'
+import { parseCookieHeader } from '../utils/cookies'
 import logger from '../utils/logger'
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-default-secret'
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d'
 
 const VERIFICATION_TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000 // 24 hours
 const PASSWORD_RESET_TOKEN_EXPIRY_MS = 30 * 60 * 1000 // 30 minutes
@@ -154,8 +152,7 @@ export class AuthController {
                 return
             }
 
-            const salt = await bcrypt.genSalt(10)
-            const hashedPassword = await bcrypt.hash(password, salt)
+            const hashedPassword = await hashPassword(password)
 
             const user = await prisma.user.create({
                 data: {
@@ -184,11 +181,15 @@ export class AuthController {
                 logger.error('[Auth] Failed to queue verification email:', err)
             )
 
-            const token = this.generateToken(user.id, user.role)
+            const session = await refreshTokenService.issueSession({
+                userId: user.id,
+                role: user.role,
+                ...this.clientContext(req),
+            })
 
             res.status(201).json({
                 message: 'User registered successfully',
-                token,
+                ...this.tokenPayload(session),
                 user: {
                     id: user.id,
                     email: user.email,
@@ -490,7 +491,7 @@ export class AuthController {
                 return
             }
 
-            const isMatch = await bcrypt.compare(password, user.password)
+            const isMatch = await comparePassword(password, user.password)
             if (!isMatch) {
                 res.status(401).json({ error: 'Invalid credentials' })
 
@@ -504,16 +505,26 @@ export class AuthController {
                 return
             }
 
+            // Transparently upgrade the stored hash if it was made under a
+            // weaker cost factor than the current configuration.
+            const passwordUpdate = needsRehash(user.password)
+                ? { password: await hashPassword(password) }
+                : {}
+
             await prisma.user.update({
                 where: { id: user.id },
-                data: { lastLoginAt: new Date() }
+                data: { ...passwordUpdate, lastLoginAt: new Date() }
             })
 
-            const token = this.generateToken(user.id, user.role)
+            const session = await refreshTokenService.issueSession({
+                userId: user.id,
+                role: user.role,
+                ...this.clientContext(req),
+            })
 
             res.status(200).json({
                 message: 'Login successful',
-                token,
+                ...this.tokenPayload(session),
                 user: {
                     id: user.id,
                     email: user.email,
@@ -529,21 +540,249 @@ export class AuthController {
 
     /**
      * @openapi
+     * /auth/refresh:
+     *   post:
+     *     operationId: authRefresh
+     *     summary: Rotate a refresh token for a new access/refresh pair
+     *     description: >
+     *       Consumes the presented refresh token and issues a new short-lived
+     *       access token plus a new opaque refresh token in the same family.
+     *       Presenting a refresh token that has already been rotated (replay)
+     *       revokes the entire family and returns 401 REFRESH_REUSE_DETECTED.
+     *
+     *       The refresh token may be sent in the JSON body (`refreshToken`)
+     *       or via an httpOnly `refresh_token` cookie.
+     *     tags: [Auth]
+     *     security: []
+     *     requestBody:
+     *       required: false
+     *       content:
+     *         application/json:
+     *           schema:
+     *             $ref: '#/components/schemas/RefreshTokenInput'
+     *     responses:
+     *       200:
+     *         description: Token rotated successfully.
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/TokenResponse'
+     *       400:
+     *         description: Validation failed or refresh token missing.
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ErrorResponse'
+     *       401:
+     *         description: Invalid, expired, revoked, or replayed refresh token.
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ErrorResponse'
+     *       500:
+     *         description: Internal server error.
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ErrorResponse'
+     */
+    async refresh(req: Request, res: Response): Promise<void> {
+        try {
+            const validation = refreshTokenSchema.safeParse(req.body ?? {})
+            if (!validation.success) {
+                res.status(400).json({
+                    error: 'Validation failed',
+                    details: validation.error.format(),
+                })
+
+                return
+            }
+
+            const refreshToken = this.readRefreshToken(req)
+            if (!refreshToken) {
+                res.status(400).json({ error: 'refreshToken is required' })
+
+                return
+            }
+
+            const result = await refreshTokenService.rotate(refreshToken, this.clientContext(req))
+
+            switch (result.kind) {
+                case 'ok':
+                    res.status(200).json({
+                        message: 'Token refreshed successfully',
+                        ...this.tokenPayload(result),
+                    })
+
+                    return
+
+                case 'reuse':
+                    res.status(401).json({
+                        error: 'Refresh token reuse detected; the session has been revoked',
+                        code: 'REFRESH_REUSE_DETECTED',
+                    })
+
+                    return
+
+                case 'expired':
+                    res.status(401).json({ error: 'Refresh token expired', code: 'REFRESH_EXPIRED' })
+
+                    return
+
+                case 'revoked':
+                    res.status(401).json({ error: 'Refresh token revoked', code: 'REFRESH_REVOKED' })
+
+                    return
+
+                case 'invalid':
+                    res.status(401).json({ error: 'Invalid refresh token', code: 'REFRESH_INVALID' })
+
+                    return
+            }
+        } catch (error) {
+            logger.error('[Auth] refresh error:', error)
+            res.status(500).json({ error: 'Internal server error during refresh' })
+        }
+    }
+
+    /**
+     * @openapi
      * /auth/logout:
      *   post:
      *     operationId: authLogout
-     *     summary: Log out (stateless — client must discard the token)
+     *     summary: Log out the current session
      *     description: >
-     *       The server has no session state; this endpoint simply returns a
-     *       reminder to clear the token client-side.
+     *       Revokes the session identified by the presented refresh token, so
+     *       that token (and any token in its family) can no longer be used.
+     *       The refresh token may be sent in the JSON body (`refreshToken`) or
+     *       via an httpOnly `refresh_token` cookie. Idempotent.
      *     tags: [Auth]
      *     security: []
+     *     requestBody:
+     *       required: false
+     *       content:
+     *         application/json:
+     *           schema:
+     *             $ref: '#/components/schemas/RefreshTokenInput'
      *     responses:
      *       200:
-     *         description: Logged out successfully.
+     *         description: Session revoked (or already revoked).
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/LogoutResponse'
+     *       400:
+     *         description: Validation failed or refresh token missing.
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ErrorResponse'
+     *       500:
+     *         description: Internal server error.
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ErrorResponse'
      */
     async logout(req: Request, res: Response): Promise<void> {
-        res.status(200).json({ message: 'Logged out successfully. Please clear your token client-side.' })
+        try {
+            const validation = refreshTokenSchema.safeParse(req.body ?? {})
+            if (!validation.success) {
+                res.status(400).json({
+                    error: 'Validation failed',
+                    details: validation.error.format(),
+                })
+
+                return
+            }
+
+            const refreshToken = this.readRefreshToken(req)
+            if (!refreshToken) {
+                res.status(400).json({ error: 'refreshToken is required' })
+
+                return
+            }
+
+            const result = await refreshTokenService.revokeByRefreshToken(refreshToken, this.clientContext(req))
+
+            res.status(200).json({
+                message: 'Logged out successfully',
+                revokedCount: result.revokedCount,
+            })
+        } catch (error) {
+            logger.error('[Auth] logout error:', error)
+            res.status(500).json({ error: 'Internal server error during logout' })
+        }
+    }
+
+    /**
+     * @openapi
+     * /auth/logout/all:
+     *   post:
+     *     operationId: authLogoutAll
+     *     summary: Log out all sessions for the user
+     *     description: >
+     *       Revokes every session (and their refresh-token families) for the
+     *       user identified by the presented refresh token. The refresh token
+     *       may be sent in the JSON body (`refreshToken`) or via an httpOnly
+     *       `refresh_token` cookie. Idempotent.
+     *     tags: [Auth]
+     *     security: []
+     *     requestBody:
+     *       required: false
+     *       content:
+     *         application/json:
+     *           schema:
+     *             $ref: '#/components/schemas/RefreshTokenInput'
+     *     responses:
+     *       200:
+     *         description: All sessions revoked.
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/LogoutResponse'
+     *       400:
+     *         description: Validation failed or refresh token missing.
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ErrorResponse'
+     *       500:
+     *         description: Internal server error.
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ErrorResponse'
+     */
+    async logoutAll(req: Request, res: Response): Promise<void> {
+        try {
+            const validation = refreshTokenSchema.safeParse(req.body ?? {})
+            if (!validation.success) {
+                res.status(400).json({
+                    error: 'Validation failed',
+                    details: validation.error.format(),
+                })
+
+                return
+            }
+
+            const refreshToken = this.readRefreshToken(req)
+            if (!refreshToken) {
+                res.status(400).json({ error: 'refreshToken is required' })
+
+                return
+            }
+
+            const result = await refreshTokenService.revokeAllByRefreshToken(refreshToken, this.clientContext(req))
+
+            res.status(200).json({
+                message: 'All sessions logged out',
+                revokedCount: result.revokedCount,
+            })
+        } catch (error) {
+            logger.error('[Auth] logoutAll error:', error)
+            res.status(500).json({ error: 'Internal server error during logout' })
+        }
     }
 
     /**
@@ -730,8 +969,7 @@ export class AuthController {
                 return
             }
 
-            const salt = await bcrypt.genSalt(10)
-            const hashedPassword = await bcrypt.hash(newPassword, salt)
+            const hashedPassword = await hashPassword(newPassword)
 
             const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
                 || (req.headers['x-real-ip'] as string)
@@ -1047,11 +1285,15 @@ export class AuthController {
                 data: { lastLoginAt: new Date() }
             })
 
-            const token = this.generateToken(user.id, user.role)
+            const session = await refreshTokenService.issueSession({
+                userId: user.id,
+                role: user.role,
+                ...this.clientContext(req),
+            })
 
             res.status(200).json({
                 message: 'Login successful',
-                token,
+                ...this.tokenPayload(session),
                 user: {
                     id: user.id,
                     email: user.email,
@@ -1097,12 +1339,54 @@ export class AuthController {
         return null
     }
 
-    private generateToken(userId: string, role: string): string {
-        return jwt.sign(
-            { id: userId, role },
-            JWT_SECRET as string,
-            { expiresIn: JWT_EXPIRES_IN as any }
-        )
+    private clientContext(req: Request): { userAgent?: string; ipAddress?: string } {
+        return {
+            ipAddress: this.getClientIp(req),
+            userAgent: this.getUserAgent(req),
+        }
+    }
+
+    private getClientIp(req: Request): string {
+        return (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
+            || (req.headers['x-real-ip'] as string)
+            || req.socket.remoteAddress
+            || 'unknown'
+    }
+
+    private getUserAgent(req: Request): string | undefined {
+        return req.headers['user-agent']
+    }
+
+    /**
+     * Resolve the refresh token from the JSON body first, then from the
+     * httpOnly `refresh_token` cookie. Returns null when neither is present.
+     */
+    private readRefreshToken(req: Request): string | null {
+        const bodyToken = req.body?.refreshToken
+        if (typeof bodyToken === 'string' && bodyToken.length > 0) {
+            return bodyToken
+        }
+
+        const cookieToken = parseCookieHeader(req.headers.cookie)['refresh_token']
+        if (cookieToken && cookieToken.length > 0) {
+            return cookieToken
+        }
+
+        return null
+    }
+
+    private tokenPayload(result: { accessToken: string; refreshToken: string; expiresIn: number }): {
+        accessToken: string
+        refreshToken: string
+        expiresIn: number
+        tokenType: string
+    } {
+        return {
+            accessToken: result.accessToken,
+            refreshToken: result.refreshToken,
+            expiresIn: result.expiresIn,
+            tokenType: 'Bearer',
+        }
     }
 
     private isRateLimited(key: string, windowMs: number): boolean {

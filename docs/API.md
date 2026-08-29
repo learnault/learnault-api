@@ -9,8 +9,8 @@ The Learnault API is a JSON REST API for a decentralized learn-to-earn platform 
 | Item | Value |
 |------|-------|
 | Base URL (production) | `https://api.learnault.io/api/v1` |
-| Base URL (local) | `http://localhost:3000/api/v1` |
-| Auth scheme | JWT Bearer (`Authorization: Bearer <token>`) |
+| Base URL (local) | `http://localhost:3000/api/v1` || Auth scheme | JWT Bearer (`Authorization: Bearer <token>`) |
+| Refresh scheme | Opaque rotating refresh token (`refreshToken` body or `refresh_token` cookie) |
 | Content-Type | `application/json` |
 
 ---
@@ -134,7 +134,10 @@ Register a new user. Queues a verification email.
 ```json
 {
   "message": "User registered successfully",
-  "token": "<jwt>",
+  "accessToken": "<jwt>",
+  "refreshToken": "<opaque-token>",
+  "expiresIn": 900,
+  "tokenType": "Bearer",
   "user": { "id": "...", "email": "...", "username": "...", "role": "learner" }
 }
 ```
@@ -151,11 +154,50 @@ Rate-limited (10 req / 15 min).
 
 ---
 
+### `POST /auth/refresh`
+
+Rotates a refresh token for a new access/refresh pair. The presented token
+is consumed; a replayed (already-rotated) token revokes the whole session
+family and returns `401 REFRESH_REUSE_DETECTED`.
+
+**Request body:** `{ "refreshToken": "<opaque-token>" }` — or send the token
+via an httpOnly `refresh_token` cookie.
+
+```json
+{
+  "message": "Token refreshed successfully",
+  "accessToken": "<new-jwt>",
+  "refreshToken": "<new-opaque-token>",
+  "expiresIn": 900,
+  "tokenType": "Bearer"
+}
+```
+
+**Responses:** 200 (rotated), 400 (missing token), 401 (`REFRESH_INVALID`,
+`REFRESH_EXPIRED`, `REFRESH_REVOKED`, or `REFRESH_REUSE_DETECTED`)
+
+---
+
 ### `POST /auth/logout`
 
-Stateless — no session is stored server-side. Returns a reminder to clear the token client-side.
+Logs out the current session by revoking its refresh-token family. Idempotent.
 
-**Response:** `200 { "message": "Logged out successfully. Please clear your token client-side." }`
+**Request body:** `{ "refreshToken": "<opaque-token>" }` — or via the
+httpOnly `refresh_token` cookie.
+
+**Response:** `200 { "message": "Logged out successfully", "revokedCount": 1 }`
+
+---
+
+### `POST /auth/logout/all`
+
+Logs out every session for the user identified by the refresh token.
+Idempotent.
+
+**Request body:** `{ "refreshToken": "<opaque-token>" }` — or via the
+httpOnly `refresh_token` cookie.
+
+**Response:** `200 { "message": "All sessions logged out", "revokedCount": 3 }`
 
 ---
 
@@ -259,64 +301,151 @@ Verifies the code from `otp/request`. Codes are single-use, expire after 5 minut
 
 ### `GET /users/me` 🔒
 
-Returns the authenticated user's full profile.
+Owner-only aggregate: account identity, learner profile, profile completion,
+onboarding state, and the current consent record per purpose. One read, so a
+client does not have to fan out across four endpoints to render a settings or
+"finish setting up" screen.
 
 ```json
 {
-  "id": "uuid", "email": "...", "username": "...",
-  "firstName": null, "lastName": null,
-  "bio": null, "avatar": null, "walletAddress": null,
-  "isActive": true, "createdAt": "...", "updatedAt": "..."
+  "data": {
+    "account": {
+      "id": "uuid", "email": "...", "username": "...",
+      "role": "LEARNER", "status": "ACTIVE",
+      "isVerified": true, "phoneVerifiedAt": null,
+      "walletAddress": null,
+      "createdAt": "...", "updatedAt": "...", "lastLoginAt": null
+    },
+    "profile": {
+      "id": "uuid", "userId": "uuid",
+      "displayName": null, "bio": null, "avatarUrl": null,
+      "country": null, "timezone": null,
+      "languages": [], "level": "beginner",
+      "interests": [], "goals": [],
+      "visibility": "private",
+      "createdAt": "...", "updatedAt": "..."
+    },
+    "completion": { "percent": 0, "missingFields": ["displayName", "bio", "..."] },
+    "onboarding": {
+      "version": "v1", "status": "in_progress", "currentStep": "profile_basics",
+      "completedSteps": ["profile_basics"], "requiredStepsRemaining": ["consent"],
+      "startedAt": "...", "completedAt": null
+    },
+    "consents": [
+      { "purpose": "terms_of_service", "status": "granted", "required": true,
+        "policyVersion": "2026-01", "grantedAt": "...", "withdrawnAt": null }
+    ],
+    "requiredConsentsGranted": false
+  }
 }
 ```
+
+The profile row is created on first access, so a brand-new learner gets a
+deterministic 0%-complete profile rather than a `null`. `onboarding` is `null`
+until the learner starts onboarding. The password hash is never included.
+
+**Responses:** `200` · `401` no/invalid token · `404` account unknown or tombstoned
 
 ---
 
 ### `PATCH /users/me` 🔒
 
-Update profile fields. All fields optional.
+Partial learner-profile update. At least one field is required, and the body is
+**closed**: any property outside the table below — including account fields such
+as `status`, `isVerified`, `role`, `email`, `password` or `walletAddress` — is a
+`400`, not a silently ignored key. Every accepted change is written together with
+its audit event in one transaction.
 
-**Request body** (any subset of):
+**Request body** (any non-empty subset of):
 
 | Field | Type | Constraints |
 |-------|------|-------------|
-| `username` | string | 3–30 chars, alphanumeric + underscore |
-| `firstName` | string | max 50 |
-| `lastName` | string | max 50 |
-| `bio` | string | max 500 |
-| `avatar` | string (URL) | |
+| `displayName` | string \| null | 1–80 chars |
+| `bio` | string \| null | max 1000 |
+| `avatarUrl` | string (URL) \| null | normally set by the avatar upload flow |
+| `country` | string \| null | 2–60 chars |
+| `timezone` | string \| null | |
+| `languages` | string[] | max 20 |
+| `level` | enum | `beginner` \| `intermediate` \| `advanced` \| `expert` |
+| `interests` | string[] | max 50 |
+| `goals` | string[] | max 20 |
+| `visibility` | enum | `private` \| `employer` \| `public` |
 
-**Response:** `200` full user object (same as `GET /users/me`)
+**Response:** `200` `{ "message": "...", "data": { … } }` — the same aggregate as
+`GET /users/me`, recomputed from the persisted row.
+
+**Responses:** `200` · `400` validation failed · `401` · `404`
+
+`PATCH /users/me/profile` accepts the same body and returns the profile alone
+(without the account aggregate).
 
 ---
 
 ### `GET /users/:id`
 
-Public — no auth needed. Returns a reduced public profile.
+Public — no auth needed. Returns the learner's public profile subset, or the
+redacted stub `{ "id": "...", "visible": false }`.
 
 ```json
-{ "id": "...", "username": "...", "firstName": null, "lastName": null, "avatar": null, "role": "learner", "createdAt": "..." }
+{
+  "data": {
+    "id": "uuid", "displayName": "Grace H.", "bio": "Learning Soroban",
+    "avatarUrl": null, "country": "NG", "level": "intermediate",
+    "interests": ["soroban"], "visible": true
+  }
+}
 ```
+
+Disclosure requires **all** of:
+
+1. `profile.visibility === "public"`,
+2. the account status is `ACTIVE`, and
+3. `data_sharing` consent has not been withdrawn.
+
+Any refusal returns the same stub, so a caller cannot tell a private profile
+from a withdrawn consent from a deactivated account. Archived profiles read as
+`404`. Private account data (email, username, wallet address, status,
+verification, password) never appears here — not even for the owner, who gets
+the same public view as anyone else on this route and uses
+`GET /users/me` or `GET /users/:id/profile` for their own full record.
+
+**Responses:** `200` · `400` malformed id · `404` unknown learner
 
 ---
 
 ### `PATCH /users/password` 🔒
 
-> ⚠️ **Preview** — the service implementation is stubbed. Will return `500` until completed.
+Verifies the current password, stores a new bcrypt hash, and revokes every
+session and refresh-token family for the account **in the same transaction** —
+so the caller must sign in again, and so does anyone holding a stolen session.
+The change is audited; neither password reaches the audit trail.
 
 **Request body:** `{ "currentPassword": "...", "newPassword": "..." }`
 
 Password rules: min 8 chars, must contain uppercase, lowercase, digit, and special character (`@$!%*?&`). Must differ from current.
 
+**Response:** `200` `{ "message": "...", "revokedSessionCount": 2 }`
+
+**Responses:** `200` · `400` validation failed · `401` no token, or wrong current
+password (`code: STEP_UP_FAILED`) · `404` account unknown or tombstoned
+
 ---
 
 ### `PATCH /users/wallet` 🔒
 
-> ⚠️ **Preview** — the wallet update may not persist to the database until the service layer is completed.
+Sets the learner's Stellar **public** key on their account. Never accepts or
+returns a secret seed. The change is audited.
 
 **Request body:** `{ "walletAddress": "G..." }`
 
 Address must match `^G[A-Z0-9]{55}$`.
+
+Re-sending the address already on file is a no-op (`200`, `"Wallet address
+unchanged"`, no second audit event). Addresses are unique across accounts.
+
+**Responses:** `200` · `400` invalid address · `401` · `404` account unknown or
+tombstoned · `409` address already claimed by another account
+(`code: WALLET_ADDRESS_TAKEN`)
 
 ---
 
@@ -764,14 +893,9 @@ Record a candidate outreach attempt. Requires **pro** or **enterprise** plan —
 
 ## Unimplemented / Stubbed Routes
 
-The following routes are wired but not fully implemented:
-
-| Route | Status |
-|-------|--------|
-| `PATCH /users/password` | Service method throws "Not implemented" — returns 500 |
-| `PATCH /users/wallet` | Service method uses mock data — changes do not persist |
-
-These are marked as **Preview** in the OpenAPI spec (`/api-docs`).
+None on `/users`. `PATCH /users/password` and `PATCH /users/wallet` were the last
+two stubs here; both are Prisma-backed and audited as of the Profile API work
+(see [`docs/decisions/0004-profile-api.md`](decisions/0004-profile-api.md)).
 
 ---
 
