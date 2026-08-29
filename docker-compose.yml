@@ -117,6 +117,30 @@ services:
     command: ['./docker/entrypoint-dev-worker.sh']
     stop_grace_period: 30s
 
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://${POSTGRES_USER:-learnault}:${POSTGRES_PASSWORD:-learnault}@db:5432/${POSTGRES_DB:-learnault_dev}?schema=public
+      RUN_MIGRATIONS: 'true'
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      SCHEDULER_INTERVAL_MS: ${SCHEDULER_INTERVAL_MS:-15000}
+      SCHEDULER_LEASE_MS: ${SCHEDULER_LEASE_MS:-60000}
+      SCHEDULER_SHUTDOWN_TIMEOUT_MS: ${SCHEDULER_SHUTDOWN_TIMEOUT_MS:-30000}
+      SCHEDULER_QUEUES: ${SCHEDULER_QUEUES:-}
+      SCHEDULER_DISABLED_QUEUES: ${SCHEDULER_DISABLED_QUEUES:-}
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: ['./docker/entrypoint-dev-scheduler.sh']
+    stop_grace_period: 40s
+
 volumes:
   pgdata:
   redisdata:

@@ -29,7 +29,7 @@ describe('EmailService', () => {
     })
 
     describe('queueEmail', () => {
-        it('should create an email delivery record and trigger queue processing', async () => {
+        it('should create a pending email delivery record without draining the queue', async () => {
             const mockDelivery = {
                 id: 'del1',
                 userId: 'user1',
@@ -63,6 +63,7 @@ describe('EmailService', () => {
                 })
             )
             expect(result).toEqual(mockDelivery)
+            expect(prisma.emailDelivery.findMany).not.toHaveBeenCalled()
         })
     })
 

@@ -39,12 +39,15 @@
     "db:seed": "npm run seed",
     "db:studio": "prisma studio",
     "worker:dev": "tsx src/workers/wallet-provisioning.worker.ts",
+    "scheduler": "node dist/workers/scheduler.worker.js",
+    "scheduler:dev": "tsx src/workers/scheduler.worker.ts",
     "stack:validate": "docker compose config --quiet",
     "stack:up": "docker compose up -d --build",
     "stack:down": "docker compose down",
     "stack:reset": "docker compose down -v",
-    "stack:logs": "docker compose logs -f api worker",
-    "stack:smoke": "bash scripts/stack-smoke-test.sh"
+    "stack:logs": "docker compose logs -f api worker scheduler",
+    "stack:smoke": "bash scripts/stack-smoke-test.sh",
+    "scheduler:verify": "bash scripts/scheduler-verification.sh"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.4.2",

@@ -160,3 +160,15 @@ export interface LeaseJobResult {
   attempt: number
   payload: unknown
 }
+
+export interface AcquireQueueLeaseOptions {
+  queueName: string
+  leaseMs?: number
+  owner?: string
+}
+
+export interface QueueLeaseResult {
+  queueName: string
+  leaseToken: string
+  leasedUntil: Date
+}

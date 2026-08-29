@@ -82,8 +82,6 @@ export class AccountController {
         try {
             const userId = req.user!.id
 
-            this.sweepInBackground()
-
             const result = await dataExportService.requestExport(userId)
 
             if (result.kind === 'duplicate') {
@@ -466,8 +464,6 @@ export class AccountController {
      */
     async getDeletionStatus(req: Request, res: Response): Promise<void> {
         try {
-            this.sweepInBackground()
-
             const request = await accountLifecycleService.getLatestDeletionRequest(req.user!.id)
 
             if (!request) {
@@ -617,12 +613,6 @@ export class AccountController {
             ipAddress: req.ip,
             userAgent: req.headers['user-agent'],
         }
-    }
-
-    private sweepInBackground(): void {
-        accountLifecycleService.sweep().catch(err =>
-            logger.error('Lifecycle sweep error:', err)
-        )
     }
 
     private generateToken(userId: string, role: string): string {

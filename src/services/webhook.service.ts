@@ -56,9 +56,6 @@ export class WebhookService {
                 })
             })
         )
-
-        // Process asynchronously
-        this.processQueue().catch(err => console.error('[Webhook] Queue processing error:', err))
     }
 
     /**

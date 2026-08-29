@@ -2,20 +2,25 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { NotificationService } from '../src/services/notification.service'
 
 // Use vi.hoisted to mock dependencies before they are imported by the service
-const { mockSendEachForMulticast } = vi.hoisted(() => ({
-  mockSendEachForMulticast: vi.fn().mockResolvedValue({ failureCount: 0, responses: [] })
-}))
+const { mockSendEachForMulticast, mockAdmin } = vi.hoisted(() => {
+  const mockSendEachForMulticast = vi.fn().mockResolvedValue({ failureCount: 0, responses: [] })
 
-vi.mock('firebase-admin', () => ({
-  apps: [{ name: 'mock-app' }],
-  initializeApp: vi.fn(),
-  credential: {
-    cert: vi.fn().mockReturnValue({})
-  },
-  messaging: vi.fn().mockReturnValue({
-    sendEachForMulticast: mockSendEachForMulticast
-  })
-}))
+  return {
+    mockSendEachForMulticast,
+    mockAdmin: {
+      apps: [{ name: 'mock-app' }],
+      initializeApp: vi.fn(),
+      credential: {
+        cert: vi.fn().mockReturnValue({})
+      },
+      messaging: vi.fn().mockReturnValue({
+        sendEachForMulticast: mockSendEachForMulticast
+      })
+    }
+  }
+})
+
+vi.mock('firebase-admin', () => ({ ...mockAdmin, default: mockAdmin }))
 
 // Use vi.hoisted to ensure these are available for vi.mock
 const { mockPrisma } = vi.hoisted(() => ({

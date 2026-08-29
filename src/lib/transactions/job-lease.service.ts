@@ -10,8 +10,17 @@
  */
 
 import { PrismaClient } from '@prisma/client'
-import { LeaseJobOptions, LeaseJobResult, JobResult, JobAttempt } from './types.js'
+import {
+  LeaseJobOptions,
+  LeaseJobResult,
+  JobResult,
+  JobAttempt,
+  AcquireQueueLeaseOptions,
+  QueueLeaseResult,
+} from './types.js'
 import { randomUUID } from 'crypto'
+
+const DEFAULT_QUEUE_LEASE_MS = 60000
 
 export class JobLeaseService {
   constructor(private prisma: PrismaClient) {}
@@ -305,6 +314,76 @@ export class JobLeaseService {
     })
 
     return result.count
+  }
+
+  async acquireQueueLease(
+    options: AcquireQueueLeaseOptions
+  ): Promise<QueueLeaseResult | null> {
+    const leaseMs = options.leaseMs ?? DEFAULT_QUEUE_LEASE_MS
+    const leaseToken = randomUUID()
+    const owner = options.owner ?? null
+
+    const rows = await this.prisma.$queryRaw<Array<{ leasedUntil: Date }>>`
+      INSERT INTO "queue_leases"
+        ("id", "queueName", "leaseToken", "leasedUntil", "owner", "createdAt", "updatedAt")
+      VALUES (
+        ${randomUUID()},
+        ${options.queueName},
+        ${leaseToken},
+        now() + (${String(leaseMs)}::text || ' milliseconds')::interval,
+        ${owner},
+        now(),
+        now()
+      )
+      ON CONFLICT ("queueName") DO UPDATE
+        SET "leaseToken" = EXCLUDED."leaseToken",
+            "leasedUntil" = EXCLUDED."leasedUntil",
+            "owner" = EXCLUDED."owner",
+            "updatedAt" = now()
+        WHERE "queue_leases"."leasedUntil" IS NULL
+           OR "queue_leases"."leasedUntil" <= now()
+      RETURNING "leasedUntil"
+    `
+
+    if (rows.length === 0) {
+      return null
+    }
+
+    return {
+      queueName: options.queueName,
+      leaseToken,
+      leasedUntil: rows[0].leasedUntil,
+    }
+  }
+
+  async renewQueueLease(
+    queueName: string,
+    leaseToken: string,
+    leaseMs: number = DEFAULT_QUEUE_LEASE_MS
+  ): Promise<boolean> {
+    const updated = await this.prisma.$executeRaw`
+      UPDATE "queue_leases"
+      SET "leasedUntil" = now() + (${String(leaseMs)}::text || ' milliseconds')::interval,
+          "updatedAt" = now()
+      WHERE "queueName" = ${queueName}
+        AND "leaseToken" = ${leaseToken}
+    `
+
+    return updated > 0
+  }
+
+  async releaseQueueLease(queueName: string, leaseToken: string): Promise<boolean> {
+    const updated = await this.prisma.$executeRaw`
+      UPDATE "queue_leases"
+      SET "leaseToken" = NULL,
+          "leasedUntil" = NULL,
+          "lastTickAt" = now(),
+          "updatedAt" = now()
+      WHERE "queueName" = ${queueName}
+        AND "leaseToken" = ${leaseToken}
+    `
+
+    return updated > 0
   }
 
   /**

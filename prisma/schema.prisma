@@ -841,3 +841,17 @@ model RolledBackRecord {
   @@index([createdAt]) // For periodic cleanup
   @@map("rolled_back_records")
 }
+
+model QueueLease {
+  id           String    @id @default(uuid())
+  queueName    String    @unique
+  leaseToken   String?
+  leasedUntil  DateTime?
+  owner        String?
+  lastTickAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([leasedUntil])
+  @@map("queue_leases")
+}

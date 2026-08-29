@@ -476,6 +476,18 @@ const RULES: readonly LifecycleRule[] = [
     audited: false,
     notes: 'Tombstone marking an event as unprocessable. Written once, then only read.',
   },
+  {
+    model: 'QueueLease',
+    table: 'queue_leases',
+    recordClass: RecordClass.MUTABLE,
+    category: DataCategory.OPERATIONAL,
+    retentionDays: Retention.INDEFINITE,
+    retentionAnchor: null,
+    onErasure: ErasureAction.RETAIN,
+    audited: false,
+    notes:
+      'One row per recurring queue drain, reused by every scheduler tick. Holds a queue name, lease token, and holder id — no user data, so nothing to erase and nothing to age out.',
+  },
 ]
 
 const BY_MODEL: ReadonlyMap<string, LifecycleRule> = new Map(

@@ -154,12 +154,15 @@ rather than removing it.
 | `OutboxEvent` | MUTABLE | 30d (`createdAt`) | Retain | No |
 | `JobAttempt` | MUTABLE | 30d (`createdAt`) | Cascade | No |
 | `RolledBackRecord` | IMMUTABLE | 30d (`createdAt`) | Retain | No |
+| `QueueLease` | MUTABLE | Indefinite | Retain | No |
 | `WalletProvisioningJob` | MUTABLE | 90d (`updatedAt`) | Cascade | No |
 
 `EmailDelivery` and `NotificationLog` hold rendered message bodies, which is
 personal data — hence the short window and hard deletion on erasure.
 `DeviceToken` is deleted rather than archived: an archived push token would still
-be a live address.
+be a live address. `QueueLease` holds one long-lived row per recurring queue
+drain — a queue name, the current lease token, and the holder id — so there is
+no user data to erase and nothing to age out.
 
 ---
 

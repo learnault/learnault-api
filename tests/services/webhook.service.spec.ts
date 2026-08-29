@@ -72,11 +72,12 @@ describe('WebhookService', () => {
                 { id: 'ep1', url: 'https://ep1.com', secret: 's1', events: 'module.completed', isActive: true },
             ])
             mockPrismaInstance.webhookDelivery.create.mockResolvedValue({ id: 'd1' })
-            mockPrismaInstance.webhookDelivery.findMany.mockResolvedValue([]) // for processQueue
+            mockPrismaInstance.webhookDelivery.findMany.mockResolvedValue([])
 
             await service.queueEvent('module.completed', { foo: 'bar' })
 
             expect(mockPrismaInstance.webhookDelivery.create).toHaveBeenCalledOnce()
+            expect(mockPrismaInstance.webhookDelivery.findMany).not.toHaveBeenCalled()
             const createCall = mockPrismaInstance.webhookDelivery.create.mock.calls[0][0]
             expect(createCall.data.eventType).toBe('module.completed')
             expect(JSON.parse(createCall.data.payload).data).toEqual({ foo: 'bar' })
