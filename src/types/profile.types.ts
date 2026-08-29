@@ -70,6 +70,56 @@ export type PublicProfileView =
 
 export interface PrivateProfileView extends LearnerProfileRecord, AccountPrivateFields {}
 
+// ── Owner account/profile aggregate ────────────────────────────────────────
+
+// The `User` columns an owner may see about their own account. Deliberately a
+// closed list rather than "the row minus password": a column added to `User`
+// later must be opted in here, not disclosed by default.
+export interface AccountSummary {
+  id: string
+  email: string
+  username: string
+  role: string
+  status: string
+  isVerified: boolean
+  phoneVerifiedAt: Date | null
+  walletAddress: string | null
+  createdAt: Date
+  updatedAt: Date
+  lastLoginAt: Date | null
+}
+
+export interface OnboardingSummary {
+  version: string
+  status: string
+  currentStep: string
+  completedSteps: string[]
+  requiredStepsRemaining: string[]
+  startedAt: Date
+  completedAt: Date | null
+}
+
+export interface ConsentSummary {
+  purpose: string
+  status: string
+  required: boolean
+  policyVersion: string
+  grantedAt: Date | null
+  withdrawnAt: Date | null
+}
+
+// What `GET /users/me` returns: identity, profile, and the two pieces of state
+// a client needs to decide what to show next — how complete the profile is and
+// where onboarding stands.
+export interface OwnerAccountProfileView {
+  account: AccountSummary
+  profile: LearnerProfileRecord
+  completion: ProfileCompletion
+  onboarding: OnboardingSummary | null
+  consents: ConsentSummary[]
+  requiredConsentsGranted: boolean
+}
+
 // Fields counted toward profile-completion percentage. `level` is excluded
 // because it always has a default value and can never read as "empty".
 export const PROFILE_COMPLETION_FIELDS = [

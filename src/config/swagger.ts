@@ -22,10 +22,6 @@ const options: swaggerJsdoc.Options = {
         '```json',
         '{ "success": false, "error": { "message": "...", "code": 500 } }',
         '```',
-        '',
-        '> ⚠️ **Preview / not-yet-implemented routes** — `PATCH /api/v1/users/password` and',
-        '> `PATCH /api/v1/users/wallet` are wired but their underlying service methods are stubs.',
-        '> They will return errors in production until the service layer is completed.',
       ].join('\n'),
       contact: {
         name: 'Learnault Contributors',

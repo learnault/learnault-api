@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ProfileController } from '../src/controllers/profile.controller'
 
-const { mockGetOwnerView, mockUpdateProfile, mockGetEmployerView, mockGetPublicView } = vi.hoisted(() => ({
+const { mockGetOwnerView, mockUpdateProfileAudited, mockGetEmployerView, mockGetPublicView } = vi.hoisted(() => ({
   mockGetOwnerView: vi.fn(),
-  mockUpdateProfile: vi.fn(),
+  mockUpdateProfileAudited: vi.fn(),
   mockGetEmployerView: vi.fn(),
   mockGetPublicView: vi.fn(),
 }))
@@ -11,7 +11,7 @@ const { mockGetOwnerView, mockUpdateProfile, mockGetEmployerView, mockGetPublicV
 vi.mock('../src/services/profile.service', () => ({
   ProfileService: class {
     getOwnerView = mockGetOwnerView
-    updateProfile = mockUpdateProfile
+    updateProfileAudited = mockUpdateProfileAudited
     getEmployerView = mockGetEmployerView
     getPublicView = mockGetPublicView
   },
@@ -25,7 +25,7 @@ describe('ProfileController', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     controller = new ProfileController()
-    req = { user: { id: 'user1' }, body: {}, params: {} }
+    req = { user: { id: 'user1', role: 'learner' }, body: {}, params: {}, headers: {}, requestId: 'req-1', ip: '203.0.113.7' }
     res = {
       status: vi.fn().mockReturnThis(),
       json: vi.fn().mockReturnThis(),
@@ -103,18 +103,49 @@ describe('ProfileController', () => {
 
     it('accepts a partial update', async () => {
       req.body = { displayName: 'Ada' }
-      mockUpdateProfile.mockResolvedValue({ id: 'profile1', displayName: 'Ada' })
+      mockUpdateProfileAudited.mockResolvedValue({ id: 'profile1', displayName: 'Ada' })
       mockGetOwnerView.mockResolvedValue({ id: 'profile1', displayName: 'Ada' })
 
       await controller.updateMyProfile(req, res)
 
-      expect(mockUpdateProfile).toHaveBeenCalledWith('user1', { displayName: 'Ada' })
+      expect(mockUpdateProfileAudited).toHaveBeenCalledWith(
+        'user1',
+        { displayName: 'Ada' },
+        expect.anything()
+      )
       expect(res.status).toHaveBeenCalledWith(200)
+    })
+
+    it('writes through the audited path, attributed to the owner', async () => {
+      req.body = { displayName: 'Ada' }
+      mockUpdateProfileAudited.mockResolvedValue({ id: 'profile1' })
+      mockGetOwnerView.mockResolvedValue({ id: 'profile1' })
+
+      await controller.updateMyProfile(req, res)
+
+      const context = mockUpdateProfileAudited.mock.calls[0][2]
+
+      expect(context.actor).toMatchObject({ type: 'USER', id: 'user1' })
+      expect(context.requestId).toBe('req-1')
+    })
+
+    it.each([
+      ['status', { status: 'ACTIVE' }],
+      ['role', { role: 'ADMIN' }],
+      ['isVerified', { isVerified: true }],
+      ['userId', { userId: 'someone-else' }],
+    ])('rejects the account field %s', async (_field, body) => {
+      req.body = body
+
+      await controller.updateMyProfile(req, res)
+
+      expect(res.status).toHaveBeenCalledWith(400)
+      expect(mockUpdateProfileAudited).not.toHaveBeenCalled()
     })
 
     it('returns 500 on unexpected error', async () => {
       req.body = { displayName: 'Ada' }
-      mockUpdateProfile.mockRejectedValue(new Error('db down'))
+      mockUpdateProfileAudited.mockRejectedValue(new Error('db down'))
 
       await controller.updateMyProfile(req, res)
 
