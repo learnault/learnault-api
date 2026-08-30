@@ -1,5 +1,5 @@
 import prisma from '../config/database'
-import * as admin from 'firebase-admin'
+import admin from 'firebase-admin'
 
 // Local type definition to avoid @prisma/client import at test time
 interface NotificationLog {
@@ -93,11 +93,6 @@ export class NotificationService {
     const log = await prisma.notificationLog.create({
       data: { userId, type, title, body, status: 'pending', nextAttemptAt: new Date() }
     })
-
-    // Process asynchronously – same pattern as webhook service
-    this.processQueue().catch(err =>
-      console.error('[NotificationService] Queue processing error:', err)
-    )
 
     return log as unknown as NotificationLog
   }

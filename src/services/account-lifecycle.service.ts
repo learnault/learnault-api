@@ -284,11 +284,6 @@ export class AccountLifecycleService {
     }
   }
 
-  /**
-   * Runs all due lifecycle work. Invoked lazily from account endpoints,
-   * optionally on an interval from server.ts, and callable from a future
-   * dedicated worker (docker/entrypoint-worker.sh).
-   */
   async sweep(): Promise<void> {
     const results = await Promise.allSettled([
       this.processDue(),

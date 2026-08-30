@@ -48,6 +48,23 @@ export class WalletProvisioningOutboxHandler {
 
   async handleNext(): Promise<WalletProvisioningHandleResult> {
     const claimed = await this.repository.claimNext(this.now(), this.leaseMs)
+
+    return this.handleClaimed(claimed)
+  }
+
+  async handleWallet(walletId: string): Promise<WalletProvisioningHandleResult> {
+    const claimed = await this.repository.claimByWalletId(
+      walletId,
+      this.now(),
+      this.leaseMs,
+    )
+
+    return this.handleClaimed(claimed)
+  }
+
+  private async handleClaimed(
+    claimed: ClaimedWalletProvisioningJob | null,
+  ): Promise<WalletProvisioningHandleResult> {
     if (!claimed) return { kind: 'idle' }
 
     const leaseToken = claimed.job.leaseToken

@@ -14,6 +14,7 @@ This document maps the key request flows and domain event propagation patterns a
 6. [Referral Application Flow](#referral-application-flow)
 7. [Withdrawal Flow](#withdrawal-flow)
 8. [Notification Delivery Flow](#notification-delivery-flow)
+9. [Subscribing to Domain Events](#subscribing-to-domain-events)
 
 ---
 
@@ -508,3 +509,121 @@ Target state: Event-driven communication via domain events
 | Credentials | Blockchain Infra | Service Call | On-chain storage |
 | Credentials | Notifications | Domain Event | Credential notification |
 | All Domains | Shared Kernel | Direct Import | Config, errors, middleware, utils |
+
+---
+
+## Subscribing to Domain Events
+
+A new domain event needs a registered handler, not a new worker process. The
+outbox relay leases every pending event and dispatches it by `eventType` to the
+handlers registered for that type.
+
+### 1. Declare the event schema
+
+Add the payload schema in `src/lib/transactions/event-schema.ts`. A handler for
+an event type with no schema is rejected at startup.
+
+```ts
+registry.register({
+  version: 1,
+  eventType: 'ModuleCompleted',
+  validate: async (payload) => {
+    await z.object({
+      completionId: z.string().uuid(),
+      userId: z.string().uuid(),
+    }).parseAsync(payload)
+  },
+})
+```
+
+### 2. Emit the event in the same transaction as the domain write
+
+```ts
+await prisma.$transaction(async (tx) => {
+  const completion = await tx.completion.create({ data: ... })
+
+  await createOutboxService(prisma).createEvent(tx, {
+    aggregateId: completion.id,
+    aggregateType: 'Completion',
+    eventType: 'ModuleCompleted',
+    eventVersion: 1,
+    payload: { completionId: completion.id, userId },
+    source: 'api.module.complete',
+  })
+
+  return completion
+})
+```
+
+If the transaction rolls back the event disappears with it, so an event can
+never describe a write that did not happen.
+
+### 3. Write the handler
+
+```ts
+export class RewardOnModuleCompleted implements OutboxEventHandler {
+  readonly name = 'rewards.on-module-completed'
+  readonly eventType = 'ModuleCompleted'
+  readonly eventVersion = 1
+  readonly maxAttempts = 5
+
+  async handle(ctx: OutboxEventHandlerContext) {
+    const payload = ctx.payload as ModuleCompletedPayload
+    await rewardService.grant(payload.userId, payload.completionId)
+
+    return { idempotencyKey: `${ctx.eventId}:${this.name}` }
+  }
+}
+```
+
+`name` must be unique across the whole registry — it becomes `JobAttempt.jobType`.
+
+**Handlers must be idempotent.** A handler can run more than once for the same
+event: after a crash mid-lease, or after an operator replays a dead-lettered
+event. Make the side effect an upsert, or guard it on a key derived from
+`ctx.eventId`.
+
+Throwing from `handle()` schedules a retry with exponential backoff. Returning
+normally completes the attempt.
+
+### 4. Register it
+
+Add the handler in `src/jobs/handler-registrations.ts`, and add its event type
+to `EMITTED_EVENT_TYPES` if the application emits it:
+
+```ts
+registry.register(new RewardOnModuleCompleted())
+```
+
+`registerOutboxHandlers()` throws at startup on a duplicate handler name, on a
+handler whose event type has no schema, and on an emitted event type with no
+handler — so a missing subscription fails loudly instead of leaving rows PENDING
+forever.
+
+### What the relay guarantees
+
+- One `JobAttempt` per (event, handler). Several handlers may subscribe to the
+  same event type and each is tracked separately.
+- An event becomes `PUBLISHED` only once **every** handler for its type has
+  completed. One failing handler holds the event back without blocking others.
+- A handler that exhausts `maxAttempts` dead-letters its own job and the event,
+  leaving every other event type unaffected.
+- An event with no registered handler is dead-lettered immediately and logged at
+  error level, rather than sitting `PENDING` unnoticed.
+
+### Operating dead letters
+
+```bash
+pnpm outbox:replay list                  # dead-lettered events and last error
+pnpm outbox:replay replay <eventId> ...  # reset to PENDING for another pass
+```
+
+Replay resets the dead-lettered `JobAttempt` rows and returns the event to
+`PENDING`; the relay picks it up on its next tick. Completed handlers are not
+re-run, and idempotent handlers make a repeated run harmless.
+
+### Where it runs
+
+The relay is a queue on the scheduled job runner
+(`src/workers/scheduler.worker.ts`), registered as `outbox-relay`. There is no
+per-domain worker process: adding a domain event means adding a handler.

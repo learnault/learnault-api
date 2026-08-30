@@ -1,9 +1,9 @@
 import { Server } from 'http'
 import app from './app'
-import { env } from './config/env'
-import { accountLifecycleService } from './services/account-lifecycle.service'
+import { schedulerConfig } from './config/scheduler'
 import logger from './utils/logger'
 import prisma from './config/database'
+import { createScheduledJobRunner, ScheduledJobRunner } from './workers/scheduled-job-runner'
 
 const PORT = process.env.PORT || 5000
 const SHUTDOWN_TIMEOUT_MS = parseInt(process.env.SHUTDOWN_TIMEOUT_MS || '30000', 10)
@@ -13,18 +13,14 @@ const server: Server = app.listen(PORT, () => {
 })
 
 let isShuttingDown = false
-let lifecycleSweepInterval: NodeJS.Timeout | null = null
+let scheduler: ScheduledJobRunner | null = null
 
-// Periodic lifecycle sweep (export generation, deletion finalization, artifact
-// purge). Disabled when LIFECYCLE_SWEEP_INTERVAL_MS is 0 — the sweep still runs
-// lazily from account endpoints, and a dedicated worker can call sweep() directly.
-if (env.LIFECYCLE_SWEEP_INTERVAL_MS > 0) {
-  lifecycleSweepInterval = setInterval(() => {
-    accountLifecycleService.sweep().catch(err =>
-      logger.error('Scheduled lifecycle sweep error:', err)
-    )
-  }, env.LIFECYCLE_SWEEP_INTERVAL_MS)
-  lifecycleSweepInterval.unref()
+if (schedulerConfig.inProcess) {
+  scheduler = createScheduledJobRunner({ prisma })
+  scheduler.start()
+  logger.info(
+    `In-process scheduler enabled for queues: ${scheduler.registeredQueues.join(', ') || 'none'}`
+  )
 }
 
 /**
@@ -63,10 +59,10 @@ async function gracefulShutdown(signal: string): Promise<void> {
     })
 
     // 2. Stop background jobs
-    if (lifecycleSweepInterval) {
-      logger.info('Stopping lifecycle sweep interval...')
-      clearInterval(lifecycleSweepInterval)
-      lifecycleSweepInterval = null
+    if (scheduler) {
+      logger.info('Stopping in-process scheduler...')
+      await scheduler.stop()
+      scheduler = null
     }
 
     // 3. Close database connections

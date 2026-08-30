@@ -85,8 +85,9 @@ COPY --from=build /app/prisma.config.ts ./
 # Entrypoint scripts
 COPY docker/entrypoint-api.sh  ./entrypoint-api.sh
 COPY docker/entrypoint-worker.sh ./entrypoint-worker.sh
+COPY docker/entrypoint-scheduler.sh ./entrypoint-scheduler.sh
 
-RUN chmod +x entrypoint-api.sh entrypoint-worker.sh
+RUN chmod +x entrypoint-api.sh entrypoint-worker.sh entrypoint-scheduler.sh
 
 # Non-root user
 RUN groupadd --gid 1001 appgroup && \

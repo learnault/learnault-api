@@ -39,10 +39,6 @@ export class EmailService {
       },
     })
 
-    this.processQueue().catch(err =>
-      logger.error('[EmailService] Queue processing error:', err)
-    )
-
     return delivery as unknown as EmailDeliveryRecord
   }
 

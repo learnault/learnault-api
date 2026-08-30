@@ -1,7 +1,6 @@
 import prisma from '../config/database'
 import { stellarConfig } from '../config/stellar'
 import { StellarService, StellarServiceError } from './stellar.service'
-import logger from '../utils/logger'
 
 interface StellarFundingRecord {
   id: string
@@ -33,11 +32,7 @@ export class StellarFundingService {
     })
 
     if (existing) {
-      this.processQueue().catch((err) =>
-        logger.error('[StellarFundingService] Queue processing error:', err)
-      )
-      
-return existing as unknown as StellarFundingRecord
+      return existing as unknown as StellarFundingRecord
     }
 
     const funding = await prisma.stellarFunding.create({
@@ -48,10 +43,6 @@ return existing as unknown as StellarFundingRecord
         nextAttemptAt: new Date(),
       },
     })
-
-    this.processQueue().catch((err) =>
-      logger.error('[StellarFundingService] Queue processing error:', err)
-    )
 
     return funding as unknown as StellarFundingRecord
   }

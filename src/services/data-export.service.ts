@@ -59,10 +59,6 @@ export class DataExportService {
 
     await auditService.record({ userId, action: AuditAction.EXPORT_REQUESTED, metadata: { requestId: request.id } })
 
-    this.processQueue().catch(err =>
-      logger.error('[DataExportService] Queue processing error:', err)
-    )
-
     return { kind: 'created', request }
   }
 

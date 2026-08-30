@@ -1,6 +1,6 @@
 # Local Development Stack (Docker Compose)
 
-A reproducible local stack for the Learnault API: **API**, **wallet worker**, **PostgreSQL**, and **Redis** — started with one command.
+A reproducible local stack for the Learnault API: **API**, **wallet worker**, **scheduler**, **PostgreSQL**, and **Redis** — started with one command.
 
 ## Prerequisites
 
@@ -23,6 +23,7 @@ docker compose ps
 #    learnault-dev-db      Up ... (healthy)
 #    learnault-dev-redis   Up ... (healthy)
 #    learnault-dev-worker  Up ... (healthy)
+#    learnault-dev-scheduler  Up ...
 ```
 
 The API is available at `http://localhost:5000` (Swagger UI at `http://localhost:5000/api-docs`).
@@ -36,6 +37,37 @@ The `api` service entrypoint (`docker/entrypoint-dev-api.sh`) waits for PostgreS
 3. Starts the Express server under `nodemon`, so source edits hot-reload via the bind mount.
 
 The `worker` service runs `src/workers/wallet-provisioning.worker.ts`, which polls the idempotent wallet-provisioning outbox and generates Stellar keys through the dev in-memory KMS adapter. In production, swap the KMS adapter for a real one (e.g. AWS KMS) behind the same `KmsSecretStore` interface.
+
+The `scheduler` service runs `src/workers/scheduler.worker.ts`. See below.
+
+## Scheduled job runner
+
+Every recurring queue drain is owned by the `scheduler` service, not by the request that enqueued the work — so a delivery whose `nextAttemptAt` falls due is retried on time even when the API is receiving no traffic, and request latency never includes queue-drain work.
+
+Registered queues: `email`, `notification`, `webhook`, `stellar-funding`, `data-export`, `account-lifecycle`.
+
+Each tick takes a row lease on `queue_leases` via `JobLeaseService.acquireQueueLease()` before draining, so extra replicas are safe:
+
+```bash
+docker compose up -d --scale scheduler=2
+```
+
+A replica that loses the race logs a skipped tick and moves on; a replica that crashes mid-drain has its lease expire, and the next tick reclaims the queue.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `SCHEDULER_INTERVAL_MS` | `15000` | Base tick interval for every queue |
+| `SCHEDULER_<QUEUE>_INTERVAL_MS` | — | Per-queue override, e.g. `SCHEDULER_WEBHOOK_INTERVAL_MS` |
+| `SCHEDULER_LEASE_MS` | `60000` | Lease held per tick (floored at 2× the interval) |
+| `SCHEDULER_QUEUES` | all | Comma list restricting which queues this replica runs |
+| `SCHEDULER_DISABLED_QUEUES` | — | Comma list of queues to skip |
+| `SCHEDULER_SHUTDOWN_TIMEOUT_MS` | `30000` | How long `SIGTERM` waits for in-flight ticks |
+| `SCHEDULER_IN_PROCESS` | `false` | Opt-in: run the runner inside the API process for single-process deployments |
+| `LIFECYCLE_SWEEP_INTERVAL_MS` | `0` | When `> 0`, overrides the `account-lifecycle` queue interval |
+
+Every tick emits a structured log line carrying per-queue `depth`, `due`, `lagMs` (age of the oldest due row), `durationMs`, and cumulative `attempts` / `failures` / `skipped`.
+
+`pnpm scheduler:verify` runs both evidence scenarios against the stack: a due-but-failed delivery drained with no inbound HTTP traffic, then a batch drained by two replicas with no row processed twice.
 
 ## Health checks & readiness
 
@@ -54,7 +86,7 @@ The API container only reports **healthy** after `/health/live` responds; `depen
 pnpm stack:up        # docker compose up -d --build
 pnpm stack:down      # stop the stack (keeps data volumes)
 pnpm stack:reset     # stop + delete data volumes (project-scoped reset)
-pnpm stack:logs      # follow API + worker logs
+pnpm stack:logs      # follow API + worker + scheduler logs
 pnpm stack:validate  # docker compose config --quiet
 pnpm stack:smoke     # validate + start + probe health endpoints
 ```
@@ -65,9 +97,10 @@ pnpm stack:smoke     # validate + start + probe health endpoints
 docker compose logs -f          # all services
 docker compose logs -f api      # API only
 docker compose logs worker      # worker only
+docker compose logs -f scheduler # scheduled job runner only
 ```
 
-Both services have `stop_grace_period: 30s`, matching the app's graceful-shutdown handler (`SHUTDOWN_TIMEOUT_MS`): `docker compose down` sends `SIGTERM`, the server drains HTTP connections and closes the Prisma pool before exiting.
+`api` and `worker` have `stop_grace_period: 30s` and `scheduler` has `40s`, matching each process's graceful-shutdown handler (`SHUTDOWN_TIMEOUT_MS` / `SCHEDULER_SHUTDOWN_TIMEOUT_MS`): `docker compose down` sends `SIGTERM`, the server drains HTTP connections and closes the Prisma pool before exiting, and the scheduler stops scheduling, waits for in-flight ticks, and releases their queue leases so no queue is left parked.
 
 ## Data persistence & reset
 

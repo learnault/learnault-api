@@ -1,12 +1,11 @@
 # ============================================================================
 # Learnault API — Local Development Stack
 #
-# One command starts a healthy stack (API + wallet worker + PostgreSQL + Redis):
+# One command starts a healthy stack (API + PostgreSQL + Redis):
 #   docker compose up -d --build
 #
 # The API container applies migrations and seeds deterministic fixtures on
-# boot (see docker/entrypoint-dev-api.sh). The worker drains the idempotent
-# wallet-provisioning outbox (see src/workers/wallet-provisioning.worker.ts).
+# boot (see docker/entrypoint-dev-api.sh).
 #
 # Useful commands:
 #   docker compose ps            → service status + health
@@ -95,10 +94,7 @@ services:
       start_period: 20s
     stop_grace_period: 30s
 
-  # --------------------------------------------------------------------------
-  # Worker — drains the wallet-provisioning outbox
-  # --------------------------------------------------------------------------
-  worker:
+  scheduler:
     build:
       context: .
       dockerfile: docker/Dockerfile.dev
@@ -110,12 +106,17 @@ services:
       NODE_ENV: development
       DATABASE_URL: postgresql://${POSTGRES_USER:-learnault}:${POSTGRES_PASSWORD:-learnault}@db:5432/${POSTGRES_DB:-learnault_dev}?schema=public
       RUN_MIGRATIONS: 'true'
-      WORKER_POLL_INTERVAL_MS: ${WORKER_POLL_INTERVAL_MS:-5000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      SCHEDULER_INTERVAL_MS: ${SCHEDULER_INTERVAL_MS:-15000}
+      SCHEDULER_LEASE_MS: ${SCHEDULER_LEASE_MS:-60000}
+      SCHEDULER_SHUTDOWN_TIMEOUT_MS: ${SCHEDULER_SHUTDOWN_TIMEOUT_MS:-30000}
+      SCHEDULER_QUEUES: ${SCHEDULER_QUEUES:-}
+      SCHEDULER_DISABLED_QUEUES: ${SCHEDULER_DISABLED_QUEUES:-}
     volumes:
       - .:/app
       - /app/node_modules
-    command: ['./docker/entrypoint-dev-worker.sh']
-    stop_grace_period: 30s
+    command: ['./docker/entrypoint-dev-scheduler.sh']
+    stop_grace_period: 40s
 
 volumes:
   pgdata:
