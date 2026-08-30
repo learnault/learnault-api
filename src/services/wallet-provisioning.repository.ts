@@ -14,6 +14,11 @@ export interface WalletProvisioningRepository {
   reserveEligibleWallet(userId: string, network: string): Promise<WalletRecord>
   getByUserId(userId: string): Promise<WalletRecord | null>
   claimNext(now: Date, leaseMs: number): Promise<ClaimedWalletProvisioningJob | null>
+  claimByWalletId(
+    walletId: string,
+    now: Date,
+    leaseMs: number,
+  ): Promise<ClaimedWalletProvisioningJob | null>
   complete(
     walletId: string,
     leaseToken: string,
@@ -98,54 +103,76 @@ export class PrismaWalletProvisioningRepository implements WalletProvisioningRep
     })
 
     for (const candidate of candidates) {
-      const leaseToken = randomUUID()
-      const leasedUntil = new Date(now.getTime() + leaseMs)
-
-      const claimed = await this.prisma.$transaction(async (tx) => {
-        const result = await tx.walletProvisioningJob.updateMany({
-          where: { id: candidate.id, ...this.claimableWhere(now) },
-          data: {
-            status: 'PROCESSING',
-            leaseToken,
-            leasedUntil,
-            attempts: { increment: 1 },
-          },
-        })
-
-        if (result.count !== 1) return null
-
-        const job = await tx.walletProvisioningJob.findUniqueOrThrow({
-          where: { id: candidate.id },
-          include: { wallet: true },
-        })
-
-        await tx.wallet.update({
-          where: { id: job.walletId },
-          data: {
-            status: 'PROVISIONING',
-            attemptCount: { increment: 1 },
-            statusChangedAt: now,
-          },
-        })
-
-        await tx.auditLog.create({
-          data: {
-            userId: job.wallet.userId,
-            action: 'WALLET_PROVISIONING_ATTEMPTED',
-            metadata: JSON.stringify({ walletId: job.walletId, attempt: job.attempts }),
-          },
-        })
-
-        return {
-          job: { ...job, leaseToken },
-          wallet: { ...job.wallet, status: 'PROVISIONING' },
-        } as unknown as ClaimedWalletProvisioningJob
-      })
-
+      const claimed = await this.claimCandidate(candidate.id, now, leaseMs)
       if (claimed) return claimed
     }
 
     return null
+  }
+
+  async claimByWalletId(
+    walletId: string,
+    now: Date,
+    leaseMs: number,
+  ): Promise<ClaimedWalletProvisioningJob | null> {
+    const candidate = await this.prisma.walletProvisioningJob.findFirst({
+      where: { walletId, ...this.claimableWhere(now) },
+      select: { id: true },
+    })
+
+    if (!candidate) return null
+
+    return this.claimCandidate(candidate.id, now, leaseMs)
+  }
+
+  private async claimCandidate(
+    jobId: string,
+    now: Date,
+    leaseMs: number,
+  ): Promise<ClaimedWalletProvisioningJob | null> {
+    const leaseToken = randomUUID()
+    const leasedUntil = new Date(now.getTime() + leaseMs)
+
+    return this.prisma.$transaction(async (tx) => {
+      const result = await tx.walletProvisioningJob.updateMany({
+        where: { id: jobId, ...this.claimableWhere(now) },
+        data: {
+          status: 'PROCESSING',
+          leaseToken,
+          leasedUntil,
+          attempts: { increment: 1 },
+        },
+      })
+
+      if (result.count !== 1) return null
+
+      const job = await tx.walletProvisioningJob.findUniqueOrThrow({
+        where: { id: jobId },
+        include: { wallet: true },
+      })
+
+      await tx.wallet.update({
+        where: { id: job.walletId },
+        data: {
+          status: 'PROVISIONING',
+          attemptCount: { increment: 1 },
+          statusChangedAt: now,
+        },
+      })
+
+      await tx.auditLog.create({
+        data: {
+          userId: job.wallet.userId,
+          action: 'WALLET_PROVISIONING_ATTEMPTED',
+          metadata: JSON.stringify({ walletId: job.walletId, attempt: job.attempts }),
+        },
+      })
+
+      return {
+        job: { ...job, leaseToken },
+        wallet: { ...job.wallet, status: 'PROVISIONING' },
+      } as unknown as ClaimedWalletProvisioningJob
+    })
   }
 
   async complete(

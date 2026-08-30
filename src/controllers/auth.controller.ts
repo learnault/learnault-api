@@ -4,6 +4,7 @@ import prisma from '../config/database'
 import { loginSchema, registerSchema, verifyEmailSchema, resendVerificationSchema, forgotPasswordSchema, resetPasswordSchema, otpRequestSchema, otpVerifySchema, refreshTokenSchema } from '../schemas/auth.schema'
 import { UserRole } from '../types/user.types'
 import { emailService } from '../services/email.service'
+import { createOutboxService } from '../lib/transactions/outbox.service'
 import { otpService, normalizePhone, OtpPurpose } from '../services/otp.service'
 import { refreshTokenService } from '../services/refresh-token.service'
 import { comparePassword, hashPassword, needsRehash } from '../utils/password'
@@ -154,25 +155,41 @@ export class AuthController {
 
             const hashedPassword = await hashPassword(password)
 
-            const user = await prisma.user.create({
-                data: {
-                    email,
-                    username,
-                    password: hashedPassword,
-                    role: (role as any) || UserRole.LEARNER,
-                }
-            })
-
-            // Issue verification token
             const { rawToken, tokenHash } = generateVerificationToken()
             const expiresAt = new Date(Date.now() + VERIFICATION_TOKEN_EXPIRY_MS)
 
-            await prisma.verificationToken.create({
-                data: {
-                    userId: user.id,
-                    tokenHash,
-                    expiresAt,
-                }
+            const user = await prisma.$transaction(async (tx) => {
+                const created = await tx.user.create({
+                    data: {
+                        email,
+                        username,
+                        password: hashedPassword,
+                        role: (role as any) || UserRole.LEARNER,
+                    }
+                })
+
+                await tx.verificationToken.create({
+                    data: {
+                        userId: created.id,
+                        tokenHash,
+                        expiresAt,
+                    }
+                })
+
+                await createOutboxService(prisma).createEvent(tx, {
+                    aggregateId: created.id,
+                    aggregateType: 'User',
+                    eventType: 'UserCreated',
+                    eventVersion: 1,
+                    payload: {
+                        userId: created.id,
+                        email: created.email,
+                        role: created.role,
+                    },
+                    source: 'api.auth.register',
+                })
+
+                return created
             })
 
             // Queue verification email via outbox

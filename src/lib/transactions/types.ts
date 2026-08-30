@@ -161,6 +161,31 @@ export interface LeaseJobResult {
   payload: unknown
 }
 
+export interface OutboxEventHandlerContext {
+  eventId: string
+  eventType: string
+  eventVersion: number
+  aggregateId: string
+  aggregateType: string
+  payload: unknown
+  attempt: number
+}
+
+export interface OutboxEventHandlerResult {
+  idempotencyKey?: string
+  result?: unknown
+}
+
+export interface OutboxEventHandler {
+  name: string
+  eventType: string
+  eventVersion: number
+  maxAttempts?: number
+  backoffBaseMs?: number
+  backoffMultiplier?: number
+  handle(context: OutboxEventHandlerContext): Promise<OutboxEventHandlerResult | void>
+}
+
 export interface AcquireQueueLeaseOptions {
   queueName: string
   leaseMs?: number

@@ -10,8 +10,8 @@ import { refreshTokenService } from '../src/services/refresh-token.service'
 const mockTokenHash = 'abc123def456hash'
 const mockRawToken = 'aaabbbcccddd00112233445566778899aabbccddeeff00112233445566778899'
 
-vi.mock('../src/config/database', () => ({
-    default: {
+const { mockDb } = vi.hoisted(() => {
+    const mockDb: any = {
         user: {
             findFirst: vi.fn(),
             findUnique: vi.fn(),
@@ -36,9 +36,19 @@ vi.mock('../src/config/database', () => ({
         auditLog: {
             create: vi.fn(),
         },
-        $transaction: vi.fn((args: any[]) => Promise.all(args)),
-    },
-}))
+        outboxEvent: {
+            create: vi.fn(),
+        },
+    }
+
+    mockDb.$transaction = vi.fn((arg: any) =>
+        typeof arg === 'function' ? arg(mockDb) : Promise.all(arg)
+    )
+
+    return { mockDb }
+})
+
+vi.mock('../src/config/database', () => ({ default: mockDb }))
 
 vi.mock('bcryptjs', () => ({
     default: {
@@ -281,8 +291,8 @@ describe('AuthController', () => {
                 status: 'USED',
             })
             ;(prisma.user.update as any).mockResolvedValue({ id: '1', isVerified: true })
-            ;(prisma.$transaction as any).mockImplementation(
-                async (args: any[]) => await Promise.all(args)
+            ;(prisma.$transaction as any).mockImplementation(async (arg: any) =>
+                typeof arg === 'function' ? arg(prisma) : await Promise.all(arg)
             )
 
             await authController.verifyEmail(

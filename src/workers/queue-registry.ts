@@ -7,6 +7,8 @@ import { NotificationService } from '../services/notification.service'
 import { stellarFundingService } from '../services/stellar-funding.service'
 import { WebhookService } from '../services/webhook.service'
 import { DeletionStatus, ExportStatus } from '../types/account.types'
+import { registerOutboxHandlers } from '../jobs/handler-registrations'
+import { createOutboxRelay, type OutboxRelay } from './outbox-relay'
 import type { QueueDepthSnapshot } from './queue-metrics'
 
 export interface ScheduledQueue {
@@ -60,12 +62,17 @@ export interface QueueRegistryDeps {
   prisma?: PrismaClient
   notificationService?: Pick<NotificationService, 'processQueue'>
   webhookService?: Pick<WebhookService, 'processQueue'>
+  outboxRelay?: OutboxRelay
 }
 
 export function createDefaultQueues(deps: QueueRegistryDeps = {}): ScheduledQueue[] {
   const prisma = deps.prisma ?? defaultPrisma
   const notificationService = deps.notificationService ?? new NotificationService()
   const webhookService = deps.webhookService ?? new WebhookService()
+  const outboxRelay = deps.outboxRelay ?? createOutboxRelay({
+    prisma,
+    handlers: registerOutboxHandlers({ prisma }),
+  })
 
   const db = prisma as unknown as Record<string, CountableDelegate>
 
@@ -101,6 +108,30 @@ export function createDefaultQueues(deps: QueueRegistryDeps = {}): ScheduledQueu
       inspect: delegateDepth(db.dataExportRequest, {
         pending: { status: ExportStatus.PENDING },
       }),
+    },
+    {
+      name: 'outbox-relay',
+      drain: async () => {
+        await outboxRelay.runOnce()
+      },
+      inspect: async () => {
+        const [depth, oldest] = await Promise.all([
+          (prisma as unknown as { outboxEvent: CountableDelegate }).outboxEvent.count({
+            where: { status: 'PENDING' },
+          }),
+          (prisma as unknown as { outboxEvent: CountableDelegate }).outboxEvent.findFirst({
+            where: { status: 'PENDING' },
+            orderBy: { createdAt: 'asc' },
+            select: { createdAt: true },
+          }),
+        ])
+
+        return {
+          depth,
+          due: depth,
+          oldestDueAt: (oldest?.createdAt as Date | null) ?? null,
+        }
+      },
     },
     {
       name: 'account-lifecycle',

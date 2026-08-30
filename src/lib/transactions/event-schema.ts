@@ -150,6 +150,19 @@ export function registerBuiltInSchemas(): void {
   // Wallet domain events
   registry.register({
     version: 1,
+    eventType: 'WalletProvisioningRequested',
+    validate: async (payload) => {
+      const schema = z.object({
+        walletId: z.string().uuid(),
+        userId: z.string().uuid(),
+        network: z.string(),
+      })
+      await schema.parseAsync(payload)
+    },
+  })
+
+  registry.register({
+    version: 1,
     eventType: 'WalletProvisioned',
     validate: async (payload) => {
       const schema = z.object({

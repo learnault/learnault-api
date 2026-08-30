@@ -1,12 +1,11 @@
 # ============================================================================
 # Learnault API — Local Development Stack
 #
-# One command starts a healthy stack (API + wallet worker + PostgreSQL + Redis):
+# One command starts a healthy stack (API + PostgreSQL + Redis):
 #   docker compose up -d --build
 #
 # The API container applies migrations and seeds deterministic fixtures on
-# boot (see docker/entrypoint-dev-api.sh). The worker drains the idempotent
-# wallet-provisioning outbox (see src/workers/wallet-provisioning.worker.ts).
+# boot (see docker/entrypoint-dev-api.sh).
 #
 # Useful commands:
 #   docker compose ps            → service status + health
@@ -93,28 +92,6 @@ services:
       timeout: 5s
       retries: 10
       start_period: 20s
-    stop_grace_period: 30s
-
-  # --------------------------------------------------------------------------
-  # Worker — drains the wallet-provisioning outbox
-  # --------------------------------------------------------------------------
-  worker:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.dev
-    restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      NODE_ENV: development
-      DATABASE_URL: postgresql://${POSTGRES_USER:-learnault}:${POSTGRES_PASSWORD:-learnault}@db:5432/${POSTGRES_DB:-learnault_dev}?schema=public
-      RUN_MIGRATIONS: 'true'
-      WORKER_POLL_INTERVAL_MS: ${WORKER_POLL_INTERVAL_MS:-5000}
-    volumes:
-      - .:/app
-      - /app/node_modules
-    command: ['./docker/entrypoint-dev-worker.sh']
     stop_grace_period: 30s
 
   scheduler:
