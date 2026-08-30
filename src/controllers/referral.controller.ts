@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import { randomBytes } from 'crypto'
+import { stroopsToXlmString, xlmToStroops } from '../utils/money'
 import prisma from '../config/database'
 import { asyncHandler } from '../middleware/error.middleware'
 import {
@@ -9,7 +10,7 @@ import {
   UnauthorizedError,
 } from '../utils/errors'
 
-const REFERRAL_BONUS_AMOUNT = 5.0
+const REFERRAL_BONUS_STROOPS = xlmToStroops(5n)
 const CODE_BYTES = 4
 
 export class ReferralController {
@@ -209,8 +210,8 @@ export class ReferralController {
       ).length
       const paidBonuses = referrals.filter((r: ReferralRow) => r.bonusPaid)
       const earnedBonuses = paidBonuses.reduce(
-        (sum: number, r: ReferralRow) => sum + (r.bonusAmount ?? 0),
-        0,
+        (sum: bigint, r: ReferralRow) => sum + (r.bonusAmountStroops ?? 0n),
+        0n,
       )
 
       res.status(200).json({
@@ -218,9 +219,11 @@ export class ReferralController {
         data: {
           totalReferrals,
           activeReferrals,
-          earnedBonuses,
-          pendingBonuses:
-            (totalReferrals - paidBonuses.length) * REFERRAL_BONUS_AMOUNT,
+          earnedBonuses: stroopsToXlmString(earnedBonuses),
+          pendingBonuses: stroopsToXlmString(
+            BigInt(totalReferrals - paidBonuses.length) *
+              REFERRAL_BONUS_STROOPS,
+          ),
         },
       })
     },
@@ -245,7 +248,7 @@ export class ReferralController {
       where: { id: referral.id },
       data: {
         bonusPaid: true,
-        bonusAmount: REFERRAL_BONUS_AMOUNT,
+        bonusAmountStroops: REFERRAL_BONUS_STROOPS,
         bonusPaidAt: new Date(),
       },
     })
@@ -253,7 +256,7 @@ export class ReferralController {
     await prisma.transaction.create({
       data: {
         userId: referral.referrerId,
-        amount: REFERRAL_BONUS_AMOUNT,
+        amountStroops: REFERRAL_BONUS_STROOPS,
         type: 'referral_reward',
         status: 'completed',
       },

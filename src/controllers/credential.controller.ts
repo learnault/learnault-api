@@ -215,7 +215,7 @@ export class CredentialController {
               description: true,
               category: true,
               difficulty: true,
-              reward: true,
+              rewardStroops: true,
             },
           },
         },
@@ -245,7 +245,7 @@ export class CredentialController {
           issuedAt: credential.issuedAt.toISOString(),
           shareableLink: `/api/v1/credentials/verify/${credential.onChainId || credential.id}`,
           metadata: {
-            reward: credential.module.reward,
+            reward: credential.module.rewardStroops.toString(),
             verificationUrl: `/api/v1/credentials/verify/${credential.onChainId || credential.id}`,
           },
         },

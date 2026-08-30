@@ -5,6 +5,7 @@ const COMPLETION_IN_PROGRESS_SCORE = -1
 import { z } from 'zod'
 import { prisma } from '../config/database'
 import { NotificationService } from '../services/notification.service'
+import { stroopsToXlmString } from '../utils/money'
 
 const notificationService = new NotificationService()
 
@@ -151,7 +152,7 @@ export const listModules = async (req: Request, res: Response) => {
       description: module.description,
       category: module.category,
       difficulty: module.difficulty,
-      reward: module.reward,
+      reward: stroopsToXlmString(module.rewardStroops),
       createdAt: module.createdAt,
       updatedAt: module.updatedAt,
       completionCount: module._count.completions,
@@ -251,7 +252,7 @@ export const getModuleById = async (req: Request, res: Response) => {
       description: module.description,
       category: module.category,
       difficulty: module.difficulty,
-      reward: module.reward,
+      reward: stroopsToXlmString(module.rewardStroops),
       createdAt: module.createdAt,
       updatedAt: module.updatedAt,
       completionCount: module._count.completions,
@@ -497,7 +498,7 @@ export const completeModule = async (req: Request, res: Response) => {
       rewardTransaction = await prisma.transaction.create({
         data: {
           userId: req.user.id,
-          amount: module.reward,
+          amountStroops: module.rewardStroops,
           type: 'reward',
           status: 'pending',
         },
@@ -511,7 +512,7 @@ export const completeModule = async (req: Request, res: Response) => {
         'quizPassFail',
         isEligibleForReward ? 'Quiz Passed!' : 'Quiz Completed',
         isEligibleForReward
-          ? `Great job! You scored ${score}% on "${module.title}" and earned ${module.reward} XLM.`
+          ? `Great job! You scored ${score}% on "${module.title}" and earned ${stroopsToXlmString(module.rewardStroops)} XLM.`
           : `You scored ${score}% on "${module.title}". Keep practicing to earn rewards!`,
       )
       .catch((err) =>
@@ -522,7 +523,9 @@ export const completeModule = async (req: Request, res: Response) => {
       message: 'Module completed successfully',
       score,
       isEligibleForReward,
-      reward: isEligibleForReward ? module.reward : 0,
+      reward: isEligibleForReward
+        ? stroopsToXlmString(module.rewardStroops)
+        : '0.0000000',
       rewardTransaction: rewardTransaction?.id,
       completedAt: updatedCompletion.completedAt,
     })

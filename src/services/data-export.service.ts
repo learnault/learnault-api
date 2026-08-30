@@ -174,7 +174,7 @@ export class DataExportService {
         select: {
           referreeId: true,
           bonusPaid: true,
-          bonusAmount: true,
+          bonusAmountStroops: true,
           createdAt: true,
         },
       }),
@@ -243,7 +243,7 @@ export class DataExportService {
         })),
         transactions: transactions.map((t: any) => ({
           id: t.id,
-          amount: t.amount,
+          amountStroops: t.amountStroops.toString(),
           type: t.type,
           status: t.status,
           createdAt: t.createdAt,
