@@ -21,10 +21,10 @@ This issue is blocked by "Introduce Typed Status Enums and Transition Guards," w
 
 **Transition matrix** (`ONBOARDING_TRANSITIONS`):
 
-| From | Allowed to |
-|---|---|
-| `in_progress` | `completed` |
-| `completed` | *(none — terminal)* |
+| From          | Allowed to          |
+| ------------- | ------------------- |
+| `in_progress` | `completed`         |
+| `completed`   | _(none — terminal)_ |
 
 `saveStep` refuses to write once `status === 'completed'` (`already-completed` result), which is the transition guard in effect: once complete, the record cannot be reopened by any client action.
 
@@ -42,10 +42,10 @@ Append-only: every grant or withdrawal action inserts a **new** row rather than 
 
 **Transition matrix** (`CONSENT_TRANSITIONS`):
 
-| From | Allowed to |
-|---|---|
-| `granted` | `withdrawn` |
-| `withdrawn` | `granted` |
+| From        | Allowed to  |
+| ----------- | ----------- |
+| `granted`   | `withdrawn` |
+| `withdrawn` | `granted`   |
 
 **Required vs. optional** is enforced in `ConsentService.withdraw`, on top of the raw transition check: withdrawal requires the latest record to be `granted` (`canTransition(CONSENT_TRANSITIONS, 'granted', 'withdrawn')`), and additionally rejects the withdrawal outright if `required` is true. Granting has no such restriction — re-granting (e.g., accepting a new `policyVersion`) is always allowed and simply appends a new row, which is also how "duplicate" grants are handled: calling `grant` twice with the same purpose is not an error, it's two audit entries.
 

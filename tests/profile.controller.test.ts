@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ProfileController } from '../src/controllers/profile.controller'
 
-const { mockGetOwnerView, mockUpdateProfileAudited, mockGetEmployerView, mockGetPublicView } = vi.hoisted(() => ({
+const {
+  mockGetOwnerView,
+  mockUpdateProfileAudited,
+  mockGetEmployerView,
+  mockGetPublicView,
+} = vi.hoisted(() => ({
   mockGetOwnerView: vi.fn(),
   mockUpdateProfileAudited: vi.fn(),
   mockGetEmployerView: vi.fn(),
@@ -25,7 +30,14 @@ describe('ProfileController', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     controller = new ProfileController()
-    req = { user: { id: 'user1', role: 'learner' }, body: {}, params: {}, headers: {}, requestId: 'req-1', ip: '203.0.113.7' }
+    req = {
+      user: { id: 'user1', role: 'learner' },
+      body: {},
+      params: {},
+      headers: {},
+      requestId: 'req-1',
+      ip: '203.0.113.7',
+    }
     res = {
       status: vi.fn().mockReturnThis(),
       json: vi.fn().mockReturnThis(),
@@ -47,7 +59,9 @@ describe('ProfileController', () => {
       await controller.getMyProfile(req, res)
 
       expect(res.status).toHaveBeenCalledWith(200)
-      expect(res.json).toHaveBeenCalledWith({ data: { id: 'profile1', displayName: 'Ada' } })
+      expect(res.json).toHaveBeenCalledWith({
+        data: { id: 'profile1', displayName: 'Ada' },
+      })
     })
 
     it('returns 500 on unexpected error', async () => {
@@ -103,7 +117,10 @@ describe('ProfileController', () => {
 
     it('accepts a partial update', async () => {
       req.body = { displayName: 'Ada' }
-      mockUpdateProfileAudited.mockResolvedValue({ id: 'profile1', displayName: 'Ada' })
+      mockUpdateProfileAudited.mockResolvedValue({
+        id: 'profile1',
+        displayName: 'Ada',
+      })
       mockGetOwnerView.mockResolvedValue({ id: 'profile1', displayName: 'Ada' })
 
       await controller.updateMyProfile(req, res)
@@ -111,7 +128,7 @@ describe('ProfileController', () => {
       expect(mockUpdateProfileAudited).toHaveBeenCalledWith(
         'user1',
         { displayName: 'Ada' },
-        expect.anything()
+        expect.anything(),
       )
       expect(res.status).toHaveBeenCalledWith(200)
     })

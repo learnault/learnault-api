@@ -1,6 +1,10 @@
 import { Request, Response } from 'express'
 import { asyncHandler } from '../middleware/error.middleware'
-import { BadRequestError, NotFoundError, UnauthorizedError } from '../utils/errors'
+import {
+  BadRequestError,
+  NotFoundError,
+  UnauthorizedError,
+} from '../utils/errors'
 import { prisma } from '../config/database'
 
 export class CredentialController {

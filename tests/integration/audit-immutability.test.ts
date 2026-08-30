@@ -22,7 +22,7 @@ const MIGRATION = join(
   'prisma',
   'migrations',
   '20260824090000_auditable_data_lifecycle',
-  'migration.sql'
+  'migration.sql',
 )
 
 let pool: Pool | undefined
@@ -40,11 +40,15 @@ let available = false
 async function applyImmutabilityDdl(db: Pool): Promise<void> {
   const sql = readFileSync(MIGRATION, 'utf8')
 
-  const start = sql.indexOf('CREATE OR REPLACE FUNCTION "audit_events_reject_mutation"')
+  const start = sql.indexOf(
+    'CREATE OR REPLACE FUNCTION "audit_events_reject_mutation"',
+  )
   const end = sql.indexOf('-- ARCHIVE COLUMNS')
 
   if (start === -1 || end === -1 || end <= start) {
-    throw new Error('Could not locate the immutability DDL in the migration file')
+    throw new Error(
+      'Could not locate the immutability DDL in the migration file',
+    )
   }
 
   await db.query(sql.slice(start, end))
@@ -57,7 +61,7 @@ async function insertEvent(db: Pool, action = 'test.event'): Promise<string> {
     `INSERT INTO "audit_events"
        ("id", "actorType", "action", "recordClass", "targetType", "targetId")
      VALUES ($1, 'SYSTEM', $2, 'IMMUTABLE', 'User', $3)`,
-    [id, action, randomUUID()]
+    [id, action, randomUUID()],
   )
 
   return id
@@ -67,7 +71,10 @@ beforeAll(async () => {
   const connectionString = process.env.DATABASE_URL
   if (!connectionString) return
 
-  const candidate = new Pool({ connectionString, connectionTimeoutMillis: 3000 })
+  const candidate = new Pool({
+    connectionString,
+    connectionTimeoutMillis: 3000,
+  })
 
   try {
     await candidate.query('SELECT 1 FROM "audit_events" LIMIT 1')
@@ -84,145 +91,165 @@ afterAll(async () => {
 
   // The purge setting is the only sanctioned way to remove rows, so cleanup has
   // to use it too — which is itself a small confirmation that it works.
-  await pool.query(`SET LOCAL "${AUDIT_PURGE_SETTING}" = 'on'`).catch(() => undefined)
+  await pool
+    .query(`SET LOCAL "${AUDIT_PURGE_SETTING}" = 'on'`)
+    .catch(() => undefined)
   await pool
     .query(
       `BEGIN; SET LOCAL "${AUDIT_PURGE_SETTING}" = 'on';
-       DELETE FROM "audit_events" WHERE "action" LIKE 'test.%'; COMMIT;`
+       DELETE FROM "audit_events" WHERE "action" LIKE 'test.%'; COMMIT;`,
     )
     .catch(() => undefined)
   await pool.end().catch(() => undefined)
 })
 
-describe.skipIf(!process.env.DATABASE_URL)('audit_events immutability (database)', () => {
-  it('accepts an append', async () => {
-    if (!available) return expect(available).toBe(false)
+describe.skipIf(!process.env.DATABASE_URL)(
+  'audit_events immutability (database)',
+  () => {
+    it('accepts an append', async () => {
+      if (!available) return expect(available).toBe(false)
 
-    const id = await insertEvent(pool!)
-    const { rows } = await pool!.query('SELECT "id" FROM "audit_events" WHERE "id" = $1', [id])
+      const id = await insertEvent(pool!)
+      const { rows } = await pool!.query(
+        'SELECT "id" FROM "audit_events" WHERE "id" = $1',
+        [id],
+      )
 
-    expect(rows).toHaveLength(1)
-  })
+      expect(rows).toHaveLength(1)
+    })
 
-  it('rejects an UPDATE', async () => {
-    if (!available) return expect(available).toBe(false)
+    it('rejects an UPDATE', async () => {
+      if (!available) return expect(available).toBe(false)
 
-    const id = await insertEvent(pool!)
+      const id = await insertEvent(pool!)
 
-    await expect(
-      pool!.query('UPDATE "audit_events" SET "reason" = $1 WHERE "id" = $2', ['tampered', id])
-    ).rejects.toThrow(/immutable/i)
-  })
-
-  it('rejects an UPDATE even inside the purge escape hatch', async () => {
-    if (!available) return expect(available).toBe(false)
-
-    const id = await insertEvent(pool!)
-    const client = await pool!.connect()
-
-    try {
-      await client.query('BEGIN')
-      await client.query(`SET LOCAL "${AUDIT_PURGE_SETTING}" = 'on'`)
-
-      // The escape hatch exists for the retention purge only. It must not
-      // become a way to edit history.
       await expect(
-        client.query('UPDATE "audit_events" SET "reason" = $1 WHERE "id" = $2', ['x', id])
+        pool!.query('UPDATE "audit_events" SET "reason" = $1 WHERE "id" = $2', [
+          'tampered',
+          id,
+        ]),
       ).rejects.toThrow(/immutable/i)
-    } finally {
-      await client.query('ROLLBACK').catch(() => undefined)
-      client.release()
-    }
-  })
+    })
 
-  it('rejects a DELETE without the purge setting', async () => {
-    if (!available) return expect(available).toBe(false)
+    it('rejects an UPDATE even inside the purge escape hatch', async () => {
+      if (!available) return expect(available).toBe(false)
 
-    const id = await insertEvent(pool!)
+      const id = await insertEvent(pool!)
+      const client = await pool!.connect()
 
-    await expect(
-      pool!.query('DELETE FROM "audit_events" WHERE "id" = $1', [id])
-    ).rejects.toThrow(/retention purge/i)
-  })
+      try {
+        await client.query('BEGIN')
+        await client.query(`SET LOCAL "${AUDIT_PURGE_SETTING}" = 'on'`)
 
-  it('rejects a TRUNCATE, which bypasses row-level triggers', async () => {
-    if (!available) return expect(available).toBe(false)
+        // The escape hatch exists for the retention purge only. It must not
+        // become a way to edit history.
+        await expect(
+          client.query(
+            'UPDATE "audit_events" SET "reason" = $1 WHERE "id" = $2',
+            ['x', id],
+          ),
+        ).rejects.toThrow(/immutable/i)
+      } finally {
+        await client.query('ROLLBACK').catch(() => undefined)
+        client.release()
+      }
+    })
 
-    await expect(pool!.query('TRUNCATE TABLE "audit_events"')).rejects.toThrow(
-      /may not be truncated/i
-    )
-  })
+    it('rejects a DELETE without the purge setting', async () => {
+      if (!available) return expect(available).toBe(false)
 
-  it('allows a DELETE when the retention purge sets the session variable', async () => {
-    if (!available) return expect(available).toBe(false)
-
-    const id = await insertEvent(pool!)
-    const client = await pool!.connect()
-
-    try {
-      await client.query('BEGIN')
-      await client.query(`SET LOCAL "${AUDIT_PURGE_SETTING}" = 'on'`)
-      const result = await client.query('DELETE FROM "audit_events" WHERE "id" = $1', [id])
-      await client.query('COMMIT')
-
-      expect(result.rowCount).toBe(1)
-    } finally {
-      await client.query('ROLLBACK').catch(() => undefined)
-      client.release()
-    }
-  })
-
-  it('confines the purge setting to its own transaction', async () => {
-    if (!available) return expect(available).toBe(false)
-
-    const id = await insertEvent(pool!)
-    const client = await pool!.connect()
-
-    try {
-      // SET LOCAL, not SET: the permission must not leak to later statements on
-      // a pooled connection that some unrelated request picks up next.
-      await client.query('BEGIN')
-      await client.query(`SET LOCAL "${AUDIT_PURGE_SETTING}" = 'on'`)
-      await client.query('COMMIT')
+      const id = await insertEvent(pool!)
 
       await expect(
-        client.query('DELETE FROM "audit_events" WHERE "id" = $1', [id])
+        pool!.query('DELETE FROM "audit_events" WHERE "id" = $1', [id]),
       ).rejects.toThrow(/retention purge/i)
-    } finally {
-      client.release()
-    }
-  })
-})
+    })
 
-describe.skipIf(!process.env.DATABASE_URL)('archive constraints (database)', () => {
-  it('rejects an archived row with no reason', async () => {
-    if (!available) return expect(available).toBe(false)
+    it('rejects a TRUNCATE, which bypasses row-level triggers', async () => {
+      if (!available) return expect(available).toBe(false)
 
-    // The check constraint is what makes "archive behaviour is deterministic"
-    // true for writers that skip the helper in src/audit/audited-mutation.ts.
-    await expect(
-      pool!.query(
-        `INSERT INTO "Module"
+      await expect(
+        pool!.query('TRUNCATE TABLE "audit_events"'),
+      ).rejects.toThrow(/may not be truncated/i)
+    })
+
+    it('allows a DELETE when the retention purge sets the session variable', async () => {
+      if (!available) return expect(available).toBe(false)
+
+      const id = await insertEvent(pool!)
+      const client = await pool!.connect()
+
+      try {
+        await client.query('BEGIN')
+        await client.query(`SET LOCAL "${AUDIT_PURGE_SETTING}" = 'on'`)
+        const result = await client.query(
+          'DELETE FROM "audit_events" WHERE "id" = $1',
+          [id],
+        )
+        await client.query('COMMIT')
+
+        expect(result.rowCount).toBe(1)
+      } finally {
+        await client.query('ROLLBACK').catch(() => undefined)
+        client.release()
+      }
+    })
+
+    it('confines the purge setting to its own transaction', async () => {
+      if (!available) return expect(available).toBe(false)
+
+      const id = await insertEvent(pool!)
+      const client = await pool!.connect()
+
+      try {
+        // SET LOCAL, not SET: the permission must not leak to later statements on
+        // a pooled connection that some unrelated request picks up next.
+        await client.query('BEGIN')
+        await client.query(`SET LOCAL "${AUDIT_PURGE_SETTING}" = 'on'`)
+        await client.query('COMMIT')
+
+        await expect(
+          client.query('DELETE FROM "audit_events" WHERE "id" = $1', [id]),
+        ).rejects.toThrow(/retention purge/i)
+      } finally {
+        client.release()
+      }
+    })
+  },
+)
+
+describe.skipIf(!process.env.DATABASE_URL)(
+  'archive constraints (database)',
+  () => {
+    it('rejects an archived row with no reason', async () => {
+      if (!available) return expect(available).toBe(false)
+
+      // The check constraint is what makes "archive behaviour is deterministic"
+      // true for writers that skip the helper in src/audit/audited-mutation.ts.
+      await expect(
+        pool!.query(
+          `INSERT INTO "Module"
            ("id", "title", "description", "category", "difficulty", "archivedAt", "updatedAt")
          VALUES ($1, 't', 'd', 'c', 'easy', now(), now())`,
-        [randomUUID()]
-      )
-    ).rejects.toThrow(/archive_reason_check/i)
-  })
+          [randomUUID()],
+        ),
+      ).rejects.toThrow(/archive_reason_check/i)
+    })
 
-  it('accepts an archived row that states a reason', async () => {
-    if (!available) return expect(available).toBe(false)
+    it('accepts an archived row that states a reason', async () => {
+      if (!available) return expect(available).toBe(false)
 
-    const id = randomUUID()
+      const id = randomUUID()
 
-    await pool!.query(
-      `INSERT INTO "Module"
+      await pool!.query(
+        `INSERT INTO "Module"
          ("id", "title", "description", "category", "difficulty",
           "archivedAt", "archivedReason", "updatedAt")
        VALUES ($1, 't', 'd', 'c', 'easy', now(), 'superseded', now())`,
-      [id]
-    )
+        [id],
+      )
 
-    await pool!.query('DELETE FROM "Module" WHERE "id" = $1', [id])
-  })
-})
+      await pool!.query('DELETE FROM "Module" WHERE "id" = $1', [id])
+    })
+  },
+)

@@ -40,13 +40,11 @@ describe('RewardService', () => {
 
   beforeEach(() => {
     stellarMock = {
-      sendPayment: vi
-        .fn()
-        .mockResolvedValue({
-          hash: MOCK_TX_HASH,
-          ledger: 123,
-          successful: true,
-        }),
+      sendPayment: vi.fn().mockResolvedValue({
+        hash: MOCK_TX_HASH,
+        ledger: 123,
+        successful: true,
+      }),
       verifyTransaction: vi.fn().mockResolvedValue(true),
     } as unknown as StellarService
 
@@ -58,23 +56,25 @@ describe('RewardService', () => {
 
   describe('calculateReward – base amounts by difficulty', () => {
     it.each([
-      ['beginner',     50_000_000n],   // 5 XLM
-      ['intermediate', 75_000_000n],   // 7.5 XLM
-      ['advanced',     100_000_000n],  // 10 XLM
-      ['expert',       150_000_000n],  // 15 XLM
-    ] as const)('%s difficulty yields correct stroops', (difficulty, expected) => {
-      const { baseAmountStroops } = service.calculateReward(
-        makeModule({ difficulty }),
-      )
-      expect(baseAmountStroops).toBe(expected)
-    })
+      ['beginner', 50_000_000n], // 5 XLM
+      ['intermediate', 75_000_000n], // 7.5 XLM
+      ['advanced', 100_000_000n], // 10 XLM
+      ['expert', 150_000_000n], // 15 XLM
+    ] as const)(
+      '%s difficulty yields correct stroops',
+      (difficulty, expected) => {
+        const { baseAmountStroops } = service.calculateReward(
+          makeModule({ difficulty }),
+        )
+        expect(baseAmountStroops).toBe(expected)
+      },
+    )
 
     it('applies the correct multiplier from DIFFICULTY_MULTIPLIERS', () => {
       for (const [diff, [num, den]] of Object.entries(DIFFICULTY_MULTIPLIERS)) {
         const mod = makeModule({ difficulty: diff as Module['difficulty'] })
         const { baseAmountStroops } = service.calculateReward(mod)
-        const expected =
-          (BASE_REWARD_STROOPS * num) / den
+        const expected = (BASE_REWARD_STROOPS * num) / den
         expect(baseAmountStroops).toBe(expected)
       }
     })
@@ -138,8 +138,12 @@ describe('RewardService', () => {
     })
 
     it('totalAmountStroops includes base + streak + referral', () => {
-      const { baseAmountStroops, streakBonusStroops, referralBonusStroops, totalAmountStroops } =
-        service.calculateReward(makeModule(), 3, true)
+      const {
+        baseAmountStroops,
+        streakBonusStroops,
+        referralBonusStroops,
+        totalAmountStroops,
+      } = service.calculateReward(makeModule(), 3, true)
       expect(totalAmountStroops).toBe(
         baseAmountStroops + streakBonusStroops + referralBonusStroops,
       )
@@ -408,9 +412,9 @@ describe('RewardService', () => {
 
   describe('hasSufficientBalance', () => {
     it('returns false for a user with no balance', () => {
-      expect(
-        service.hasSufficientBalance('user-empty', 10_000_000n),
-      ).toBe(false)
+      expect(service.hasSufficientBalance('user-empty', 10_000_000n)).toBe(
+        false,
+      )
     })
 
     it('returns true after earning a reward and requesting ≤ available', async () => {
@@ -425,10 +429,7 @@ describe('RewardService', () => {
       await service.claimReward(makeClaim(), makeModule())
       const balance = service.getBalance('user-abc')
       expect(
-        service.hasSufficientBalance(
-          'user-abc',
-          balance.availableStroops + 1n,
-        ),
+        service.hasSufficientBalance('user-abc', balance.availableStroops + 1n),
       ).toBe(false)
     })
   })
@@ -485,12 +486,14 @@ describe('RewardService', () => {
 
 describe('numeric display constants', () => {
   it('BASE_REWARD_XLM is 5 (numeric display value)', async () => {
-    const { BASE_REWARD_XLM } = await import('../../src/services/reward.service')
+    const { BASE_REWARD_XLM } =
+      await import('../../src/services/reward.service')
     expect(BASE_REWARD_XLM).toBe(5)
   })
 
   it('REFERRAL_BONUS_XLM is 2 (numeric display value)', async () => {
-    const { REFERRAL_BONUS_XLM } = await import('../../src/services/reward.service')
+    const { REFERRAL_BONUS_XLM } =
+      await import('../../src/services/reward.service')
     expect(REFERRAL_BONUS_XLM).toBe(2)
   })
 

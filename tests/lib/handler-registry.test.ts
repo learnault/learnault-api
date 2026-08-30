@@ -11,7 +11,7 @@ import type { OutboxEventHandler } from '../../src/lib/transactions/types'
 function handler(
   name: string,
   eventType = 'UserCreated',
-  eventVersion = 1
+  eventVersion = 1,
 ): OutboxEventHandler {
   return { name, eventType, eventVersion, handle: async () => undefined }
 }
@@ -22,8 +22,16 @@ describe('OutboxHandlerRegistry', () => {
 
   beforeEach(() => {
     schemas = new EventSchemaRegistry()
-    schemas.register({ eventType: 'UserCreated', version: 1, validate: () => undefined })
-    schemas.register({ eventType: 'WalletProvisioned', version: 1, validate: () => undefined })
+    schemas.register({
+      eventType: 'UserCreated',
+      version: 1,
+      validate: () => undefined,
+    })
+    schemas.register({
+      eventType: 'WalletProvisioned',
+      version: 1,
+      validate: () => undefined,
+    })
     registry = new OutboxHandlerRegistry(schemas)
   })
 
@@ -40,7 +48,10 @@ describe('OutboxHandlerRegistry', () => {
     registry.register(handler('a'))
     registry.register(handler('b'))
 
-    expect(registry.handlersFor('UserCreated', 1).map(h => h.name)).toEqual(['a', 'b'])
+    expect(registry.handlersFor('UserCreated', 1).map((h) => h.name)).toEqual([
+      'a',
+      'b',
+    ])
     expect(registry.registeredNames()).toEqual(['a', 'b'])
   })
 
@@ -48,19 +59,19 @@ describe('OutboxHandlerRegistry', () => {
     registry.register(handler('a'))
 
     expect(() => registry.register(handler('a', 'WalletProvisioned'))).toThrow(
-      DuplicateHandlerError
+      DuplicateHandlerError,
     )
   })
 
   it('rejects a handler for an event type with no registered schema', () => {
     expect(() => registry.register(handler('a', 'NeverDeclared'))).toThrow(
-      UnknownEventTypeError
+      UnknownEventTypeError,
     )
   })
 
   it('rejects a handler for a version the schema registry does not know', () => {
     expect(() => registry.register(handler('a', 'UserCreated', 7))).toThrow(
-      UnknownEventTypeError
+      UnknownEventTypeError,
     )
   })
 
@@ -71,17 +82,21 @@ describe('OutboxHandlerRegistry', () => {
       registry.assertHandlersFor([
         { eventType: 'UserCreated', eventVersion: 1 },
         { eventType: 'WalletProvisioned', eventVersion: 1 },
-      ])
+      ]),
     ).toThrow(UnhandledEventTypeError)
 
     expect(() =>
-      registry.assertHandlersFor([{ eventType: 'UserCreated', eventVersion: 1 }])
+      registry.assertHandlersFor([
+        { eventType: 'UserCreated', eventVersion: 1 },
+      ]),
     ).not.toThrow()
   })
 
   it('names the missing event types in the startup error', () => {
     expect(() =>
-      registry.assertHandlersFor([{ eventType: 'WalletProvisioned', eventVersion: 1 }])
+      registry.assertHandlersFor([
+        { eventType: 'WalletProvisioned', eventVersion: 1 },
+      ]),
     ).toThrow(/WalletProvisioned:v1/)
   })
 

@@ -45,10 +45,20 @@ describe('PreferenceService', () => {
 
   describe('updatePreferences', () => {
     it('preserves omitted fields via a partial upsert', async () => {
-      mockFindUnique.mockResolvedValue({ userId: 'user1', locale: 'en-US', profileVisibility: 'public' })
-      mockUpsert.mockResolvedValue({ userId: 'user1', locale: 'fr-FR', profileVisibility: 'public' })
+      mockFindUnique.mockResolvedValue({
+        userId: 'user1',
+        locale: 'en-US',
+        profileVisibility: 'public',
+      })
+      mockUpsert.mockResolvedValue({
+        userId: 'user1',
+        locale: 'fr-FR',
+        profileVisibility: 'public',
+      })
 
-      const result = await service.updatePreferences('user1', { locale: 'fr-FR' as any })
+      const result = await service.updatePreferences('user1', {
+        locale: 'fr-FR' as any,
+      })
 
       expect(mockUpsert).toHaveBeenCalledWith({
         where: { userId: 'user1' },
@@ -59,13 +69,28 @@ describe('PreferenceService', () => {
     })
 
     it('audits privacy-impacting changes when the value actually changes', async () => {
-      mockFindUnique.mockResolvedValue({ userId: 'user1', profileVisibility: 'public' })
-      mockUpsert.mockResolvedValue({ userId: 'user1', profileVisibility: 'private' })
+      mockFindUnique.mockResolvedValue({
+        userId: 'user1',
+        profileVisibility: 'public',
+      })
+      mockUpsert.mockResolvedValue({
+        userId: 'user1',
+        profileVisibility: 'private',
+      })
 
-      await service.updatePreferences('user1', { profileVisibility: 'private' as any })
+      await service.updatePreferences('user1', {
+        profileVisibility: 'private' as any,
+      })
 
       expect(mockCreateMany).toHaveBeenCalledWith({
-        data: [{ userId: 'user1', field: 'profileVisibility', oldValue: 'public', newValue: 'private' }],
+        data: [
+          {
+            userId: 'user1',
+            field: 'profileVisibility',
+            oldValue: 'public',
+            newValue: 'private',
+          },
+        ],
       })
     })
 
@@ -79,7 +104,10 @@ describe('PreferenceService', () => {
     })
 
     it('does not audit when a privacy field is submitted but unchanged', async () => {
-      mockFindUnique.mockResolvedValue({ userId: 'user1', analyticsConsent: true })
+      mockFindUnique.mockResolvedValue({
+        userId: 'user1',
+        analyticsConsent: true,
+      })
       mockUpsert.mockResolvedValue({ userId: 'user1', analyticsConsent: true })
 
       await service.updatePreferences('user1', { analyticsConsent: true })
@@ -89,12 +117,22 @@ describe('PreferenceService', () => {
 
     it('records null oldValue on first-ever write (no prior row)', async () => {
       mockFindUnique.mockResolvedValue(null)
-      mockUpsert.mockResolvedValue({ userId: 'user1', dataSharingConsent: true })
+      mockUpsert.mockResolvedValue({
+        userId: 'user1',
+        dataSharingConsent: true,
+      })
 
       await service.updatePreferences('user1', { dataSharingConsent: true })
 
       expect(mockCreateMany).toHaveBeenCalledWith({
-        data: [{ userId: 'user1', field: 'dataSharingConsent', oldValue: null, newValue: 'true' }],
+        data: [
+          {
+            userId: 'user1',
+            field: 'dataSharingConsent',
+            oldValue: null,
+            newValue: 'true',
+          },
+        ],
       })
     })
   })

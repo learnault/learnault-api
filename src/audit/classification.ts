@@ -474,7 +474,8 @@ const RULES: readonly LifecycleRule[] = [
     retentionAnchor: 'createdAt',
     onErasure: ErasureAction.RETAIN,
     audited: false,
-    notes: 'Tombstone marking an event as unprocessable. Written once, then only read.',
+    notes:
+      'Tombstone marking an event as unprocessable. Written once, then only read.',
   },
   {
     model: 'QueueLease',
@@ -491,7 +492,7 @@ const RULES: readonly LifecycleRule[] = [
 ]
 
 const BY_MODEL: ReadonlyMap<string, LifecycleRule> = new Map(
-  RULES.map((rule) => [rule.model, rule])
+  RULES.map((rule) => [rule.model, rule]),
 )
 
 /** Every rule in the matrix, in declaration order. */
@@ -524,15 +525,22 @@ export function requiresAudit(model: string): boolean {
 }
 
 /** Models in a given lifecycle class. */
-export function modelsInClass(recordClass: RecordClassValue): readonly string[] {
-  return RULES.filter((rule) => rule.recordClass === recordClass).map((rule) => rule.model)
+export function modelsInClass(
+  recordClass: RecordClassValue,
+): readonly string[] {
+  return RULES.filter((rule) => rule.recordClass === recordClass).map(
+    (rule) => rule.model,
+  )
 }
 
 /**
  * Cut-off before which a model's rows are eligible for a retention purge, or
  * `null` when the model is retained indefinitely.
  */
-export function retentionCutoff(model: string, now: Date = new Date()): Date | null {
+export function retentionCutoff(
+  model: string,
+  now: Date = new Date(),
+): Date | null {
   const rule = BY_MODEL.get(model)
   if (!rule || rule.retentionDays === null) {
     return null

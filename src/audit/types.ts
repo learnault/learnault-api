@@ -70,7 +70,8 @@ export const ErasureAction = {
   CASCADE: 'CASCADE',
 } as const
 
-export type ErasureActionValue = (typeof ErasureAction)[keyof typeof ErasureAction]
+export type ErasureActionValue =
+  (typeof ErasureAction)[keyof typeof ErasureAction]
 
 /** One row of the lifecycle matrix. */
 export interface LifecycleRule {

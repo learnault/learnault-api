@@ -50,7 +50,7 @@ describe('AuditService', () => {
     vi.mocked(prisma.auditLog.create).mockRejectedValue(new Error('db down'))
 
     await expect(
-      service.record({ userId: 'user-1', action: 'EXPORT_REQUESTED' })
+      service.record({ userId: 'user-1', action: 'EXPORT_REQUESTED' }),
     ).resolves.toBeUndefined()
 
     expect(logger.error).toHaveBeenCalled()

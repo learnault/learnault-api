@@ -19,7 +19,11 @@ vi.mock('../src/config/database', () => ({
     credential: { deleteMany: vi.fn(), findMany: vi.fn() },
     referral: { deleteMany: vi.fn(), findMany: vi.fn(), findFirst: vi.fn() },
     stellarFunding: { deleteMany: vi.fn() },
-    dataExportRequest: { deleteMany: vi.fn(), findMany: vi.fn(), updateMany: vi.fn() },
+    dataExportRequest: {
+      deleteMany: vi.fn(),
+      findMany: vi.fn(),
+      updateMany: vi.fn(),
+    },
     accountDeletionRequest: {
       findFirst: vi.fn(),
       findMany: vi.fn(),
@@ -55,7 +59,9 @@ describe('AccountLifecycleService', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     service = new AccountLifecycleService()
-    vi.mocked(prisma.$transaction).mockImplementation((args: any[]) => Promise.all(args))
+    vi.mocked(prisma.$transaction).mockImplementation((args: any[]) =>
+      Promise.all(args),
+    )
     vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any)
   })
 
@@ -72,7 +78,11 @@ describe('AccountLifecycleService', () => {
     it('treats a unique-index violation from a concurrent request as a duplicate', async () => {
       vi.mocked(prisma.accountDeletionRequest.findFirst)
         .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({ id: 'del-winner', userId: 'user-1', status: 'pending' } as any)
+        .mockResolvedValueOnce({
+          id: 'del-winner',
+          userId: 'user-1',
+          status: 'pending',
+        } as any)
       vi.mocked(prisma.$transaction).mockRejectedValue({ code: 'P2002' })
 
       const result = await service.requestDeletion('user-1', undefined, {})
@@ -84,8 +94,12 @@ describe('AccountLifecycleService', () => {
 
   describe('processDue — finalization matrix', () => {
     it('applies the deletion/anonymization matrix and completes the request', async () => {
-      vi.mocked(prisma.accountDeletionRequest.findMany).mockResolvedValue([dueRequest] as any)
-      vi.mocked(prisma.accountDeletionRequest.updateMany).mockResolvedValue({ count: 1 } as any)
+      vi.mocked(prisma.accountDeletionRequest.findMany).mockResolvedValue([
+        dueRequest,
+      ] as any)
+      vi.mocked(prisma.accountDeletionRequest.updateMany).mockResolvedValue({
+        count: 1,
+      } as any)
 
       await service.processDue()
 
@@ -102,7 +116,9 @@ describe('AccountLifecycleService', () => {
         prisma.referralCode,
         prisma.dataExportRequest,
       ]) {
-        expect(model.deleteMany).toHaveBeenCalledWith({ where: { userId: 'user-1' } })
+        expect(model.deleteMany).toHaveBeenCalledWith({
+          where: { userId: 'user-1' },
+        })
       }
 
       // Retained models: financial/on-chain records must NOT be deleted
@@ -124,7 +140,9 @@ describe('AccountLifecycleService', () => {
       // User row anonymized in place (tombstone), never hard-deleted
       const userUpdate = vi.mocked(prisma.user.update).mock.calls[0][0] as any
       expect(userUpdate.where).toEqual({ id: 'user-1' })
-      expect(userUpdate.data.email).toMatch(/^deleted\+[a-z0-9]+@anon\.invalid$/)
+      expect(userUpdate.data.email).toMatch(
+        /^deleted\+[a-z0-9]+@anon\.invalid$/,
+      )
       expect(userUpdate.data.username).toMatch(/^deleted_[a-z0-9]+$/)
       expect(userUpdate.data.password).toMatch(/^[0-9a-f]{64}$/)
       expect(userUpdate.data.walletAddress).toBeNull()
@@ -137,18 +155,22 @@ describe('AccountLifecycleService', () => {
         expect.objectContaining({
           where: { id: 'del-1' },
           data: expect.objectContaining({ status: 'completed' }),
-        })
+        }),
       )
       expect(prisma.auditLog.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ action: 'DELETION_COMPLETED' }),
-        })
+        }),
       )
     })
 
     it('skips rows another runner already claimed', async () => {
-      vi.mocked(prisma.accountDeletionRequest.findMany).mockResolvedValue([dueRequest] as any)
-      vi.mocked(prisma.accountDeletionRequest.updateMany).mockResolvedValue({ count: 0 } as any)
+      vi.mocked(prisma.accountDeletionRequest.findMany).mockResolvedValue([
+        dueRequest,
+      ] as any)
+      vi.mocked(prisma.accountDeletionRequest.updateMany).mockResolvedValue({
+        count: 0,
+      } as any)
 
       await service.processDue()
 
@@ -158,7 +180,9 @@ describe('AccountLifecycleService', () => {
 
     it('re-running after completion is a no-op (idempotent)', async () => {
       // Completed requests no longer match the pending filter
-      vi.mocked(prisma.accountDeletionRequest.findMany).mockResolvedValue([] as any)
+      vi.mocked(prisma.accountDeletionRequest.findMany).mockResolvedValue(
+        [] as any,
+      )
 
       await service.processDue()
 
@@ -166,13 +190,18 @@ describe('AccountLifecycleService', () => {
     })
 
     it('returns the request to pending with backoff on finalization failure', async () => {
-      vi.mocked(prisma.accountDeletionRequest.findMany).mockResolvedValue([dueRequest] as any)
-      vi.mocked(prisma.accountDeletionRequest.updateMany).mockResolvedValue({ count: 1 } as any)
+      vi.mocked(prisma.accountDeletionRequest.findMany).mockResolvedValue([
+        dueRequest,
+      ] as any)
+      vi.mocked(prisma.accountDeletionRequest.updateMany).mockResolvedValue({
+        count: 1,
+      } as any)
       vi.mocked(prisma.$transaction).mockRejectedValue(new Error('db down'))
 
       await service.processDue()
 
-      const retryCall = vi.mocked(prisma.accountDeletionRequest.updateMany).mock.calls[1][0] as any
+      const retryCall = vi.mocked(prisma.accountDeletionRequest.updateMany).mock
+        .calls[1][0] as any
       expect(retryCall.where).toEqual({ id: 'del-1', status: 'processing' })
       expect(retryCall.data.status).toBe('pending')
       expect(retryCall.data.error).toBe('db down')
@@ -183,21 +212,28 @@ describe('AccountLifecycleService', () => {
       vi.mocked(prisma.accountDeletionRequest.findMany).mockResolvedValue([
         { ...dueRequest, attemptCount: 4 },
       ] as any)
-      vi.mocked(prisma.accountDeletionRequest.updateMany).mockResolvedValue({ count: 1 } as any)
+      vi.mocked(prisma.accountDeletionRequest.updateMany).mockResolvedValue({
+        count: 1,
+      } as any)
       vi.mocked(prisma.$transaction).mockRejectedValue(new Error('db down'))
 
       await service.processDue()
 
-      const failCall = vi.mocked(prisma.accountDeletionRequest.updateMany).mock.calls[1][0] as any
+      const failCall = vi.mocked(prisma.accountDeletionRequest.updateMany).mock
+        .calls[1][0] as any
       expect(failCall.data.status).toBe('failed')
     })
   })
 
   describe('cancelDeletion', () => {
     it('reports finalized when the finalizer won the race', async () => {
-      vi.mocked(prisma.accountDeletionRequest.updateMany).mockResolvedValue({ count: 0 } as any)
+      vi.mocked(prisma.accountDeletionRequest.updateMany).mockResolvedValue({
+        count: 0,
+      } as any)
       vi.mocked(prisma.accountDeletionRequest.findFirst).mockResolvedValue({
-        id: 'del-1', userId: 'user-1', status: 'processing',
+        id: 'del-1',
+        userId: 'user-1',
+        status: 'processing',
       } as any)
 
       const result = await service.cancelDeletion('user-1', {})
@@ -207,7 +243,9 @@ describe('AccountLifecycleService', () => {
     })
 
     it('reports none when no request exists', async () => {
-      vi.mocked(prisma.accountDeletionRequest.updateMany).mockResolvedValue({ count: 0 } as any)
+      vi.mocked(prisma.accountDeletionRequest.updateMany).mockResolvedValue({
+        count: 0,
+      } as any)
       vi.mocked(prisma.accountDeletionRequest.findFirst).mockResolvedValue(null)
 
       const result = await service.cancelDeletion('user-1', {})

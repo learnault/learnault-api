@@ -22,8 +22,8 @@ function toBool(value: string | undefined, fallback = false): boolean {
 function toList(value: string | undefined): string[] {
   return (value ?? '')
     .split(',')
-    .map(entry => entry.trim())
-    .filter(entry => entry.length > 0)
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0)
 }
 
 function envKeyFor(queueName: string): string {
@@ -35,7 +35,7 @@ export const schedulerConfig = {
   leaseMs: toInt(process.env.SCHEDULER_LEASE_MS, DEFAULT_LEASE_MS),
   shutdownTimeoutMs: toInt(
     process.env.SCHEDULER_SHUTDOWN_TIMEOUT_MS,
-    DEFAULT_SHUTDOWN_TIMEOUT_MS
+    DEFAULT_SHUTDOWN_TIMEOUT_MS,
   ),
   inProcess: toBool(process.env.SCHEDULER_IN_PROCESS, false),
   only: toList(process.env.SCHEDULER_QUEUES),

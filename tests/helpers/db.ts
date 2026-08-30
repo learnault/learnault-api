@@ -43,9 +43,7 @@ export async function dropWorkerSchema(
   }
 }
 
-export async function dropAllWorkerSchemas(
-  databaseUrl: string,
-): Promise<void> {
+export async function dropAllWorkerSchemas(databaseUrl: string): Promise<void> {
   const pool = new Pool({ connectionString: databaseUrl })
   try {
     const result = await pool.query(
@@ -81,11 +79,14 @@ export async function truncateAllTables(
 }
 
 export function applyMigrations(databaseUrl: string): void {
-  execSync('npx tsx node_modules/prisma/build/index.js db push --accept-data-loss', {
-    env: { ...process.env, DATABASE_URL: databaseUrl },
-    stdio: 'pipe',
-    cwd: process.cwd(),
-  })
+  execSync(
+    'npx tsx node_modules/prisma/build/index.js db push --accept-data-loss',
+    {
+      env: { ...process.env, DATABASE_URL: databaseUrl },
+      stdio: 'pipe',
+      cwd: process.cwd(),
+    },
+  )
 }
 
 export function runMigrations(databaseUrl: string): void {

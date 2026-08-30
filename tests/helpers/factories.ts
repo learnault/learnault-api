@@ -1,6 +1,16 @@
 import type { PrismaClient } from '@prisma/client'
 
-export function buildUser(overrides: Partial<{
+export function buildUser(
+  overrides: Partial<{
+    email: string
+    username: string
+    password: string
+    role: 'LEARNER' | 'ADMIN' | 'INSTRUCTOR'
+    isVerified: boolean
+    walletAddress: string | null
+    status: string
+  }> = {},
+): {
   email: string
   username: string
   password: string
@@ -8,19 +18,10 @@ export function buildUser(overrides: Partial<{
   isVerified: boolean
   walletAddress: string | null
   status: string
-}> = {}): {
-  email: string
-  username: string
-  password: string
-  role: 'LEARNER' | 'ADMIN' | 'INSTRUCTOR'
-  isVerified: boolean
-  walletAddress: string | null
-  status: string
-  } {
+} {
+  const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
-    const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-
-    return {
+  return {
     email: `test_${uniqueSuffix}@example.com`,
     username: `testuser_${uniqueSuffix}`,
     password: '$2a$10$dummy_hash_for_testing_purposes_only',
@@ -47,13 +48,15 @@ export async function createUser(
   return prisma.user.create({ data: buildUser(overrides) })
 }
 
-export function buildModule(overrides: Partial<{
-  title: string
-  description: string
-  category: string
-  difficulty: string
-  reward: number
-}> = {}) {
+export function buildModule(
+  overrides: Partial<{
+    title: string
+    description: string
+    category: string
+    difficulty: string
+    reward: number
+  }> = {},
+) {
   const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
   return {

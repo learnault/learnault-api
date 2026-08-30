@@ -28,15 +28,25 @@ vi.mock('../../src/config/database', () => ({
 }))
 
 // Dynamically import AFTER stubbing so the module-level guard sees the value
-const { authenticate, optionalAuthenticate, authorize, requireActiveAccount, requireVerifiedEmail } = await import(
-  '../../src/middleware/auth.middleware'
-)
+const {
+  authenticate,
+  optionalAuthenticate,
+  authorize,
+  requireActiveAccount,
+  requireVerifiedEmail,
+} = await import('../../src/middleware/auth.middleware')
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-function makeToken (
+function makeToken(
   payload: Record<string, unknown>,
-  overrides: { expiresIn?: string | number; issuer?: string; audience?: string; keyid?: string; algorithm?: jwt.Algorithm } = {},
+  overrides: {
+    expiresIn?: string | number
+    issuer?: string
+    audience?: string
+    keyid?: string
+    algorithm?: jwt.Algorithm
+  } = {},
 ): string {
   return jwt.sign(payload, JWT_SECRET, {
     expiresIn: overrides.expiresIn ?? '1h',
@@ -47,7 +57,7 @@ function makeToken (
   } as jwt.SignOptions)
 }
 
-function makeMocks () {
+function makeMocks() {
   const req = { headers: {} } as Partial<Request>
   const res = {
     status: vi.fn().mockReturnThis(),
@@ -85,7 +95,9 @@ describe('authenticate', () => {
     authenticate(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(401)
-    expect(res.json).toHaveBeenCalledWith({ message: 'Authorization token required' })
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'Authorization token required',
+    })
     expect(next).not.toHaveBeenCalled()
   })
 
@@ -96,13 +108,18 @@ describe('authenticate', () => {
     authenticate(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(401)
-    expect(res.json).toHaveBeenCalledWith({ message: 'Authorization token required' })
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'Authorization token required',
+    })
     expect(next).not.toHaveBeenCalled()
   })
 
   it('returns 401 with "Token has expired" for an expired token', () => {
     const { req, res, next } = makeMocks()
-    const token = makeToken({ id: 'u1', email: 'x@y.com', role: 'learner' }, { expiresIn: -1 })
+    const token = makeToken(
+      { id: 'u1', email: 'x@y.com', role: 'learner' },
+      { expiresIn: -1 },
+    )
     req.headers = { authorization: `Bearer ${token}` }
 
     authenticate(req as Request, res as Response, next)
@@ -125,7 +142,10 @@ describe('authenticate', () => {
 
   it('returns 401 for a token signed with the wrong issuer', () => {
     const { req, res, next } = makeMocks()
-    const token = makeToken({ id: 'u1', email: 'x@y.com', role: 'learner' }, { issuer: 'someone-else' })
+    const token = makeToken(
+      { id: 'u1', email: 'x@y.com', role: 'learner' },
+      { issuer: 'someone-else' },
+    )
     req.headers = { authorization: `Bearer ${token}` }
 
     authenticate(req as Request, res as Response, next)
@@ -137,7 +157,10 @@ describe('authenticate', () => {
 
   it('returns 401 for a token signed with the wrong audience', () => {
     const { req, res, next } = makeMocks()
-    const token = makeToken({ id: 'u1', email: 'x@y.com', role: 'learner' }, { audience: 'someone-else' })
+    const token = makeToken(
+      { id: 'u1', email: 'x@y.com', role: 'learner' },
+      { audience: 'someone-else' },
+    )
     req.headers = { authorization: `Bearer ${token}` }
 
     authenticate(req as Request, res as Response, next)
@@ -149,7 +172,10 @@ describe('authenticate', () => {
 
   it('returns 401 for a token signed with an unrecognized key id', () => {
     const { req, res, next } = makeMocks()
-    const token = makeToken({ id: 'u1', email: 'x@y.com', role: 'learner' }, { keyid: 'unknown-key' })
+    const token = makeToken(
+      { id: 'u1', email: 'x@y.com', role: 'learner' },
+      { keyid: 'unknown-key' },
+    )
     req.headers = { authorization: `Bearer ${token}` }
 
     authenticate(req as Request, res as Response, next)
@@ -163,7 +189,10 @@ describe('authenticate', () => {
     const { req, res, next } = makeMocks()
     // none-algorithm/HS384 forgery attempt — must be rejected even though
     // jsonwebtoken itself can produce it.
-    const token = makeToken({ id: 'u1', email: 'x@y.com', role: 'learner' }, { algorithm: 'HS384' })
+    const token = makeToken(
+      { id: 'u1', email: 'x@y.com', role: 'learner' },
+      { algorithm: 'HS384' },
+    )
     req.headers = { authorization: `Bearer ${token}` }
 
     authenticate(req as Request, res as Response, next)
@@ -210,7 +239,10 @@ describe('optionalAuthenticate', () => {
 
   it('calls next() without blocking when token is expired', () => {
     const { req, res, next } = makeMocks()
-    const token = makeToken({ id: 'u1', email: 'x@y.com', role: 'learner' }, { expiresIn: -1 })
+    const token = makeToken(
+      { id: 'u1', email: 'x@y.com', role: 'learner' },
+      { expiresIn: -1 },
+    )
     req.headers = { authorization: `Bearer ${token}` }
 
     optionalAuthenticate(req as Request, res as Response, next)
@@ -233,8 +265,8 @@ describe('requireActiveAccount', () => {
   })
 
   it('calls next() for an ACTIVE account', async () => {
-    const { req, res, next } = makeMocks();
-    (req as any).user = { id: 'u1' }
+    const { req, res, next } = makeMocks()
+    ;(req as any).user = { id: 'u1' }
     findUniqueMock.mockResolvedValue({ status: 'ACTIVE' })
 
     await requireActiveAccount(req as Request, res as Response, next)
@@ -243,32 +275,36 @@ describe('requireActiveAccount', () => {
   })
 
   it('returns 403 ACCOUNT_DEACTIVATED for a deactivated account', async () => {
-    const { req, res, next } = makeMocks();
-    (req as any).user = { id: 'u1' }
+    const { req, res, next } = makeMocks()
+    ;(req as any).user = { id: 'u1' }
     findUniqueMock.mockResolvedValue({ status: 'DEACTIVATED' })
 
     await requireActiveAccount(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(403)
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: 'ACCOUNT_DEACTIVATED' }))
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'ACCOUNT_DEACTIVATED' }),
+    )
     expect(next).not.toHaveBeenCalled()
   })
 
   it('returns 403 ACCOUNT_PENDING_DELETION for a pending-deletion account', async () => {
-    const { req, res, next } = makeMocks();
-    (req as any).user = { id: 'u1' }
+    const { req, res, next } = makeMocks()
+    ;(req as any).user = { id: 'u1' }
     findUniqueMock.mockResolvedValue({ status: 'PENDING_DELETION' })
 
     await requireActiveAccount(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(403)
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: 'ACCOUNT_PENDING_DELETION' }))
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'ACCOUNT_PENDING_DELETION' }),
+    )
     expect(next).not.toHaveBeenCalled()
   })
 
   it('returns 401 "Account not found" for a deleted or missing account', async () => {
-    const { req, res, next } = makeMocks();
-    (req as any).user = { id: 'u1' }
+    const { req, res, next } = makeMocks()
+    ;(req as any).user = { id: 'u1' }
     findUniqueMock.mockResolvedValue(null)
 
     await requireActiveAccount(req as Request, res as Response, next)
@@ -292,8 +328,8 @@ describe('requireVerifiedEmail', () => {
   })
 
   it('calls next() when the email is verified', async () => {
-    const { req, res, next } = makeMocks();
-    (req as any).user = { id: 'u1' }
+    const { req, res, next } = makeMocks()
+    ;(req as any).user = { id: 'u1' }
     findUniqueMock.mockResolvedValue({ isVerified: true })
 
     await requireVerifiedEmail(req as Request, res as Response, next)
@@ -302,14 +338,16 @@ describe('requireVerifiedEmail', () => {
   })
 
   it('returns 403 EMAIL_NOT_VERIFIED when the email is unverified', async () => {
-    const { req, res, next } = makeMocks();
-    (req as any).user = { id: 'u1' }
+    const { req, res, next } = makeMocks()
+    ;(req as any).user = { id: 'u1' }
     findUniqueMock.mockResolvedValue({ isVerified: false })
 
     await requireVerifiedEmail(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(403)
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: 'EMAIL_NOT_VERIFIED' }))
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'EMAIL_NOT_VERIFIED' }),
+    )
     expect(next).not.toHaveBeenCalled()
   })
 })
@@ -318,8 +356,8 @@ describe('requireVerifiedEmail', () => {
 
 describe('authorize', () => {
   it('calls next() when the persisted role matches', async () => {
-    const { req, res, next } = makeMocks();
-    (req as any).user = { id: 'u1', email: 'a@b.com', role: 'learner' }
+    const { req, res, next } = makeMocks()
+    ;(req as any).user = { id: 'u1', email: 'a@b.com', role: 'learner' }
     findUniqueMock.mockResolvedValue({ role: 'learner', status: 'ACTIVE' })
 
     await authorize('learner')(req as Request, res as Response, next)
@@ -329,25 +367,31 @@ describe('authorize', () => {
   })
 
   it('calls next() when the persisted role matches one of multiple allowed roles', async () => {
-    const { req, res, next } = makeMocks();
-    (req as any).user = { id: 'u1', email: 'a@b.com', role: 'employer' }
+    const { req, res, next } = makeMocks()
+    ;(req as any).user = { id: 'u1', email: 'a@b.com', role: 'employer' }
     findUniqueMock.mockResolvedValue({ role: 'employer', status: 'ACTIVE' })
 
-    await authorize('learner', 'employer')(req as Request, res as Response, next)
+    await authorize('learner', 'employer')(
+      req as Request,
+      res as Response,
+      next,
+    )
 
     expect(next).toHaveBeenCalledOnce()
   })
 
   it('returns 403 when the persisted role is not in the allowed list', async () => {
-    const { req, res, next } = makeMocks();
-    (req as any).user = { id: 'u1', email: 'a@b.com', role: 'learner' }
+    const { req, res, next } = makeMocks()
+    ;(req as any).user = { id: 'u1', email: 'a@b.com', role: 'learner' }
     findUniqueMock.mockResolvedValue({ role: 'learner', status: 'ACTIVE' })
 
     await authorize('employer')(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(403)
     expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ message: expect.stringContaining('Access denied') }),
+      expect.objectContaining({
+        message: expect.stringContaining('Access denied'),
+      }),
     )
     expect(next).not.toHaveBeenCalled()
   })
@@ -358,15 +402,17 @@ describe('authorize', () => {
     await authorize('learner')(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(401)
-    expect(res.json).toHaveBeenCalledWith({ message: 'Authentication required' })
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'Authentication required',
+    })
     expect(next).not.toHaveBeenCalled()
   })
 
   it('uses the current persisted role even when the JWT claim is stale', async () => {
-    const { req, res, next } = makeMocks();
+    const { req, res, next } = makeMocks()
     // Token still claims 'learner', but the account was promoted to
     // 'employer' in the database after the token was issued.
-    (req as any).user = { id: 'u1', email: 'a@b.com', role: 'learner' }
+    ;(req as any).user = { id: 'u1', email: 'a@b.com', role: 'learner' }
     findUniqueMock.mockResolvedValue({ role: 'employer', status: 'ACTIVE' })
 
     await authorize('employer')(req as Request, res as Response, next)
@@ -376,20 +422,25 @@ describe('authorize', () => {
   })
 
   it('returns 403 ACCOUNT_DEACTIVATED even if the JWT role would otherwise pass', async () => {
-    const { req, res, next } = makeMocks();
-    (req as any).user = { id: 'u1', email: 'a@b.com', role: 'employer' }
-    findUniqueMock.mockResolvedValue({ role: 'employer', status: 'DEACTIVATED' })
+    const { req, res, next } = makeMocks()
+    ;(req as any).user = { id: 'u1', email: 'a@b.com', role: 'employer' }
+    findUniqueMock.mockResolvedValue({
+      role: 'employer',
+      status: 'DEACTIVATED',
+    })
 
     await authorize('employer')(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(403)
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: 'ACCOUNT_DEACTIVATED' }))
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'ACCOUNT_DEACTIVATED' }),
+    )
     expect(next).not.toHaveBeenCalled()
   })
 
   it('returns 401 "Account not found" for a deleted account', async () => {
-    const { req, res, next } = makeMocks();
-    (req as any).user = { id: 'u1', email: 'a@b.com', role: 'employer' }
+    const { req, res, next } = makeMocks()
+    ;(req as any).user = { id: 'u1', email: 'a@b.com', role: 'employer' }
     findUniqueMock.mockResolvedValue(null)
 
     await authorize('employer')(req as Request, res as Response, next)

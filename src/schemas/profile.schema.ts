@@ -25,27 +25,31 @@ export const profileUpdateFieldsShape = {
   languages: z.array(z.string().min(1)).max(20).optional(),
   level: z
     .enum(LEARNER_LEVELS, {
-      errorMap: () => ({ message: `Level must be one of: ${LEARNER_LEVELS.join(', ')}` }),
+      errorMap: () => ({
+        message: `Level must be one of: ${LEARNER_LEVELS.join(', ')}`,
+      }),
     })
     .optional(),
   interests: z.array(z.string().min(1)).max(50).optional(),
   goals: z.array(z.string().min(1)).max(20).optional(),
   visibility: z
     .enum(PROFILE_VISIBILITIES, {
-      errorMap: () => ({ message: `Visibility must be one of: ${PROFILE_VISIBILITIES.join(', ')}` }),
+      errorMap: () => ({
+        message: `Visibility must be one of: ${PROFILE_VISIBILITIES.join(', ')}`,
+      }),
     })
     .optional(),
 } as const
 
 /** Field names an owner is allowed to write, derived from the schema itself. */
 export const OWNER_UPDATABLE_PROFILE_FIELDS = Object.keys(
-  profileUpdateFieldsShape
+  profileUpdateFieldsShape,
 ) as readonly (keyof typeof profileUpdateFieldsShape)[]
 
 export const updateProfileSchema = z
   .object(profileUpdateFieldsShape)
   .strict()
-  .refine(data => Object.keys(data).length > 0, {
+  .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one profile field is required',
   })
 
@@ -55,7 +59,7 @@ export const changePasswordSchema = z
     newPassword: commonSchemas.password,
   })
   .strict()
-  .refine(data => data.currentPassword !== data.newPassword, {
+  .refine((data) => data.currentPassword !== data.newPassword, {
     message: 'New password must be different from current password',
     path: ['newPassword'],
   })
@@ -70,6 +74,6 @@ export const userIdParamSchema = z.object({
   id: z.string().uuid('Invalid user id'),
 })
 
-export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
-export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
-export type UpdateWalletInput = z.infer<typeof updateWalletSchema>;
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>
+export type UpdateWalletInput = z.infer<typeof updateWalletSchema>

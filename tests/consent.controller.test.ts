@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ConsentController } from '../src/controllers/consent.controller'
 
-const { mockGetCurrent, mockGetHistory, mockGrant, mockWithdraw } = vi.hoisted(() => ({
-  mockGetCurrent: vi.fn(),
-  mockGetHistory: vi.fn(),
-  mockGrant: vi.fn(),
-  mockWithdraw: vi.fn(),
-}))
+const { mockGetCurrent, mockGetHistory, mockGrant, mockWithdraw } = vi.hoisted(
+  () => ({
+    mockGetCurrent: vi.fn(),
+    mockGetHistory: vi.fn(),
+    mockGrant: vi.fn(),
+    mockWithdraw: vi.fn(),
+  }),
+)
 
 vi.mock('../src/services/consent.service', () => ({
   consentService: {
@@ -42,7 +44,9 @@ describe('ConsentController', () => {
     })
 
     it('returns current consents on success', async () => {
-      mockGetCurrent.mockResolvedValue([{ purpose: 'terms_of_service', status: 'granted' }])
+      mockGetCurrent.mockResolvedValue([
+        { purpose: 'terms_of_service', status: 'granted' },
+      ])
 
       await controller.getCurrent(req, res)
 
@@ -72,7 +76,11 @@ describe('ConsentController', () => {
 
   describe('grant', () => {
     it('returns 400 on an invalid purpose', async () => {
-      req.body = { purpose: 'not_a_purpose', policyVersion: 'v1', source: 'onboarding' }
+      req.body = {
+        purpose: 'not_a_purpose',
+        policyVersion: 'v1',
+        source: 'onboarding',
+      }
 
       await controller.grant(req, res)
 
@@ -88,12 +96,20 @@ describe('ConsentController', () => {
     })
 
     it('grants consent with a valid payload', async () => {
-      req.body = { purpose: 'analytics', policyVersion: 'v1', source: 'onboarding' }
+      req.body = {
+        purpose: 'analytics',
+        policyVersion: 'v1',
+        source: 'onboarding',
+      }
       mockGrant.mockResolvedValue({ purpose: 'analytics', status: 'granted' })
 
       await controller.grant(req, res)
 
-      expect(mockGrant).toHaveBeenCalledWith('user1', { purpose: 'analytics', policyVersion: 'v1', source: 'onboarding' })
+      expect(mockGrant).toHaveBeenCalledWith('user1', {
+        purpose: 'analytics',
+        policyVersion: 'v1',
+        source: 'onboarding',
+      })
       expect(res.status).toHaveBeenCalledWith(200)
     })
   })
@@ -127,7 +143,10 @@ describe('ConsentController', () => {
 
     it('withdraws optional consent', async () => {
       req.body = { purpose: 'analytics', source: 'settings' }
-      mockWithdraw.mockResolvedValue({ kind: 'withdrawn', record: { status: 'withdrawn' } })
+      mockWithdraw.mockResolvedValue({
+        kind: 'withdrawn',
+        record: { status: 'withdrawn' },
+      })
 
       await controller.withdraw(req, res)
 

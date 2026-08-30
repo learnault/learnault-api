@@ -277,7 +277,9 @@ export class RewardController {
             : null
 
       if (!amountString) {
-        throw new BadRequestError('Amount must be a numeric string (e.g. "5.0000000")')
+        throw new BadRequestError(
+          'Amount must be a numeric string (e.g. "5.0000000")',
+        )
       }
 
       // Parse the XLM string into exact stroops — throws MoneyError on bad format

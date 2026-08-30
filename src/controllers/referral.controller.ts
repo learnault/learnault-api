@@ -2,7 +2,12 @@ import { Request, Response } from 'express'
 import { randomBytes } from 'crypto'
 import prisma from '../config/database'
 import { asyncHandler } from '../middleware/error.middleware'
-import { BadRequestError, ConflictError, NotFoundError, UnauthorizedError } from '../utils/errors'
+import {
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+  UnauthorizedError,
+} from '../utils/errors'
 
 const REFERRAL_BONUS_AMOUNT = 5.0
 const CODE_BYTES = 4
@@ -40,32 +45,36 @@ export class ReferralController {
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    */
-  generateCode = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const userId = (req as any).user?.id
-    if (!userId) throw new UnauthorizedError('User ID not found')
+  generateCode = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const userId = (req as any).user?.id
+      if (!userId) throw new UnauthorizedError('User ID not found')
 
-    const existing = await prisma.referralCode.findUnique({ where: { userId } })
-    if (existing) {
-      res.status(200).json({
-        success: true,
-        message: 'Referral code already exists',
-        data: { code: existing.code },
+      const existing = await prisma.referralCode.findUnique({
+        where: { userId },
+      })
+      if (existing) {
+        res.status(200).json({
+          success: true,
+          message: 'Referral code already exists',
+          data: { code: existing.code },
+        })
+
+        return
+      }
+
+      const code = await this.generateUniqueCode()
+      const referralCode = await prisma.referralCode.create({
+        data: { code, userId },
       })
 
-      return
-    }
-
-    const code = await this.generateUniqueCode()
-    const referralCode = await prisma.referralCode.create({
-      data: { code, userId },
-    })
-
-    res.status(201).json({
-      success: true,
-      message: 'Referral code generated successfully',
-      data: { code: referralCode.code },
-    })
-  })
+      res.status(201).json({
+        success: true,
+        message: 'Referral code generated successfully',
+        data: { code: referralCode.code },
+      })
+    },
+  )
 
   /**
    * @openapi
@@ -108,44 +117,52 @@ export class ReferralController {
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    */
-  applyCode = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const userId = (req as any).user?.id
-    if (!userId) throw new UnauthorizedError('User ID not found')
+  applyCode = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const userId = (req as any).user?.id
+      if (!userId) throw new UnauthorizedError('User ID not found')
 
-    const { code } = req.body
-    if (!code || typeof code !== 'string') {
-      throw new BadRequestError('Referral code is required')
-    }
+      const { code } = req.body
+      if (!code || typeof code !== 'string') {
+        throw new BadRequestError('Referral code is required')
+      }
 
-    const referralCode = await prisma.referralCode.findUnique({ where: { code } })
-    if (!referralCode) throw new NotFoundError('Referral code not found')
+      const referralCode = await prisma.referralCode.findUnique({
+        where: { code },
+      })
+      if (!referralCode) throw new NotFoundError('Referral code not found')
 
-    if (referralCode.userId === userId) {
-      throw new BadRequestError('Self-referrals are not allowed')
-    }
+      if (referralCode.userId === userId) {
+        throw new BadRequestError('Self-referrals are not allowed')
+      }
 
-    const alreadyReferred = await prisma.referral.findUnique({ where: { referreeId: userId } })
-    if (alreadyReferred) throw new ConflictError('You have already used a referral code')
+      const alreadyReferred = await prisma.referral.findUnique({
+        where: { referreeId: userId },
+      })
+      if (alreadyReferred)
+        throw new ConflictError('You have already used a referral code')
 
-    const alreadyUsedThisCode = await prisma.referral.findFirst({
-      where: { referrerId: referralCode.userId, referreeId: userId },
-    })
-    if (alreadyUsedThisCode) throw new ConflictError('This referral code has already been applied')
+      const alreadyUsedThisCode = await prisma.referral.findFirst({
+        where: { referrerId: referralCode.userId, referreeId: userId },
+      })
+      if (alreadyUsedThisCode)
+        throw new ConflictError('This referral code has already been applied')
 
-    const referral = await prisma.referral.create({
-      data: {
-        referrerId: referralCode.userId,
-        referreeId: userId,
-        codeId: referralCode.id,
-      },
-    })
+      const referral = await prisma.referral.create({
+        data: {
+          referrerId: referralCode.userId,
+          referreeId: userId,
+          codeId: referralCode.id,
+        },
+      })
 
-    res.status(201).json({
-      success: true,
-      message: 'Referral code applied successfully',
-      data: { referralId: referral.id },
-    })
-  })
+      res.status(201).json({
+        success: true,
+        message: 'Referral code applied successfully',
+        data: { referralId: referral.id },
+      })
+    },
+  )
 
   /**
    * @openapi
@@ -170,41 +187,44 @@ export class ReferralController {
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    */
-  getStats = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const userId = (req as any).user?.id
-    if (!userId) throw new UnauthorizedError('User ID not found')
+  getStats = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const userId = (req as any).user?.id
+      if (!userId) throw new UnauthorizedError('User ID not found')
 
-    const referrals = await prisma.referral.findMany({
-      where: { referrerId: userId },
-      include: {
-        referree: {
-          select: { completions: { take: 1 } },
+      const referrals = await prisma.referral.findMany({
+        where: { referrerId: userId },
+        include: {
+          referree: {
+            select: { completions: { take: 1 } },
+          },
         },
-      },
-    })
+      })
 
-    type ReferralRow = (typeof referrals)[number]
+      type ReferralRow = (typeof referrals)[number]
 
-    const totalReferrals = referrals.length
-    const activeReferrals = referrals.filter(
-      (r: ReferralRow) => r.referree.completions.length > 0,
-    ).length
-    const paidBonuses = referrals.filter((r: ReferralRow) => r.bonusPaid)
-    const earnedBonuses = paidBonuses.reduce(
-      (sum: number, r: ReferralRow) => sum + (r.bonusAmount ?? 0),
-      0,
-    )
+      const totalReferrals = referrals.length
+      const activeReferrals = referrals.filter(
+        (r: ReferralRow) => r.referree.completions.length > 0,
+      ).length
+      const paidBonuses = referrals.filter((r: ReferralRow) => r.bonusPaid)
+      const earnedBonuses = paidBonuses.reduce(
+        (sum: number, r: ReferralRow) => sum + (r.bonusAmount ?? 0),
+        0,
+      )
 
-    res.status(200).json({
-      success: true,
-      data: {
-        totalReferrals,
-        activeReferrals,
-        earnedBonuses,
-        pendingBonuses: (totalReferrals - paidBonuses.length) * REFERRAL_BONUS_AMOUNT,
-      },
-    })
-  })
+      res.status(200).json({
+        success: true,
+        data: {
+          totalReferrals,
+          activeReferrals,
+          earnedBonuses,
+          pendingBonuses:
+            (totalReferrals - paidBonuses.length) * REFERRAL_BONUS_AMOUNT,
+        },
+      })
+    },
+  )
 
   /**
    * Called internally when a referree completes their first module to unlock the referrer bonus.
@@ -216,7 +236,9 @@ export class ReferralController {
 
     if (!referral || referral.bonusPaid) return
 
-    const completionCount = await prisma.completion.count({ where: { userId: referreeId } })
+    const completionCount = await prisma.completion.count({
+      where: { userId: referreeId },
+    })
     if (completionCount < 1) return
 
     await prisma.referral.update({

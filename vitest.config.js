@@ -13,6 +13,12 @@ export default defineConfig({
       outputDir: 'coverage',
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.d.ts'],
+      thresholds: {
+        branches: 15,
+        functions: 20,
+        lines: 20,
+        statements: 20,
+      },
     },
   },
 })

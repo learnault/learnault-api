@@ -1,6 +1,9 @@
 import { Request, Response } from 'express'
 import { sessionService } from '../services/session.service'
-import { sessionListQuerySchema, sessionIdParamSchema } from '../schemas/session.schema'
+import {
+  sessionListQuerySchema,
+  sessionIdParamSchema,
+} from '../schemas/session.schema'
 import logger from '../utils/logger'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -26,7 +29,8 @@ async function resolveCurrentSessionId(req: Request): Promise<string | null> {
       select: { id: true, userId: true, isRevoked: true },
     })
 
-    if (!session || session.isRevoked || session.userId !== req.user?.id) return null
+    if (!session || session.isRevoked || session.userId !== req.user?.id)
+      return null
 
     return session.id
   } catch {
@@ -126,7 +130,7 @@ export class SessionController {
         userId,
         currentSessionId,
         page,
-        limit
+        limit,
       )
 
       const totalPages = Math.ceil(total / limit)
@@ -228,7 +232,7 @@ export class SessionController {
         userId,
         sessionId,
         currentSessionId,
-        context(req)
+        context(req),
       )
 
       switch (result.kind) {
@@ -239,7 +243,8 @@ export class SessionController {
 
         case 'current_session':
           res.status(400).json({
-            error: 'Cannot revoke your current session. Use POST /v1/auth/logout instead.',
+            error:
+              'Cannot revoke your current session. Use POST /v1/auth/logout instead.',
             code: 'CURRENT_SESSION',
           })
 
@@ -302,7 +307,11 @@ export class SessionController {
       const userId = req.user!.id
       const currentSessionId = await resolveCurrentSessionId(req)
 
-      const result = await sessionService.revokeAll(userId, currentSessionId, context(req))
+      const result = await sessionService.revokeAll(
+        userId,
+        currentSessionId,
+        context(req),
+      )
 
       res.status(200).json({
         message:

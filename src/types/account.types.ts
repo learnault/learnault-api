@@ -7,7 +7,8 @@ export const AccountStatus = {
   DELETED: 'DELETED',
 } as const
 
-export type AccountStatusValue = (typeof AccountStatus)[keyof typeof AccountStatus]
+export type AccountStatusValue =
+  (typeof AccountStatus)[keyof typeof AccountStatus]
 
 export const ExportStatus = {
   PENDING: 'pending',
@@ -27,7 +28,8 @@ export const DeletionStatus = {
   FAILED: 'failed',
 } as const
 
-export type DeletionStatusValue = (typeof DeletionStatus)[keyof typeof DeletionStatus]
+export type DeletionStatusValue =
+  (typeof DeletionStatus)[keyof typeof DeletionStatus]
 
 export const AuditAction = {
   EXPORT_REQUESTED: 'EXPORT_REQUESTED',

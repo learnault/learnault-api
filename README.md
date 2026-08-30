@@ -62,7 +62,7 @@ git clone https://github.com/learnault/learnault-api.git
 cd learnault-api
 
 # Install dependencies
-pnpm install
+pnpm install --frozen-lockfile
 
 # Set up environment variables
 cp .env.example .env
@@ -104,7 +104,23 @@ pnpm test
 
 # Lint code
 pnpm lint
+
+# Run the same quality gates as CI
+pnpm prisma:format:check
+pnpm db:generate
+pnpm format:check
+pnpm lint
+pnpm typecheck
+pnpm test:ci
+pnpm test:coverage
+pnpm build
 ```
+
+The database-backed checks require a dedicated PostgreSQL database. Set
+`DATABASE_URL` to a test database (for example,
+`postgresql://postgres:postgres@localhost:5432/learnault_ci`) before running
+`pnpm db:deploy`; Redis should be available at `redis://localhost:6379` when
+exercising Redis-dependent paths.
 
 ## Documentation
 

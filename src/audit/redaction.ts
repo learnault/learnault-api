@@ -207,7 +207,7 @@ export interface RedactionResult {
  * would take down the mutation being audited.
  */
 export function redactMetadata(
-  input: Record<string, unknown> | null | undefined
+  input: Record<string, unknown> | null | undefined,
 ): RedactionResult {
   if (input === null || input === undefined) {
     return { value: null, redactedPaths: [], truncated: false }
@@ -272,7 +272,10 @@ export function redactMetadata(
 
     if (value instanceof Error) {
       // Keep the class and message; a stack trace can embed request payloads.
-      return { name: value.name, message: walk(value.message, `${path}.message`, depth + 1) }
+      return {
+        name: value.name,
+        message: walk(value.message, `${path}.message`, depth + 1),
+      }
     }
 
     if (seen.has(value as object)) {
@@ -288,7 +291,9 @@ export function redactMetadata(
         state.truncated = true
       }
 
-      return kept.map((entry, index) => walk(entry, `${path}[${index}]`, depth + 1))
+      return kept.map((entry, index) =>
+        walk(entry, `${path}[${index}]`, depth + 1),
+      )
     }
 
     const entries = Object.entries(value as Record<string, unknown>)
@@ -328,7 +333,7 @@ export function redactMetadata(
  * dropping the payload rather than storing a truncated, unparseable prefix.
  */
 export function serializeMetadata(
-  input: Record<string, unknown> | null | undefined
+  input: Record<string, unknown> | null | undefined,
 ): string | null {
   const { value, truncated } = redactMetadata(input)
 
@@ -343,7 +348,9 @@ export function serializeMetadata(
     return JSON.stringify({ _redacted: ['*'], _reason: 'unserializable' })
   }
 
-  if (Buffer.byteLength(serialized, 'utf8') > RedactionLimits.maxSerializedBytes) {
+  if (
+    Buffer.byteLength(serialized, 'utf8') > RedactionLimits.maxSerializedBytes
+  ) {
     return JSON.stringify({
       _truncated: true,
       _reason: 'metadata exceeded size limit',
@@ -369,13 +376,16 @@ export function serializeMetadata(
  */
 export function hashIpAddress(
   ipAddress: string | null | undefined,
-  secret: string
+  secret: string,
 ): string | null {
   if (!ipAddress) {
     return null
   }
 
-  return createHmac('sha256', secret).update(ipAddress.trim()).digest('hex').slice(0, 32)
+  return createHmac('sha256', secret)
+    .update(ipAddress.trim())
+    .digest('hex')
+    .slice(0, 32)
 }
 
 /**
@@ -383,7 +393,9 @@ export function hashIpAddress(
  * console" from "the mobile app" in an investigation, not enough to fingerprint
  * a device.
  */
-export function userAgentFamily(userAgent: string | null | undefined): string | null {
+export function userAgentFamily(
+  userAgent: string | null | undefined,
+): string | null {
   if (!userAgent) {
     return null
   }

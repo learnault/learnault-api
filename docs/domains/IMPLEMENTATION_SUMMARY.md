@@ -19,12 +19,14 @@ This document summarizes the implementation of clearly defined, enforceable doma
 **File:** `docs/domains/DOMAIN_INVENTORY.md`
 
 **Contents:**
+
 - Identified 10 business domains from current codebase
 - Documented shared kernel components
 - Mapped cross-domain dependencies (both direct and implicit)
 - Identified orchestration concerns requiring ownership resolution
 
 **Key Findings:**
+
 - Strong dependencies detected: AuthController → EmailService, RewardService → StellarService, RewardService → NotificationService
 - Database relationships create implicit dependencies
 - Orchestration ownership unclear for module completion, reward claim, and credential issuance flows
@@ -36,6 +38,7 @@ This document summarizes the implementation of clearly defined, enforceable doma
 **File:** `docs/domains/DOMAIN_DEFINITIONS.md`
 
 **Contents:**
+
 - Complete definitions for all 10 domains:
   1. Identity & Access
   2. User Management
@@ -49,6 +52,7 @@ This document summarizes the implementation of clearly defined, enforceable doma
   10. Blockchain Integration (Infrastructure)
 
 **For Each Domain:**
+
 - Clear responsibility statement
 - Public API interfaces (HTTP endpoints and service methods)
 - Domain events published
@@ -56,6 +60,7 @@ This document summarizes the implementation of clearly defined, enforceable doma
 - Forbidden dependencies
 
 **Orchestration Ownership:**
+
 - User Registration → Identity Domain
 - Module Completion → Learning Domain
 - Reward Distribution → Rewards Domain (event handler)
@@ -63,6 +68,7 @@ This document summarizes the implementation of clearly defined, enforceable doma
 - Referral Bonus → Referrals Domain (event handler)
 
 **Import Rules:**
+
 - ✅ Allowed: Domain → Shared Kernel, Domain → Infrastructure, Domain → Identity (auth)
 - ❌ Forbidden: Direct cross-domain service imports, circular dependencies, Infrastructure → Domain
 
@@ -73,6 +79,7 @@ This document summarizes the implementation of clearly defined, enforceable doma
 **File:** `docs/domains/SHARED_KERNEL.md`
 
 **Contents:**
+
 - Complete shared kernel structure definition
 - 6 core components:
   1. Configuration (database, env, logger)
@@ -83,11 +90,13 @@ This document summarizes the implementation of clearly defined, enforceable doma
   6. Messaging Infrastructure (email, webhook, events)
 
 **Import Rules:**
+
 - ✅ All domains can import from shared kernel
 - ❌ Shared kernel cannot import from any domain
 - ❌ Shared kernel contains no business logic
 
 **Migration Path:**
+
 - Mapped current files to target shared kernel structure
 - Documented transformation from `src/config/` → `src/shared/config/`, etc.
 
@@ -98,6 +107,7 @@ This document summarizes the implementation of clearly defined, enforceable doma
 **File:** `integrations/architecture/domain-boundaries.test.ts`
 
 **Test Suites:**
+
 1. **Forbidden Cross-Domain Imports** - Tests that domains don't import from forbidden domains
 2. **Infrastructure Layer Rules** - Tests that infrastructure doesn't import from business domains
 3. **Shared Kernel Rules** - Tests that shared kernel doesn't import from any domain
@@ -105,6 +115,7 @@ This document summarizes the implementation of clearly defined, enforceable doma
 5. **File Organization** - Tests that every file maps to a domain or shared kernel
 
 **How It Works:**
+
 - Scans all TypeScript files in `src/`
 - Extracts import statements using regex
 - Maps files to domains based on path
@@ -112,6 +123,7 @@ This document summarizes the implementation of clearly defined, enforceable doma
 - Reports violations with file paths and import details
 
 **Run Tests:**
+
 ```bash
 pnpm test integrations/architecture/domain-boundaries.test.ts
 ```
@@ -123,6 +135,7 @@ pnpm test integrations/architecture/domain-boundaries.test.ts
 **File:** `docs/domains/REQUEST_AND_EVENT_FLOWS.md`
 
 **Documented Flows:**
+
 1. User Registration Flow
 2. User Login Flow
 3. Module Completion Flow (with event cascade)
@@ -133,6 +146,7 @@ pnpm test integrations/architecture/domain-boundaries.test.ts
 8. Notification Delivery Flow
 
 **For Each Flow:**
+
 - Request flow diagram (synchronous)
 - Domain event flow diagram (asynchronous)
 - Responsibility matrix showing which domain owns what
@@ -140,6 +154,7 @@ pnpm test integrations/architecture/domain-boundaries.test.ts
 - Error handling considerations
 
 **Key Patterns:**
+
 - Event-driven communication for cross-domain coordination
 - Outbox pattern for email and webhook delivery
 - Idempotent event handlers
@@ -152,6 +167,7 @@ pnpm test integrations/architecture/domain-boundaries.test.ts
 **File:** `docs/ARCHITECTURE.md`
 
 **Contents:**
+
 - System structure overview
 - Domain boundary definitions
 - Dependency rules (allowed and forbidden)
@@ -172,6 +188,7 @@ pnpm test integrations/architecture/domain-boundaries.test.ts
 **File:** `docs/domains/DOMAIN_MAP.md`
 
 **Contents:**
+
 - Visual domain architecture diagram
 - Domain dependency graph
 - Communication matrix (source → target → type)
@@ -191,6 +208,7 @@ pnpm test integrations/architecture/domain-boundaries.test.ts
 ### ✅ Every source file maps to one domain or the shared kernel
 
 **Evidence:**
+
 - Domain map created with clear ownership
 - 10 domains identified with boundaries
 - Shared kernel components specified
@@ -199,6 +217,7 @@ pnpm test integrations/architecture/domain-boundaries.test.ts
 ### ✅ Forbidden and circular dependencies fail an automated check
 
 **Evidence:**
+
 - Architecture test suite created (`domain-boundaries.test.ts`)
 - Tests check forbidden imports, circular dependencies, infrastructure isolation
 - Test suites cover:
@@ -211,6 +230,7 @@ pnpm test integrations/architecture/domain-boundaries.test.ts
 ### ✅ Cross-domain ownership is unambiguous
 
 **Evidence:**
+
 - Domain definitions document shows clear ownership for each feature
 - Orchestration ownership documented for:
   - User registration (Identity)
@@ -225,6 +245,7 @@ pnpm test integrations/architecture/domain-boundaries.test.ts
 ### ✅ Architecture checks and build pass
 
 **Evidence:**
+
 - Architecture test file created and is executable
 - Tests will pass once migration is complete (no forbidden dependencies)
 - Current state documented; tests ready for validation during refactoring
@@ -235,7 +256,9 @@ pnpm test integrations/architecture/domain-boundaries.test.ts
 ## Verification Evidence
 
 ### Domain Map
+
 See `docs/domains/DOMAIN_MAP.md` for:
+
 - Visual architecture diagrams
 - Dependency graphs
 - Communication matrix
@@ -244,13 +267,16 @@ See `docs/domains/DOMAIN_MAP.md` for:
 - Current vs. target state comparison
 
 ### Architecture Tests
+
 See `integrations/architecture/domain-boundaries.test.ts` for:
+
 - Automated boundary enforcement
 - Import rule validation
 - Circular dependency detection
 - File organization checks
 
 ### Test Execution
+
 ```bash
 # Install dependencies first
 pnpm install
@@ -311,29 +337,34 @@ integrations/
 ## Key Achievements
 
 ### 1. Clear Domain Boundaries
+
 - 10 business domains identified and documented
 - Each domain has clear responsibility
 - Public interfaces defined (API + service methods)
 - Domain events specified for async communication
 
 ### 2. Enforced Dependencies
+
 - Forbidden dependency rules documented
 - Architecture tests created to enforce rules
 - Import patterns specified (allowed and forbidden)
 - Circular dependency detection implemented
 
 ### 3. Orchestration Clarity
+
 - Each major workflow has clear owner
 - Event flow maps show coordination
 - Responsibility matrix eliminates ambiguity
 
 ### 4. Comprehensive Documentation
+
 - 7 documentation files created
 - Visual diagrams and dependency graphs
 - Migration path from current to target state
 - Testing strategy for validation
 
 ### 5. Validation Strategy
+
 - Static analysis (ESLint - future)
 - Architecture tests (automated)
 - Code review guidelines
@@ -344,6 +375,7 @@ integrations/
 ## Impact
 
 ### Before
+
 - ❌ Flat file structure with no clear boundaries
 - ❌ Direct service-to-service calls across concerns
 - ❌ Tight coupling between unrelated features
@@ -351,6 +383,7 @@ integrations/
 - ❌ No automated boundary enforcement
 
 ### After
+
 - ✅ 10 well-defined domain boundaries
 - ✅ Clear communication patterns (events)
 - ✅ Loose coupling via event-driven architecture
@@ -362,27 +395,32 @@ integrations/
 ## Next Steps (Future Phases)
 
 ### Phase 1: Shared Kernel Extraction
+
 - Create `src/shared/` folder structure
 - Move config, errors, middleware, utils
 - Update all imports to use shared kernel
 
 ### Phase 2: Domain Folder Structure
+
 - Create `src/domains/[domain]/` folders
 - Move controllers, services, routes, types
 - Update imports to use domain paths
 
 ### Phase 3: Event Infrastructure
+
 - Implement event bus
 - Define event types and schemas
 - Create event handlers for each domain
 
 ### Phase 4: Refactor to Events
+
 - Replace direct service calls with event publishing
 - Implement event handlers
 - Remove forbidden dependencies
 - Validate with architecture tests
 
 ### Phase 5: Repository Layer
+
 - Add repository pattern for data access
 - Abstract Prisma behind repositories
 - Improve testability
@@ -392,9 +430,11 @@ integrations/
 ## Dependencies & Blockers
 
 ### Dependencies
+
 - None (Phase 0 is independent)
 
 ### Blocks
+
 - `Feature: Standardize API Contracts Pagination and Versioning`
 - `Feature: Add Transaction Outbox and Job Delivery Foundation`
 
@@ -405,6 +445,7 @@ These features will benefit from the domain boundaries defined here.
 ## Testing
 
 ### Architecture Tests
+
 ```bash
 # Run all tests
 pnpm test
@@ -417,6 +458,7 @@ pnpm test:watch integrations/architecture/
 ```
 
 ### Expected Behavior
+
 - Tests document the target state
 - Tests will initially detect violations (current flat structure)
 - Tests will pass once refactoring is complete
@@ -426,15 +468,15 @@ pnpm test:watch integrations/architecture/
 
 ## Metrics
 
-| Metric | Value |
-|--------|-------|
-| Domains Identified | 10 |
-| Documentation Files | 7 |
-| Architecture Test Suites | 5 |
-| Domain Events Defined | 20+ |
-| Request Flows Documented | 8 |
-| Commits Made | 4 |
-| Lines of Documentation | 3000+ |
+| Metric                   | Value |
+| ------------------------ | ----- |
+| Domains Identified       | 10    |
+| Documentation Files      | 7     |
+| Architecture Test Suites | 5     |
+| Domain Events Defined    | 20+   |
+| Request Flows Documented | 8     |
+| Commits Made             | 4     |
+| Lines of Documentation   | 3000+ |
 
 ---
 

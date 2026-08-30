@@ -87,7 +87,7 @@ describe('AuditEventService', () => {
           action: 'transaction.created',
           actor: { type: ActorType.WORKER, id: 'reward' },
           target: { type: 'Transaction', id: 't-1' },
-        }).recordClass
+        }).recordClass,
       ).toBe(RecordClass.IMMUTABLE)
 
       expect(
@@ -95,7 +95,7 @@ describe('AuditEventService', () => {
           action: 'module.archived',
           actor: { type: ActorType.ADMIN, id: 'a-1' },
           target: { type: 'Module', id: 'm-1' },
-        }).recordClass
+        }).recordClass,
       ).toBe(RecordClass.ARCHIVABLE)
     })
 
@@ -106,7 +106,7 @@ describe('AuditEventService', () => {
           actor: { type: ActorType.SYSTEM },
           target: { type: 'Unknown' },
           recordClass: RecordClass.DELETABLE,
-        }).recordClass
+        }).recordClass,
       ).toBe(RecordClass.DELETABLE)
     })
 
@@ -155,7 +155,8 @@ describe('AuditEventService', () => {
         action: 'login.succeeded',
         actor: { type: ActorType.USER, id: 'u-1' },
         target: { type: 'Session', id: 's-1' },
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.6099.109',
+        userAgent:
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.6099.109',
       })
 
       expect(row.userAgentFamily).toBe('Chrome')
@@ -170,7 +171,8 @@ describe('AuditEventService', () => {
         target: { type: 'Wallet', id: 'w-1' },
         metadata: {
           walletId: 'w-1',
-          secretSeed: 'SBQWY3DNPFWGSZTFNV4WQZLBOJ7SFQNDBQFXHTOYIY5QYVCSFRCFUKPP',
+          secretSeed:
+            'SBQWY3DNPFWGSZTFNV4WQZLBOJ7SFQNDBQFXHTOYIY5QYVCSFRCFUKPP',
           email: 'learner@example.com',
         },
       })
@@ -189,7 +191,11 @@ describe('AuditEventService', () => {
         metadata: { from: 'RESERVED', to: 'ACTIVE', attempt: 2 },
       })
 
-      expect(JSON.parse(row.metadata!)).toEqual({ from: 'RESERVED', to: 'ACTIVE', attempt: 2 })
+      expect(JSON.parse(row.metadata!)).toEqual({
+        from: 'RESERVED',
+        to: 'ACTIVE',
+        attempt: 2,
+      })
     })
   })
 
@@ -213,21 +219,25 @@ describe('AuditEventService', () => {
     })
 
     it('swallows a write failure — standalone auditing must not break the caller', async () => {
-      vi.mocked(prisma.auditEvent.create).mockRejectedValue(new Error('db down'))
+      vi.mocked(prisma.auditEvent.create).mockRejectedValue(
+        new Error('db down'),
+      )
 
       await expect(
         service.record({
           action: 'login.failed',
           actor: { type: ActorType.ANONYMOUS },
           target: { type: 'User' },
-        })
+        }),
       ).resolves.toBeUndefined()
 
       expect(logger.error).toHaveBeenCalled()
     })
 
     it('does not log the metadata when a write fails', async () => {
-      vi.mocked(prisma.auditEvent.create).mockRejectedValue(new Error('db down'))
+      vi.mocked(prisma.auditEvent.create).mockRejectedValue(
+        new Error('db down'),
+      )
 
       await service.record({
         action: 'login.failed',
@@ -261,14 +271,18 @@ describe('AuditEventService', () => {
     })
 
     it('propagates a failure so the surrounding transaction rolls back', async () => {
-      const tx = { auditEvent: { create: vi.fn().mockRejectedValue(new Error('constraint')) } }
+      const tx = {
+        auditEvent: {
+          create: vi.fn().mockRejectedValue(new Error('constraint')),
+        },
+      }
 
       await expect(
         service.recordWithin(tx, {
           action: 'user.anonymized',
           actor: { type: ActorType.SYSTEM, id: 'sweep' },
           target: { type: 'User', id: 'u-1' },
-        })
+        }),
       ).rejects.toThrow('constraint')
     })
   })
@@ -303,25 +317,35 @@ describe('AuditEventService', () => {
       const executeRawUnsafe = vi.fn().mockResolvedValue(0)
       const executeRaw = vi.fn().mockResolvedValue(12)
 
-      vi.mocked(prisma.$transaction).mockImplementation(
-        (async (callback: (tx: unknown) => Promise<number>) =>
-          callback({ $executeRawUnsafe: executeRawUnsafe, $executeRaw: executeRaw })) as never
+      vi.mocked(prisma.$transaction).mockImplementation((async (
+        callback: (tx: unknown) => Promise<number>,
+      ) =>
+        callback({
+          $executeRawUnsafe: executeRawUnsafe,
+          $executeRaw: executeRaw,
+        })) as never)
+
+      const deleted = await service.purgeExpired(
+        new Date('2026-08-24T00:00:00.000Z'),
       )
 
-      const deleted = await service.purgeExpired(new Date('2026-08-24T00:00:00.000Z'))
-
       expect(deleted).toBe(12)
-      expect(executeRawUnsafe).toHaveBeenCalledWith(`SET LOCAL "${AUDIT_PURGE_SETTING}" = 'on'`)
+      expect(executeRawUnsafe).toHaveBeenCalledWith(
+        `SET LOCAL "${AUDIT_PURGE_SETTING}" = 'on'`,
+      )
       expect(executeRaw).toHaveBeenCalledOnce()
     })
 
     it('deletes by timestamp only, so no single event can be targeted', async () => {
       const executeRaw = vi.fn().mockResolvedValue(0)
 
-      vi.mocked(prisma.$transaction).mockImplementation(
-        (async (callback: (tx: unknown) => Promise<number>) =>
-          callback({ $executeRawUnsafe: vi.fn(), $executeRaw: executeRaw })) as never
-      )
+      vi.mocked(prisma.$transaction).mockImplementation((async (
+        callback: (tx: unknown) => Promise<number>,
+      ) =>
+        callback({
+          $executeRawUnsafe: vi.fn(),
+          $executeRaw: executeRaw,
+        })) as never)
 
       await service.purgeExpired(new Date('2026-08-24T00:00:00.000Z'))
 
@@ -352,7 +376,11 @@ describe('AuditEventService', () => {
       await service.list({ actorId: 'admin-1', targetType: 'User', from, to })
 
       expect(prisma.auditEvent.findMany).toHaveBeenCalledWith({
-        where: { actorId: 'admin-1', targetType: 'User', occurredAt: { gte: from, lte: to } },
+        where: {
+          actorId: 'admin-1',
+          targetType: 'User',
+          occurredAt: { gte: from, lte: to },
+        },
         orderBy: { occurredAt: 'desc' },
         take: 50,
         skip: 0,
@@ -365,7 +393,7 @@ describe('AuditEventService', () => {
       await service.list()
 
       expect(prisma.auditEvent.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: {} })
+        expect.objectContaining({ where: {} }),
       )
     })
 
@@ -375,7 +403,7 @@ describe('AuditEventService', () => {
       await service.list({ take: 100_000 })
 
       expect(prisma.auditEvent.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ take: 200 })
+        expect.objectContaining({ take: 200 }),
       )
     })
 
@@ -385,7 +413,7 @@ describe('AuditEventService', () => {
       await service.list({ take: 0 })
 
       expect(prisma.auditEvent.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ take: 1 })
+        expect.objectContaining({ take: 1 }),
       )
     })
   })

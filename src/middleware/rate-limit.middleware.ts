@@ -3,33 +3,44 @@ import { NextFunction, Request, Response } from 'express'
 import { env } from '../config/env'
 
 interface RateLimitOptions {
-  windowMs: number;
-  max: number;
-  message?: string;
-  skipSuccessfulRequests?: boolean;
-  skipFailedRequests?: boolean;
+  windowMs: number
+  max: number
+  message?: string
+  skipSuccessfulRequests?: boolean
+  skipFailedRequests?: boolean
 }
 
 interface RateLimitData {
-  count: number;
-  resetTime: number;
+  count: number
+  resetTime: number
 }
 
-function createStore () {
+function createStore() {
   return new Map<string, RateLimitData>()
 }
 
-function getClientIP (req: Request): string {
-  return (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+function getClientIP(req: Request): string {
+  return (
+    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
     (req.headers['x-real-ip'] as string) ||
     req.connection.remoteAddress ||
     req.socket.remoteAddress ||
     'unknown'
+  )
 }
 
-function createRateLimiter (options: RateLimitOptions, store: Map<string, RateLimitData>, weakStore?: WeakMap<Request, RateLimitData>) {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { windowMs, max, message = 'Too many requests, please try again later.', skipSuccessfulRequests = false, skipFailedRequests = false } = options
+function createRateLimiter(
+  options: RateLimitOptions,
+  store: Map<string, RateLimitData>,
+  weakStore?: WeakMap<Request, RateLimitData>,
+) {
+  const {
+    windowMs,
+    max,
+    message = 'Too many requests, please try again later.',
+    skipSuccessfulRequests = false,
+    skipFailedRequests = false,
+  } = options
   const isTest = process.env.NODE_ENV === 'test'
 
   return (req: Request, res: Response, next: NextFunction) => {
@@ -77,7 +88,7 @@ export const generalLimiter = createRateLimiter(
     max: env.RATE_LIMIT_GENERAL_MAX,
   },
   createStore(),
-  new WeakMap<Request, RateLimitData>()
+  new WeakMap<Request, RateLimitData>(),
 )
 
 // Strict limiter for auth endpoints
@@ -87,7 +98,7 @@ export const authLimiter = createRateLimiter(
     max: env.RATE_LIMIT_AUTH_MAX,
   },
   createStore(),
-  new WeakMap<Request, RateLimitData>()
+  new WeakMap<Request, RateLimitData>(),
 )
 
 // Strict limiter for phone OTP endpoints (request + verify)
@@ -97,7 +108,7 @@ export const otpLimiter = createRateLimiter(
     max: env.RATE_LIMIT_OTP_MAX,
   },
   createStore(),
-  new WeakMap<Request, RateLimitData>()
+  new WeakMap<Request, RateLimitData>(),
 )
 
 // Employer-specific limiter with higher limits
@@ -107,7 +118,7 @@ export const employerLimiter = createRateLimiter(
     max: env.RATE_LIMIT_EMPLOYER_MAX,
   },
   createStore(),
-  new WeakMap<Request, RateLimitData>()
+  new WeakMap<Request, RateLimitData>(),
 )
 
 // Authenticated users limiter with higher limits
@@ -117,11 +128,15 @@ export const authenticatedLimiter = createRateLimiter(
     max: env.RATE_LIMIT_AUTHENTICATED_MAX,
   },
   createStore(),
-  new WeakMap<Request, RateLimitData>()
+  new WeakMap<Request, RateLimitData>(),
 )
 
 // Middleware to choose limiter based on user type
-export function dynamicRateLimiter (req: Request, res: Response, next: NextFunction) {
+export function dynamicRateLimiter(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   // Assuming req.user is set by auth middleware
   const user = (req as any).user
   if (user && user.role === 'employer') {

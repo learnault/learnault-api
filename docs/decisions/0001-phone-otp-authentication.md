@@ -28,13 +28,13 @@ Phone-first login materially matters for Learnault's stated target market (low-c
 
 ### Threat model and mitigations
 
-| Threat | Mitigation |
-|---|---|
-| SMS interception / SIM swap | OTP is a convenience login path, not a step-up for high-value actions (wallet export, payouts are out of scope for this change); code expires in 5 minutes and is single-use. |
-| Brute-force code guessing | Codes are 6-digit (1,000,000 space), hashed (`sha256(phone:code)`, phone-peppered so a leaked hash table can't be replayed against another number), and the challenge locks after 5 wrong attempts, forcing a fresh request. |
-| Phone number enumeration via `LOGIN` | Unauthenticated `otp/request` always returns the same generic 200 body regardless of whether the phone is registered/verified — mirrors the existing `forgotPassword` anti-enumeration pattern. No challenge row or SMS is created for unknown/unverified phones. |
-| Request flooding to exhaust SMS budget | Three independent limits: per-IP (route middleware), per-phone (cooldown + hourly cap), per-device where a `deviceId` is supplied. A new request always revokes prior pending challenges for that user+purpose, so only one challenge can be outstanding at a time. |
-| Phone takeover (attacker verifies a phone another user already verified) | `PHONE_VERIFICATION` checks for an existing *verified* owner of the normalized number before creating a challenge and rejects with 409. |
+| Threat                                                                   | Mitigation                                                                                                                                                                                                                                                          |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SMS interception / SIM swap                                              | OTP is a convenience login path, not a step-up for high-value actions (wallet export, payouts are out of scope for this change); code expires in 5 minutes and is single-use.                                                                                       |
+| Brute-force code guessing                                                | Codes are 6-digit (1,000,000 space), hashed (`sha256(phone:code)`, phone-peppered so a leaked hash table can't be replayed against another number), and the challenge locks after 5 wrong attempts, forcing a fresh request.                                        |
+| Phone number enumeration via `LOGIN`                                     | Unauthenticated `otp/request` always returns the same generic 200 body regardless of whether the phone is registered/verified — mirrors the existing `forgotPassword` anti-enumeration pattern. No challenge row or SMS is created for unknown/unverified phones.   |
+| Request flooding to exhaust SMS budget                                   | Three independent limits: per-IP (route middleware), per-phone (cooldown + hourly cap), per-device where a `deviceId` is supplied. A new request always revokes prior pending challenges for that user+purpose, so only one challenge can be outstanding at a time. |
+| Phone takeover (attacker verifies a phone another user already verified) | `PHONE_VERIFICATION` checks for an existing _verified_ owner of the normalized number before creating a challenge and rejects with 409.                                                                                                                             |
 
 ### Cost rationale
 

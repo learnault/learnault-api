@@ -17,14 +17,15 @@ export const isoDateSchema = z
   .string()
   .datetime('Invalid ISO 8601 UTC date string format')
 
-export const sortOrderSchema = z
-  .nativeEnum(SortOrder)
-  .default(SortOrder.DESC)
+export const sortOrderSchema = z.nativeEnum(SortOrder).default(SortOrder.DESC)
 
 export const assetAmountSchema = z.object({
   amount: z
     .string()
-    .regex(/^\d+(\.\d+)?$/, 'Amount must be a numeric decimal or integer string'),
+    .regex(
+      /^\d+(\.\d+)?$/,
+      'Amount must be a numeric decimal or integer string',
+    ),
   assetCode: z.string().min(1, 'Asset code is required'),
   issuer: z.string().nullable().optional(),
 })
@@ -61,7 +62,9 @@ export const createPaginatedQuerySchema = (customFields?: ZodRawShape) => {
   return pagePaginationSchema.extend(customFields || {})
 }
 
-export const createCursorPaginatedQuerySchema = (customFields?: ZodRawShape) => {
+export const createCursorPaginatedQuerySchema = (
+  customFields?: ZodRawShape,
+) => {
   return cursorPaginationSchema.extend(customFields || {})
 }
 
@@ -87,8 +90,8 @@ export const createPaginationMeta = ({
   version?: string
 }): PaginationMeta => {
   const totalPages = Math.ceil(total / limit) || 0
-  
-return {
+
+  return {
     page,
     limit,
     total,
@@ -132,11 +135,11 @@ export const createCursorPaginationMeta = ({
 export const createSuccessEnvelope = <T>(
   data: T,
   message?: string,
-  meta?: Partial<RequestMetadata>
+  meta?: Partial<RequestMetadata>,
 ): ApiResponse<T> => {
   const now = new Date().toISOString()
-  
-return {
+
+  return {
     success: true,
     data,
     message,
@@ -152,7 +155,7 @@ return {
 export const createPaginatedEnvelope = <T>(
   data: T[],
   meta: PaginationMeta,
-  message?: string
+  message?: string,
 ): PaginatedResponse<T> => {
   return {
     success: true,
@@ -166,7 +169,7 @@ export const createPaginatedEnvelope = <T>(
 export const createCursorPaginatedEnvelope = <T>(
   data: T[],
   meta: CursorPaginationMeta,
-  message?: string
+  message?: string,
 ): CursorPaginatedResponse<T> => {
   return {
     success: true,

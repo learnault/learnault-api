@@ -25,18 +25,27 @@ export const WALLET_TRANSITIONS: TransitionMap<WalletStatus> = {
   DISABLED: [],
 } as const
 
-export function canTransitionWallet(from: WalletStatus, to: WalletStatus): boolean {
+export function canTransitionWallet(
+  from: WalletStatus,
+  to: WalletStatus,
+): boolean {
   return canTransition(WALLET_TRANSITIONS, from, to)
 }
 
 export class InvalidWalletTransitionError extends Error {
-  constructor(readonly from: WalletStatus, readonly to: WalletStatus) {
+  constructor(
+    readonly from: WalletStatus,
+    readonly to: WalletStatus,
+  ) {
     super(`Cannot transition wallet status from '${from}' to '${to}'`)
     this.name = 'InvalidWalletTransitionError'
   }
 }
 
-export function assertValidWalletTransition(from: WalletStatus, to: WalletStatus): void {
+export function assertValidWalletTransition(
+  from: WalletStatus,
+  to: WalletStatus,
+): void {
   if (!canTransitionWallet(from, to)) {
     throw new InvalidWalletTransitionError(from, to)
   }
@@ -123,9 +132,7 @@ export function toPublicWallet(wallet: WalletRecord): PublicWallet {
 }
 
 export type WalletEligibilityCode =
-  | 'USER_NOT_FOUND'
-  | 'USER_NOT_VERIFIED'
-  | 'CUSTODIAL_CONSENT_REQUIRED'
+  'USER_NOT_FOUND' | 'USER_NOT_VERIFIED' | 'CUSTODIAL_CONSENT_REQUIRED'
 
 export class WalletEligibilityError extends Error {
   constructor(readonly code: WalletEligibilityCode) {

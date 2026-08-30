@@ -31,7 +31,7 @@ router.get(
   '/',
   authenticate,
   validate({ query: credentialQuerySchema }),
-  credentialController.getUserCredentials
+  credentialController.getUserCredentials,
 )
 
 // GET /credentials/verify/:onChainId - Public verification endpoint
@@ -39,7 +39,7 @@ router.get(
 router.get(
   '/verify/:onChainId',
   validate({ params: onChainIdSchema }),
-  credentialController.verifyCredential
+  credentialController.verifyCredential,
 )
 
 // GET /credentials/:id - Get single credential by ID
@@ -48,7 +48,7 @@ router.get(
   '/:id',
   authenticate,
   validate({ params: credentialIdSchema }),
-  credentialController.getCredentialById
+  credentialController.getCredentialById,
 )
 
 export default router

@@ -19,9 +19,9 @@ export function slugify(input: string): string {
 export function truncate(
   input: string,
   maxLength: number,
-  ellipsis = '...'
+  ellipsis = '...',
 ): string {
   if (input.length <= maxLength) return input
-  
-return input.slice(0, maxLength - ellipsis.length) + ellipsis
+
+  return input.slice(0, maxLength - ellipsis.length) + ellipsis
 }

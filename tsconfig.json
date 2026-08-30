@@ -16,7 +16,7 @@
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
+    "emitDecoratorMetadata": true
     // "ignoreDeprecations": "6.0"
   },
   "include": ["src/**/*"],

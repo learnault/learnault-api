@@ -81,26 +81,46 @@ describe('StellarService — wallet status additions', () => {
       expect(snapshot.found).toBe(true)
       expect(snapshot.lastModifiedTime).toBe('2026-08-30T00:00:00Z')
       expect(snapshot.balances).toEqual([
-        { assetType: 'native', assetCode: 'XLM', issuer: null, amount: '100.1234567' },
-        { assetType: 'credit_alphanum4', assetCode: 'USDC', issuer: 'GCISSUER...', amount: '5.0000001' },
+        {
+          assetType: 'native',
+          assetCode: 'XLM',
+          issuer: null,
+          amount: '100.1234567',
+        },
+        {
+          assetType: 'credit_alphanum4',
+          assetCode: 'USDC',
+          issuer: 'GCISSUER...',
+          amount: '5.0000001',
+        },
       ])
     })
 
     it('treats a 404 (unfunded account) as found: false rather than an error', async () => {
-      const notFound = Object.assign(new Error('not found'), { response: { status: 404 } })
+      const notFound = Object.assign(new Error('not found'), {
+        response: { status: 404 },
+      })
       mockGetAccount.mockRejectedValue(notFound)
 
       const snapshot = await service.getAccountSnapshot('GPUBKEY...')
 
-      expect(snapshot).toEqual({ found: false, lastModifiedTime: null, balances: [] })
+      expect(snapshot).toEqual({
+        found: false,
+        lastModifiedTime: null,
+        balances: [],
+      })
     })
 
     it('classifies a timeout as HORIZON_TIMEOUT', async () => {
       mockGetAccount.mockRejectedValue(
-        Object.assign(new Error('timeout of 30000ms exceeded'), { code: 'ECONNABORTED' }),
+        Object.assign(new Error('timeout of 30000ms exceeded'), {
+          code: 'ECONNABORTED',
+        }),
       )
 
-      await expect(service.getAccountSnapshot('GPUBKEY...')).rejects.toMatchObject({
+      await expect(
+        service.getAccountSnapshot('GPUBKEY...'),
+      ).rejects.toMatchObject({
         code: 'HORIZON_TIMEOUT',
       })
     })
@@ -108,7 +128,9 @@ describe('StellarService — wallet status additions', () => {
     it('classifies other failures as HORIZON_UNAVAILABLE', async () => {
       mockGetAccount.mockRejectedValue(new Error('ECONNREFUSED'))
 
-      await expect(service.getAccountSnapshot('GPUBKEY...')).rejects.toMatchObject({
+      await expect(
+        service.getAccountSnapshot('GPUBKEY...'),
+      ).rejects.toMatchObject({
         code: 'HORIZON_UNAVAILABLE',
       })
     })
@@ -172,7 +194,10 @@ describe('StellarService — wallet status additions', () => {
             to: 'GRECEIVER',
             asset_type: 'native',
             amount: '1.0000000',
-            transaction: { memo_type: 'text', memo: `bad\x00memo${'x'.repeat(300)}` },
+            transaction: {
+              memo_type: 'text',
+              memo: `bad\x00memo${'x'.repeat(300)}`,
+            },
           },
         ],
       })
@@ -186,7 +211,13 @@ describe('StellarService — wallet status additions', () => {
     it('excludes non-payment operation types (e.g. trustline changes)', async () => {
       mockPaymentsCall.mockResolvedValue({
         records: [
-          { id: 'op-1', paging_token: 'tok-1', type: 'change_trust', created_at: 'x', transaction_hash: 'h' },
+          {
+            id: 'op-1',
+            paging_token: 'tok-1',
+            type: 'change_trust',
+            created_at: 'x',
+            transaction_hash: 'h',
+          },
         ],
       })
 
@@ -196,7 +227,9 @@ describe('StellarService — wallet status additions', () => {
     })
 
     it('returns an empty page for a 404 rather than throwing', async () => {
-      mockPaymentsCall.mockRejectedValue(Object.assign(new Error('not found'), { response: { status: 404 } }))
+      mockPaymentsCall.mockRejectedValue(
+        Object.assign(new Error('not found'), { response: { status: 404 } }),
+      )
 
       const page = await service.getPaymentHistory('GRECEIVER')
 
@@ -206,7 +239,9 @@ describe('StellarService — wallet status additions', () => {
     it('classifies provider failures as HORIZON_UNAVAILABLE', async () => {
       mockPaymentsCall.mockRejectedValue(new Error('ECONNRESET'))
 
-      await expect(service.getPaymentHistory('GRECEIVER')).rejects.toMatchObject({
+      await expect(
+        service.getPaymentHistory('GRECEIVER'),
+      ).rejects.toMatchObject({
         code: 'HORIZON_UNAVAILABLE',
       })
     })

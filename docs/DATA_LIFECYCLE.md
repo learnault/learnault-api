@@ -15,12 +15,12 @@ explains it. `tests/audit/classification.test.ts` fails if a model exists in
 
 Every record is exactly one of four classes.
 
-| Class | Meaning | Deletion |
-| --- | --- | --- |
-| **MUTABLE** | Updated in place. Where the history matters, it lives in audit events, not in the row. | Purged when retention expires |
+| Class          | Meaning                                                                                                                             | Deletion                              |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| **MUTABLE**    | Updated in place. Where the history matters, it lives in audit events, not in the row.                                              | Purged when retention expires         |
 | **ARCHIVABLE** | Withdrawn by stamping `archivedAt` rather than deleted, because something else still depends on it. Excluded from reads by default. | Purged some time after being archived |
-| **DELETABLE** | Safe to hard-delete. Nothing else depends on it. | Deleted on expiry or erasure |
-| **IMMUTABLE** | Append-only. Never updated. Deleted only by a retention purge, if at all. | Purge only |
+| **DELETABLE**  | Safe to hard-delete. Nothing else depends on it.                                                                                    | Deleted on expiry or erasure          |
+| **IMMUTABLE**  | Append-only. Never updated. Deleted only by a retention purge, if at all.                                                           | Purge only                            |
 
 The distinction that matters most in practice is **archivable vs deletable**. A
 record is archivable when deleting it would strand another record: a `Completion`
@@ -39,21 +39,21 @@ it. `Audited` means mutations must go through
 
 ### Identity
 
-| Model | Class | Retention (anchor) | On erasure | Audited |
-| --- | --- | --- | --- | --- |
-| `User` | MUTABLE | Indefinite | **Anonymize** | Yes |
-| `LearnerPreference` | MUTABLE | Indefinite | Cascade | Yes |
-| `LearnerProfile` | ARCHIVABLE | 365d (`archivedAt`) | Cascade | Yes |
-| `OnboardingProgress` | MUTABLE | Indefinite | Cascade | No |
-| `NotificationPreference` | MUTABLE | Indefinite | Cascade | No |
-| `DataExportRequest` | DELETABLE | **7d** (`completedAt`) | Delete | Yes |
-| `AccountDeletionRequest` | MUTABLE | 7y (`createdAt`) | **Retain** | Yes |
+| Model                    | Class      | Retention (anchor)     | On erasure    | Audited |
+| ------------------------ | ---------- | ---------------------- | ------------- | ------- |
+| `User`                   | MUTABLE    | Indefinite             | **Anonymize** | Yes     |
+| `LearnerPreference`      | MUTABLE    | Indefinite             | Cascade       | Yes     |
+| `LearnerProfile`         | ARCHIVABLE | 365d (`archivedAt`)    | Cascade       | Yes     |
+| `OnboardingProgress`     | MUTABLE    | Indefinite             | Cascade       | No      |
+| `NotificationPreference` | MUTABLE    | Indefinite             | Cascade       | No      |
+| `DataExportRequest`      | DELETABLE  | **7d** (`completedAt`) | Delete        | Yes     |
+| `AccountDeletionRequest` | MUTABLE    | 7y (`createdAt`)       | **Retain**    | Yes     |
 
 `User` is anonymized rather than deleted. Money and credential rows outlive the
 account (see below), and they need a valid referent — so the row survives as a
 tombstone with every identifying column overwritten.
 
-`AccountDeletionRequest` is retained *past the erasure it triggers*: it is the
+`AccountDeletionRequest` is retained _past the erasure it triggers_: it is the
 evidence the request was honoured. That is only acceptable because it holds no
 personal data beyond the user id.
 
@@ -63,13 +63,13 @@ highest-value single row in the database.
 
 ### Money
 
-| Model | Class | Retention (anchor) | On erasure | Audited |
-| --- | --- | --- | --- | --- |
-| `Transaction` | IMMUTABLE | 7y (`createdAt`) | Retain | Yes |
-| `Wallet` | MUTABLE | Indefinite | Retain | Yes |
-| `StellarFunding` | MUTABLE | 7y (`createdAt`) | Retain | Yes |
-| `Referral` | IMMUTABLE | 7y (`createdAt`) | Retain | Yes |
-| `ReferralCode` | ARCHIVABLE | 365d (`archivedAt`) | Cascade | Yes |
+| Model            | Class      | Retention (anchor)  | On erasure | Audited |
+| ---------------- | ---------- | ------------------- | ---------- | ------- |
+| `Transaction`    | IMMUTABLE  | 7y (`createdAt`)    | Retain     | Yes     |
+| `Wallet`         | MUTABLE    | Indefinite          | Retain     | Yes     |
+| `StellarFunding` | MUTABLE    | 7y (`createdAt`)    | Retain     | Yes     |
+| `Referral`       | IMMUTABLE  | 7y (`createdAt`)    | Retain     | Yes     |
+| `ReferralCode`   | ARCHIVABLE | 365d (`archivedAt`) | Cascade    | Yes     |
 
 A ledger a subject can erase is not a ledger. Money rows survive erasure, which
 is only defensible because they carry no personal data in-row — they reference a
@@ -82,10 +82,10 @@ ledger row.
 
 ### Credentials
 
-| Model | Class | Retention | On erasure | Audited |
-| --- | --- | --- | --- | --- |
-| `Credential` | IMMUTABLE | Indefinite | Retain | Yes |
-| `Completion` | IMMUTABLE | Indefinite | **Delete** | Yes |
+| Model        | Class     | Retention  | On erasure | Audited |
+| ------------ | --------- | ---------- | ---------- | ------- |
+| `Credential` | IMMUTABLE | Indefinite | Retain     | Yes     |
+| `Completion` | IMMUTABLE | Indefinite | **Delete** | Yes     |
 
 `Credential` is verifiable by third parties against the chain, so issuance is
 permanent; revocation appends a revocation record rather than editing the row.
@@ -97,15 +97,15 @@ identifier is not.
 
 ### Security
 
-| Model | Class | Retention (anchor) | On erasure | Audited |
-| --- | --- | --- | --- | --- |
-| `AuditEvent` | IMMUTABLE | 7y (`occurredAt`) | Retain | n/a |
-| `AuditLog` *(legacy)* | IMMUTABLE | 2y (`createdAt`) | Anonymize | n/a |
-| `Session` | MUTABLE | 90d (`updatedAt`) | Delete | Yes |
-| `RefreshToken` | MUTABLE | 90d (`updatedAt`) | Cascade | Yes |
-| `VerificationToken` | MUTABLE | 30d (`createdAt`) | Delete | Yes |
-| `OtpChallenge` | MUTABLE | 30d (`createdAt`) | Delete | Yes |
-| `ManagedKeyReference` | IMMUTABLE | Indefinite | Retain | Yes |
+| Model                 | Class     | Retention (anchor) | On erasure | Audited |
+| --------------------- | --------- | ------------------ | ---------- | ------- |
+| `AuditEvent`          | IMMUTABLE | 7y (`occurredAt`)  | Retain     | n/a     |
+| `AuditLog` _(legacy)_ | IMMUTABLE | 2y (`createdAt`)   | Anonymize  | n/a     |
+| `Session`             | MUTABLE   | 90d (`updatedAt`)  | Delete     | Yes     |
+| `RefreshToken`        | MUTABLE   | 90d (`updatedAt`)  | Cascade    | Yes     |
+| `VerificationToken`   | MUTABLE   | 30d (`createdAt`)  | Delete     | Yes     |
+| `OtpChallenge`        | MUTABLE   | 30d (`createdAt`)  | Delete     | Yes     |
+| `ManagedKeyReference` | IMMUTABLE | Indefinite         | Retain     | Yes     |
 
 Indefinite retention of security data is the failure mode this category exists to
 prevent, so everything here is bounded — with one exception.
@@ -120,10 +120,10 @@ already-rotated token is still detectable as theft.
 
 ### Consent
 
-| Model | Class | Retention (anchor) | On erasure | Audited |
-| --- | --- | --- | --- | --- |
-| `ConsentRecord` | IMMUTABLE | 7y (`createdAt`) | Retain | Yes |
-| `PreferenceAuditLog` | IMMUTABLE | 7y (`createdAt`) | Retain | n/a |
+| Model                | Class     | Retention (anchor) | On erasure | Audited |
+| -------------------- | --------- | ------------------ | ---------- | ------- |
+| `ConsentRecord`      | IMMUTABLE | 7y (`createdAt`)   | Retain     | Yes     |
+| `PreferenceAuditLog` | IMMUTABLE | 7y (`createdAt`)   | Retain     | n/a     |
 
 Proof of consent must outlive the account it describes — otherwise a withdrawal
 cannot be demonstrated after the fact. Withdrawal appends a new row; it never
@@ -131,11 +131,11 @@ edits the granting one.
 
 ### Content
 
-| Model | Class | Retention (anchor) | On erasure | Audited |
-| --- | --- | --- | --- | --- |
-| `Module` | ARCHIVABLE | Indefinite (`archivedAt`) | Retain | Yes |
-| `Avatar` | ARCHIVABLE | 365d (`archivedAt`) | Cascade | Yes |
-| `AvatarVariant` | IMMUTABLE | 365d (`createdAt`) | Cascade | No |
+| Model           | Class      | Retention (anchor)        | On erasure | Audited |
+| --------------- | ---------- | ------------------------- | ---------- | ------- |
+| `Module`        | ARCHIVABLE | Indefinite (`archivedAt`) | Retain     | Yes     |
+| `Avatar`        | ARCHIVABLE | 365d (`archivedAt`)       | Cascade    | Yes     |
+| `AvatarVariant` | IMMUTABLE  | 365d (`createdAt`)        | Cascade    | No      |
 
 `Module` is archived and never purged: completions and credentials reference the
 module a learner actually took, so withdrawing content archives it permanently
@@ -143,19 +143,19 @@ rather than removing it.
 
 ### Operational
 
-| Model | Class | Retention (anchor) | On erasure | Audited |
-| --- | --- | --- | --- | --- |
-| `WebhookEndpoint` | ARCHIVABLE | 365d (`archivedAt`) | Retain | Yes |
-| `WebhookDelivery` | MUTABLE | 30d (`createdAt`) | Retain | No |
-| `EmailDelivery` | MUTABLE | 30d (`createdAt`) | Delete | No |
-| `NotificationLog` | MUTABLE | 30d (`createdAt`) | Delete | No |
-| `DeviceToken` | DELETABLE | 90d (`updatedAt`) | Delete | No |
-| `SyncEvent` | IMMUTABLE | 90d (`createdAt`) | Delete | No |
-| `OutboxEvent` | MUTABLE | 30d (`createdAt`) | Retain | No |
-| `JobAttempt` | MUTABLE | 30d (`createdAt`) | Cascade | No |
-| `RolledBackRecord` | IMMUTABLE | 30d (`createdAt`) | Retain | No |
-| `QueueLease` | MUTABLE | Indefinite | Retain | No |
-| `WalletProvisioningJob` | MUTABLE | 90d (`updatedAt`) | Cascade | No |
+| Model                   | Class      | Retention (anchor)  | On erasure | Audited |
+| ----------------------- | ---------- | ------------------- | ---------- | ------- |
+| `WebhookEndpoint`       | ARCHIVABLE | 365d (`archivedAt`) | Retain     | Yes     |
+| `WebhookDelivery`       | MUTABLE    | 30d (`createdAt`)   | Retain     | No      |
+| `EmailDelivery`         | MUTABLE    | 30d (`createdAt`)   | Delete     | No      |
+| `NotificationLog`       | MUTABLE    | 30d (`createdAt`)   | Delete     | No      |
+| `DeviceToken`           | DELETABLE  | 90d (`updatedAt`)   | Delete     | No      |
+| `SyncEvent`             | IMMUTABLE  | 90d (`createdAt`)   | Delete     | No      |
+| `OutboxEvent`           | MUTABLE    | 30d (`createdAt`)   | Retain     | No      |
+| `JobAttempt`            | MUTABLE    | 30d (`createdAt`)   | Cascade    | No      |
+| `RolledBackRecord`      | IMMUTABLE  | 30d (`createdAt`)   | Retain     | No      |
+| `QueueLease`            | MUTABLE    | Indefinite          | Retain     | No      |
+| `WalletProvisioningJob` | MUTABLE    | 90d (`updatedAt`)   | Cascade    | No      |
 
 `EmailDelivery` and `NotificationLog` hold rendered message bodies, which is
 personal data — hence the short window and hard deletion on erasure.
@@ -171,18 +171,18 @@ no user data to erase and nothing to age out.
 `audit_events` is the audit spine. One row records **who** did **what** to
 **which record**, **why**, and under **which request**.
 
-| Column | Purpose |
-| --- | --- |
-| `actorType`, `actorId`, `actorRole` | Who acted. `USER`, `ADMIN`, `SYSTEM`, `WORKER`, `ANONYMOUS`. Role as held *at the time*. |
-| `action` | Dotted name, e.g. `account.deactivated` |
-| `targetType`, `targetId` | Which record changed |
-| `recordClass` | Lifecycle class of the target, from the matrix |
-| `reason` | Justification. Required for `ADMIN` actors |
-| `requestId`, `correlationId`, `source` | Correlation to request logs, outbox events, and the code path |
-| `metadata` | Redacted JSON context |
-| `actorIpHash` | Keyed HMAC of the request IP — never the address |
-| `userAgentFamily` | Coarse family (`Chrome`, `Android`) — never the raw UA |
-| `occurredAt` | When |
+| Column                                 | Purpose                                                                                  |
+| -------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `actorType`, `actorId`, `actorRole`    | Who acted. `USER`, `ADMIN`, `SYSTEM`, `WORKER`, `ANONYMOUS`. Role as held _at the time_. |
+| `action`                               | Dotted name, e.g. `account.deactivated`                                                  |
+| `targetType`, `targetId`               | Which record changed                                                                     |
+| `recordClass`                          | Lifecycle class of the target, from the matrix                                           |
+| `reason`                               | Justification. Required for `ADMIN` actors                                               |
+| `requestId`, `correlationId`, `source` | Correlation to request logs, outbox events, and the code path                            |
+| `metadata`                             | Redacted JSON context                                                                    |
+| `actorIpHash`                          | Keyed HMAC of the request IP — never the address                                         |
+| `userAgentFamily`                      | Coarse family (`Chrome`, `Android`) — never the raw UA                                   |
+| `occurredAt`                           | When                                                                                     |
 
 Separating **actor** from **target** is the point: "an admin deactivated a
 learner" is a materially different event from "a learner deactivated themselves",
@@ -226,22 +226,22 @@ seven. New code writes `audit_events`.
 ## 4. Redaction
 
 Because audit rows cannot be scrubbed later, metadata is filtered on the way
-*in*, by [`src/audit/redaction.ts`](../src/audit/redaction.ts). Two independent
+_in_, by [`src/audit/redaction.ts`](../src/audit/redaction.ts). Two independent
 passes run over every value:
 
 1. **Key matching** — a field named `password`, `refreshToken`, `email`, … is
    replaced regardless of content.
 2. **Value matching** — a value shaped like a Stellar seed, a Stellar public key,
    a JWT, a bearer credential, an email address, an E.164 number, an IPv4
-   address, a 40+ character hex blob, or a PEM header is replaced *even under an
-   innocuous key*, because callers nest secrets in unexpected places.
+   address, a 40+ character hex blob, or a PEM header is replaced _even under an
+   innocuous key_, because callers nest secrets in unexpected places.
 
 Structural caps then bound the whole object: depth 4, 20 array entries, 32 keys,
 256 characters per string, 4 KB serialized.
 
 Over-redaction is treated as its own failure. `statusCode`, `failureCode`,
 `referralCode`, `amountStroops` and `requestId` are all allowed, because an audit
-trail nobody can read is not reviewable. Notably `to` is *allowed*: it is the
+trail nobody can read is not reviewable. Notably `to` is _allowed_: it is the
 obvious name for an email recipient, but also the standard name for the
 destination of a status transition — and the value-level email pattern catches an
 actual recipient anyway.
@@ -355,7 +355,7 @@ matrix after the cooling-off window (`DELETION_COOLING_OFF_DAYS`, default 30):
 
 1. Add it to `prisma/schema.prisma`.
 2. Add a rule to `src/audit/classification.ts` — class, category, retention,
-   anchor, erasure behaviour, whether it is audited, and *why*.
+   anchor, erasure behaviour, whether it is audited, and _why_.
 3. If it is `ARCHIVABLE`, add `archivedAt`, `archivedById` and `archivedReason`,
    plus the `CHECK` constraint in the migration.
 4. Add it to the matrix in this document.
@@ -369,24 +369,24 @@ to prevent.
 
 ## 9. Configuration
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `AUDIT_IP_HASH_SECRET` | *(unset)* | HMAC key for `actorIpHash`. Unset in production omits the hash. |
-| `DELETION_COOLING_OFF_DAYS` | `30` | Window before an erasure request is finalized |
-| `EXPORT_TTL_DAYS` | `7` | Lifetime of an export artifact |
-| `LIFECYCLE_SWEEP_INTERVAL_MS` | `0` (disabled) | Background sweep interval |
+| Variable                      | Default        | Purpose                                                         |
+| ----------------------------- | -------------- | --------------------------------------------------------------- |
+| `AUDIT_IP_HASH_SECRET`        | _(unset)_      | HMAC key for `actorIpHash`. Unset in production omits the hash. |
+| `DELETION_COOLING_OFF_DAYS`   | `30`           | Window before an erasure request is finalized                   |
+| `EXPORT_TTL_DAYS`             | `7`            | Lifetime of an export artifact                                  |
+| `LIFECYCLE_SWEEP_INTERVAL_MS` | `0` (disabled) | Background sweep interval                                       |
 
 ---
 
 ## 10. Tests
 
-| File | Covers |
-| --- | --- |
-| `tests/audit/classification.test.ts` | Every schema model classified; retention, erasure and audit invariants per category |
-| `tests/audit/redaction.test.ts` | Key and value deny-lists, structural caps, IP hashing, UA coarsening, over-redaction |
-| `tests/audit/audit-event.service.test.ts` | Attribution, redaction on write, no mutating API, purge uses the session variable |
-| `tests/audit/audited-mutation.test.ts` | Transaction atomicity, rollback on audit failure, policy enforcement, archive/restore |
-| `tests/audit/archive.test.ts` | Default exclusion, the `findUnique` and write carve-outs, opt-out, patches |
+| File                                           | Covers                                                                                    |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `tests/audit/classification.test.ts`           | Every schema model classified; retention, erasure and audit invariants per category       |
+| `tests/audit/redaction.test.ts`                | Key and value deny-lists, structural caps, IP hashing, UA coarsening, over-redaction      |
+| `tests/audit/audit-event.service.test.ts`      | Attribution, redaction on write, no mutating API, purge uses the session variable         |
+| `tests/audit/audited-mutation.test.ts`         | Transaction atomicity, rollback on audit failure, policy enforcement, archive/restore     |
+| `tests/audit/archive.test.ts`                  | Default exclusion, the `findUnique` and write carve-outs, opt-out, patches                |
 | `tests/integration/audit-immutability.test.ts` | Database-level `UPDATE`/`DELETE`/`TRUNCATE` rejection and the archive `CHECK` constraints |
 
 The integration test is skipped when no test database is reachable. Because

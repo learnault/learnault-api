@@ -34,65 +34,65 @@ export enum TransactionReason {
 
 /** API-layer transaction shape.  `amount` is a 7-decimal XLM string. */
 export interface Transaction {
-  id: string;
-  userId: string;
-  type: TransactionType;
-  status: TransactionStatus;
-  reason: TransactionReason;
+  id: string
+  userId: string
+  type: TransactionType
+  status: TransactionStatus
+  reason: TransactionReason
   /** 7-decimal XLM string, e.g. "5.0000000". Never a JavaScript number. */
-  amount: string;
+  amount: string
   /** 7-decimal XLM string. */
-  balanceBefore: string;
+  balanceBefore: string
   /** 7-decimal XLM string. */
-  balanceAfter: string;
-  referenceId?: string;
-  referenceType?: string;
-  note?: string;
-  createdAt: string;
-  completedAt?: string;
+  balanceAfter: string
+  referenceId?: string
+  referenceType?: string
+  note?: string
+  createdAt: string
+  completedAt?: string
 }
 
 /** API-layer balance shape.  All amounts are 7-decimal XLM strings. */
 export interface Balance {
-  userId: string;
+  userId: string
   /** 7-decimal XLM string. */
-  available: string;
+  available: string
   /** 7-decimal XLM string. */
-  pending: string;
+  pending: string
   /** 7-decimal XLM string. */
-  lifetime: string;
-  updatedAt: string;
+  lifetime: string
+  updatedAt: string
 }
 
 export interface RewardSummary {
-  balance: Balance;
-  recentTransactions: Transaction[];
+  balance: Balance
+  recentTransactions: Transaction[]
   /** 7-decimal XLM string. */
-  earnedThisMonth: string;
+  earnedThisMonth: string
   /** 7-decimal XLM string. */
-  spentThisMonth: string;
+  spentThisMonth: string
 }
 
 // Request types
 export interface CreateTransactionRequest {
-  userId: string;
-  type: TransactionType;
-  reason: TransactionReason;
+  userId: string
+  type: TransactionType
+  reason: TransactionReason
   /** 7-decimal XLM string submitted by the caller. */
-  amount: string;
-  referenceId?: string;
-  referenceType?: string;
-  note?: string;
+  amount: string
+  referenceId?: string
+  referenceType?: string
+  note?: string
 }
 
 export interface TransactionFilterParams {
-  type?: TransactionType;
-  status?: TransactionStatus;
-  reason?: TransactionReason;
-  fromDate?: string;
-  toDate?: string;
+  type?: TransactionType
+  status?: TransactionStatus
+  reason?: TransactionReason
+  fromDate?: string
+  toDate?: string
   /** 7-decimal XLM string (lower bound). */
-  minAmount?: string;
+  minAmount?: string
   /** 7-decimal XLM string (upper bound). */
-  maxAmount?: string;
+  maxAmount?: string
 }

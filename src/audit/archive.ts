@@ -16,7 +16,7 @@ import { RecordClass } from './types.js'
 
 /** Models carrying archive columns, derived from the lifecycle matrix. */
 export const ARCHIVABLE_MODELS: ReadonlySet<string> = new Set(
-  modelsInClass(RecordClass.ARCHIVABLE)
+  modelsInClass(RecordClass.ARCHIVABLE),
 )
 
 /**
@@ -76,7 +76,7 @@ export function mentionsArchivedAt(where: unknown): boolean {
   return (['AND', 'OR', 'NOT'] as const).some(
     (combinator) =>
       Object.prototype.hasOwnProperty.call(clause, combinator) &&
-      mentionsArchivedAt(clause[combinator])
+      mentionsArchivedAt(clause[combinator]),
   )
 }
 
@@ -103,7 +103,11 @@ export async function excludeArchivedFromReads<R>({
   args,
   query,
 }: QueryInterception<unknown, R>): Promise<R> {
-  if (!model || !ARCHIVABLE_MODELS.has(model) || !FILTERED_OPERATIONS.has(operation)) {
+  if (
+    !model ||
+    !ARCHIVABLE_MODELS.has(model) ||
+    !FILTERED_OPERATIONS.has(operation)
+  ) {
     return query(args)
   }
 
@@ -144,13 +148,15 @@ export const archiveExclusionExtension = {
  * Restrict a `where` clause to live rows. Redundant for the operations the
  * extension already covers; useful for `findUnique` and for raw queries.
  */
-export function activeOnly<W extends object>(where?: W): W & { archivedAt: null } {
+export function activeOnly<W extends object>(
+  where?: W,
+): W & { archivedAt: null } {
   return { ...((where ?? {}) as W), archivedAt: null }
 }
 
 /** Restrict a `where` clause to archived rows only. */
 export function archivedOnly<W extends object>(
-  where?: W
+  where?: W,
 ): W & { archivedAt: { not: null } } {
   return { ...((where ?? {}) as W), archivedAt: { not: null } }
 }
@@ -164,7 +170,7 @@ export function archivedOnly<W extends object>(
  * review.
  */
 export function includeArchived<W extends object>(
-  where?: W
+  where?: W,
 ): W & { archivedAt: undefined } {
   return { ...((where ?? {}) as W), archivedAt: undefined }
 }
@@ -176,7 +182,7 @@ export function includeArchived<W extends object>(
 export function archivePatch(
   reason: string,
   archivedById?: string | null,
-  now: Date = new Date()
+  now: Date = new Date(),
 ): ArchiveColumns {
   return {
     archivedAt: now,
@@ -203,7 +209,9 @@ export function isArchived(record: MaybeArchived | null | undefined): boolean {
  * Narrow a point lookup to a live record, returning `null` for an archived one.
  * The counterpart to `findUnique` being exempt from the extension.
  */
-export function assertActive<T extends MaybeArchived>(record: T | null): T | null {
+export function assertActive<T extends MaybeArchived>(
+  record: T | null,
+): T | null {
   return record && !isArchived(record) ? record : null
 }
 
@@ -216,7 +224,7 @@ export function assertActive<T extends MaybeArchived>(record: T | null): T | nul
  */
 export function archivedPurgeCutoff(
   retentionDays: number | null,
-  now: Date = new Date()
+  now: Date = new Date(),
 ): Date | null {
   if (retentionDays === null) {
     return null

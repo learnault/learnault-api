@@ -7,7 +7,9 @@
  * cookie attributes (Path/Domain/SameSite/Expires), which never appear on the
  * request side anyway.
  */
-export function parseCookieHeader(header: string | undefined): Record<string, string> {
+export function parseCookieHeader(
+  header: string | undefined,
+): Record<string, string> {
   const cookies: Record<string, string> = {}
 
   if (!header) {

@@ -39,13 +39,11 @@ describe('RewardService', () => {
 
   beforeEach(() => {
     stellarMock = {
-      sendPayment: vi
-        .fn()
-        .mockResolvedValue({
-          hash: MOCK_TX_HASH,
-          ledger: 123,
-          successful: true,
-        }),
+      sendPayment: vi.fn().mockResolvedValue({
+        hash: MOCK_TX_HASH,
+        ledger: 123,
+        successful: true,
+      }),
       verifyTransaction: vi.fn().mockResolvedValue(true),
     } as unknown as StellarService
 

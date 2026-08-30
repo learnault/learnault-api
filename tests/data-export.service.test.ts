@@ -63,22 +63,47 @@ function mockUserData() {
     lastLoginAt: null,
   } as any)
   vi.mocked(prisma.completion.findMany).mockResolvedValue([
-    { moduleId: 'm1', module: { title: 'Module One' }, score: 90, completedAt: new Date() },
+    {
+      moduleId: 'm1',
+      module: { title: 'Module One' },
+      score: 90,
+      completedAt: new Date(),
+    },
   ] as any)
   vi.mocked(prisma.credential.findMany).mockResolvedValue([
-    { moduleId: 'm1', module: { title: 'Module One' }, onChainId: 'chain-1', issuedAt: new Date() },
+    {
+      moduleId: 'm1',
+      module: { title: 'Module One' },
+      onChainId: 'chain-1',
+      issuedAt: new Date(),
+    },
   ] as any)
   vi.mocked(prisma.transaction.findMany).mockResolvedValue([
-    { id: 't1', amount: 10, type: 'reward', status: 'completed', createdAt: new Date() },
+    {
+      id: 't1',
+      amount: 10,
+      type: 'reward',
+      status: 'completed',
+      createdAt: new Date(),
+    },
   ] as any)
-  vi.mocked(prisma.referralCode.findFirst).mockResolvedValue({ code: 'REF1', createdAt: new Date() } as any)
+  vi.mocked(prisma.referralCode.findFirst).mockResolvedValue({
+    code: 'REF1',
+    createdAt: new Date(),
+  } as any)
   vi.mocked(prisma.referral.findMany).mockResolvedValue([] as any)
   vi.mocked(prisma.referral.findFirst).mockResolvedValue(null)
   vi.mocked(prisma.syncEvent.findMany).mockResolvedValue([] as any)
   vi.mocked(prisma.notificationPreference.findFirst).mockResolvedValue(null)
   vi.mocked(prisma.notificationLog.findMany).mockResolvedValue([] as any)
   vi.mocked(prisma.session.findMany).mockResolvedValue([
-    { userAgent: 'ua', ipAddress: '1.2.3.4', createdAt: new Date(), expiresAt: new Date(), isRevoked: false },
+    {
+      userAgent: 'ua',
+      ipAddress: '1.2.3.4',
+      createdAt: new Date(),
+      expiresAt: new Date(),
+      isRevoked: false,
+    },
   ] as any)
   vi.mocked(prisma.auditLog.findMany).mockResolvedValue([
     { action: 'LOGIN', createdAt: new Date() },
@@ -92,31 +117,42 @@ describe('DataExportService', () => {
     vi.resetAllMocks()
     service = new DataExportService()
     vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any)
-    vi.mocked(emailService.queueEmail).mockResolvedValue({ id: 'email-1' } as any)
+    vi.mocked(emailService.queueEmail).mockResolvedValue({
+      id: 'email-1',
+    } as any)
   })
 
   describe('processQueue', () => {
     it('skips generation when another runner already claimed the row', async () => {
-      vi.mocked(prisma.dataExportRequest.findMany).mockResolvedValue([pendingRow] as any)
-      vi.mocked(prisma.dataExportRequest.updateMany).mockResolvedValue({ count: 0 } as any)
+      vi.mocked(prisma.dataExportRequest.findMany).mockResolvedValue([
+        pendingRow,
+      ] as any)
+      vi.mocked(prisma.dataExportRequest.updateMany).mockResolvedValue({
+        count: 0,
+      } as any)
 
       await service.processQueue()
 
       expect(prisma.dataExportRequest.updateMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: 'exp-1', status: 'pending' } })
+        expect.objectContaining({ where: { id: 'exp-1', status: 'pending' } }),
       )
       expect(prisma.user.findUnique).not.toHaveBeenCalled()
       expect(prisma.dataExportRequest.update).not.toHaveBeenCalled()
     })
 
     it('generates a redacted artifact and marks the request ready with an expiry', async () => {
-      vi.mocked(prisma.dataExportRequest.findMany).mockResolvedValue([pendingRow] as any)
-      vi.mocked(prisma.dataExportRequest.updateMany).mockResolvedValue({ count: 1 } as any)
+      vi.mocked(prisma.dataExportRequest.findMany).mockResolvedValue([
+        pendingRow,
+      ] as any)
+      vi.mocked(prisma.dataExportRequest.updateMany).mockResolvedValue({
+        count: 1,
+      } as any)
       mockUserData()
 
       await service.processQueue()
 
-      const updateArg = vi.mocked(prisma.dataExportRequest.update).mock.calls[0][0] as any
+      const updateArg = vi.mocked(prisma.dataExportRequest.update).mock
+        .calls[0][0] as any
       expect(updateArg.data.status).toBe('ready')
 
       // Redaction: no credentials/secrets anywhere in the artifact
@@ -133,7 +169,8 @@ describe('DataExportService', () => {
       expect(parsed.data.completions[0].moduleTitle).toBe('Module One')
 
       // Time-bounded: expiresAt ≈ now + EXPORT_TTL_DAYS (default 7)
-      const deltaDays = (updateArg.data.expiresAt.getTime() - Date.now()) / DAY_MS
+      const deltaDays =
+        (updateArg.data.expiresAt.getTime() - Date.now()) / DAY_MS
       expect(deltaDays).toBeGreaterThan(6.9)
       expect(deltaDays).toBeLessThan(7.1)
 
@@ -142,18 +179,23 @@ describe('DataExportService', () => {
         'test@example.com',
         expect.any(String),
         expect.any(String),
-        'DATA_EXPORT'
+        'DATA_EXPORT',
       )
     })
 
     it('backs off and returns the request to pending on failure', async () => {
-      vi.mocked(prisma.dataExportRequest.findMany).mockResolvedValue([pendingRow] as any)
-      vi.mocked(prisma.dataExportRequest.updateMany).mockResolvedValue({ count: 1 } as any)
+      vi.mocked(prisma.dataExportRequest.findMany).mockResolvedValue([
+        pendingRow,
+      ] as any)
+      vi.mocked(prisma.dataExportRequest.updateMany).mockResolvedValue({
+        count: 1,
+      } as any)
       vi.mocked(prisma.user.findUnique).mockRejectedValue(new Error('db down'))
 
       await service.processQueue()
 
-      const updateArg = vi.mocked(prisma.dataExportRequest.update).mock.calls[0][0] as any
+      const updateArg = vi.mocked(prisma.dataExportRequest.update).mock
+        .calls[0][0] as any
       expect(updateArg.data.status).toBe('pending')
       expect(updateArg.data.error).toBe('db down')
       expect(updateArg.data.nextAttemptAt).toBeInstanceOf(Date)
@@ -164,12 +206,15 @@ describe('DataExportService', () => {
       vi.mocked(prisma.dataExportRequest.findMany).mockResolvedValue([
         { ...pendingRow, attemptCount: 4 },
       ] as any)
-      vi.mocked(prisma.dataExportRequest.updateMany).mockResolvedValue({ count: 1 } as any)
+      vi.mocked(prisma.dataExportRequest.updateMany).mockResolvedValue({
+        count: 1,
+      } as any)
       vi.mocked(prisma.user.findUnique).mockRejectedValue(new Error('db down'))
 
       await service.processQueue()
 
-      const updateArg = vi.mocked(prisma.dataExportRequest.update).mock.calls[0][0] as any
+      const updateArg = vi.mocked(prisma.dataExportRequest.update).mock
+        .calls[0][0] as any
       expect(updateArg.data.status).toBe('failed')
     })
 
@@ -186,7 +231,9 @@ describe('DataExportService', () => {
 
   describe('purgeExpired', () => {
     it('expires ready requests past their expiry and nulls the artifact', async () => {
-      vi.mocked(prisma.dataExportRequest.updateMany).mockResolvedValue({ count: 2 } as any)
+      vi.mocked(prisma.dataExportRequest.updateMany).mockResolvedValue({
+        count: 2,
+      } as any)
 
       const purged = await service.purgeExpired()
 
@@ -202,8 +249,14 @@ describe('DataExportService', () => {
     it('treats a unique-index violation from a concurrent create as a duplicate', async () => {
       vi.mocked(prisma.dataExportRequest.findFirst)
         .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({ id: 'exp-winner', userId: 'user-1', status: 'pending' } as any)
-      vi.mocked(prisma.dataExportRequest.create).mockRejectedValue({ code: 'P2002' })
+        .mockResolvedValueOnce({
+          id: 'exp-winner',
+          userId: 'user-1',
+          status: 'pending',
+        } as any)
+      vi.mocked(prisma.dataExportRequest.create).mockRejectedValue({
+        code: 'P2002',
+      })
       vi.mocked(prisma.dataExportRequest.findMany).mockResolvedValue([] as any)
 
       const result = await service.requestExport('user-1')

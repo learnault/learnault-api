@@ -96,7 +96,9 @@ export class AuditPolicyError extends Error {
  * })
  * ```
  */
-export async function auditedMutation<T>(spec: AuditedMutationSpec<T>): Promise<T> {
+export async function auditedMutation<T>(
+  spec: AuditedMutationSpec<T>,
+): Promise<T> {
   assertPolicy(spec)
 
   return prisma.$transaction(async (tx) => {
@@ -146,13 +148,16 @@ export async function auditedArchive<T>(input: {
   correlationId?: string | null
   source?: string | null
   metadata?: Record<string, unknown> | null
-  archive: (tx: AuditedTransactionClient, patch: ReturnType<typeof archivePatch>) => Promise<T>
+  archive: (
+    tx: AuditedTransactionClient,
+    patch: ReturnType<typeof archivePatch>,
+  ) => Promise<T>
 }): Promise<T> {
   assertArchivable(input.model, 'archive')
 
   if (!input.reason?.trim()) {
     throw new AuditPolicyError(
-      `Archiving ${input.model} requires a reason: an archive with no stated reason cannot be reviewed later.`
+      `Archiving ${input.model} requires a reason: an archive with no stated reason cannot be reviewed later.`,
     )
   }
 
@@ -183,7 +188,10 @@ export async function auditedRestore<T>(input: {
   correlationId?: string | null
   source?: string | null
   metadata?: Record<string, unknown> | null
-  restore: (tx: AuditedTransactionClient, patch: ReturnType<typeof restorePatch>) => Promise<T>
+  restore: (
+    tx: AuditedTransactionClient,
+    patch: ReturnType<typeof restorePatch>,
+  ) => Promise<T>
 }): Promise<T> {
   assertArchivable(input.model, 'restore')
 
@@ -254,19 +262,23 @@ function assertPolicy<T>(spec: AuditedMutationSpec<T>): void {
 
   if (!spec.target.type.trim()) {
     throw new AuditPolicyError(
-      `Audited mutation "${spec.action}" requires a target type (the Prisma model name).`
+      `Audited mutation "${spec.action}" requires a target type (the Prisma model name).`,
     )
   }
 
   if (spec.actor.type === ActorType.ADMIN && !spec.reason?.trim()) {
     throw new AuditPolicyError(
-      `Audited mutation "${spec.action}" is performed by an ADMIN actor and therefore requires a reason.`
+      `Audited mutation "${spec.action}" is performed by an ADMIN actor and therefore requires a reason.`,
     )
   }
 
-  if ((spec.actor.type === ActorType.USER || spec.actor.type === ActorType.ADMIN) && !spec.actor.id) {
+  if (
+    (spec.actor.type === ActorType.USER ||
+      spec.actor.type === ActorType.ADMIN) &&
+    !spec.actor.id
+  ) {
     throw new AuditPolicyError(
-      `Audited mutation "${spec.action}" has a ${spec.actor.type} actor with no id; the event would be unattributable.`
+      `Audited mutation "${spec.action}" has a ${spec.actor.type} actor with no id; the event would be unattributable.`,
     )
   }
 }
@@ -276,13 +288,13 @@ function assertArchivable(model: string, verb: string): void {
 
   if (!rule) {
     throw new AuditPolicyError(
-      `Cannot ${verb} ${model}: it has no rule in the lifecycle matrix (src/audit/classification.ts).`
+      `Cannot ${verb} ${model}: it has no rule in the lifecycle matrix (src/audit/classification.ts).`,
     )
   }
 
   if (rule.recordClass !== 'ARCHIVABLE') {
     throw new AuditPolicyError(
-      `Cannot ${verb} ${model}: the lifecycle matrix classifies it as ${rule.recordClass}, not ARCHIVABLE.`
+      `Cannot ${verb} ${model}: the lifecycle matrix classifies it as ${rule.recordClass}, not ARCHIVABLE.`,
     )
   }
 }

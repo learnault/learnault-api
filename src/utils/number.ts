@@ -10,7 +10,7 @@ export function formatCurrency(
   value: number,
   currency = 'USD',
   locale = 'en-US',
-  decimals = 2
+  decimals = 2,
 ): string {
   const formatter = new Intl.NumberFormat(locale, {
     style: 'currency',
@@ -18,6 +18,6 @@ export function formatCurrency(
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   })
-  
-return formatter.format(value)
+
+  return formatter.format(value)
 }

@@ -6,12 +6,12 @@
 
 The Learnault API is a JSON REST API for a decentralized learn-to-earn platform on Stellar.
 
-| Item | Value |
-|------|-------|
-| Base URL (production) | `https://api.learnault.io/api/v1` |
-| Base URL (local) | `http://localhost:3000/api/v1` || Auth scheme | JWT Bearer (`Authorization: Bearer <token>`) |
-| Refresh scheme | Opaque rotating refresh token (`refreshToken` body or `refresh_token` cookie) |
-| Content-Type | `application/json` |
+| Item                  | Value                                                                         |
+| --------------------- | ----------------------------------------------------------------------------- |
+| Base URL (production) | `https://api.learnault.io/api/v1`                                             |
+| Base URL (local)      | `http://localhost:3000/api/v1`                                                |     | Auth scheme | JWT Bearer (`Authorization: Bearer <token>`) |
+| Refresh scheme        | Opaque rotating refresh token (`refreshToken` body or `refresh_token` cookie) |
+| Content-Type          | `application/json`                                                            |
 
 ---
 
@@ -36,6 +36,7 @@ Varies by endpoint — see individual routes. Most use one of:
 ```json
 { "message": "...", "data": { ... } }
 ```
+
 ```json
 { "success": true, "data": { ... } }
 ```
@@ -82,13 +83,13 @@ When exceeded (HTTP 429):
 Retry-After: 60
 ```
 
-| Limiter | Applies to | Default window | Default max |
-|---------|-----------|----------------|-------------|
-| `authLimiter` | `/auth/login`, `/auth/resend-verification`, `/auth/forgot-password` | 15 min | 10 |
-| `otpLimiter` | `/auth/otp/request`, `/auth/otp/verify` | 15 min | 5 |
-| `employerLimiter` | All `/employer/*` routes | 15 min | 500 |
-| `authenticatedLimiter` | All `/sync/*` routes | 15 min | 1000 |
-| `generalLimiter` | Everything else | 15 min | 100 |
+| Limiter                | Applies to                                                          | Default window | Default max |
+| ---------------------- | ------------------------------------------------------------------- | -------------- | ----------- |
+| `authLimiter`          | `/auth/login`, `/auth/resend-verification`, `/auth/forgot-password` | 15 min         | 10          |
+| `otpLimiter`           | `/auth/otp/request`, `/auth/otp/verify`                             | 15 min         | 5           |
+| `employerLimiter`      | All `/employer/*` routes                                            | 15 min         | 500         |
+| `authenticatedLimiter` | All `/sync/*` routes                                                | 15 min         | 1000        |
+| `generalLimiter`       | Everything else                                                     | 15 min         | 100         |
 
 All values are overridable via environment variables (`RATE_LIMIT_*_WINDOW_MS`, `RATE_LIMIT_*_MAX`).
 
@@ -116,20 +117,20 @@ Register a new user. Queues a verification email.
 
 **Request body**
 
-| Field | Type | Required | Notes |
-|-------|------|----------|-------|
-| `email` | string (email) | ✅ | |
-| `password` | string | ✅ | min 8 chars |
-| `username` | string | ✅ | min 3 chars |
-| `role` | `"learner"` \| `"employer"` | ❌ | default `"learner"` |
+| Field      | Type                        | Required | Notes               |
+| ---------- | --------------------------- | -------- | ------------------- |
+| `email`    | string (email)              | ✅       |                     |
+| `password` | string                      | ✅       | min 8 chars         |
+| `username` | string                      | ✅       | min 3 chars         |
+| `role`     | `"learner"` \| `"employer"` | ❌       | default `"learner"` |
 
 **Responses**
 
-| Status | Meaning |
-|--------|---------|
-| 201 | User created; JWT and user object returned |
-| 400 | Validation failed |
-| 409 | Email or username already taken |
+| Status | Meaning                                    |
+| ------ | ------------------------------------------ |
+| 201    | User created; JWT and user object returned |
+| 400    | Validation failed                          |
+| 409    | Email or username already taken            |
 
 ```json
 {
@@ -205,10 +206,10 @@ httpOnly `refresh_token` cookie.
 
 **Request body:** `{ "token": "<64-char hex string from email>" }`
 
-| Status | Meaning |
-|--------|---------|
-| 200 | Verified (or already verified) |
-| 400 | Invalid, expired, or revoked token |
+| Status | Meaning                            |
+| ------ | ---------------------------------- |
+| 200    | Verified (or already verified)     |
+| 400    | Invalid, expired, or revoked token |
 
 ---
 
@@ -238,10 +239,10 @@ On success, all active sessions are revoked and all pending verification tokens 
 
 **Request body:** `{ "token": "<64-char hex>", "newPassword": "<min 8 chars>" }`
 
-| Status | Meaning |
-|--------|---------|
-| 200 | Password reset |
-| 400 | Invalid/expired token or weak password |
+| Status | Meaning                                |
+| ------ | -------------------------------------- |
+| 200    | Password reset                         |
+| 400    | Invalid/expired token or weak password |
 
 ---
 
@@ -256,22 +257,24 @@ Rate-limited by IP (`otpLimiter`), by phone (1/min cooldown, 5/hour), and — if
 
 **Request body**
 
-| Field | Type | Required | Notes |
-|-------|------|----------|-------|
-| `phone` | string | ✅ | E.164 format, e.g. `+2348012345678` |
-| `deviceId` | string | ❌ | Used for device-level rate limiting |
+| Field      | Type   | Required | Notes                               |
+| ---------- | ------ | -------- | ----------------------------------- |
+| `phone`    | string | ✅       | E.164 format, e.g. `+2348012345678` |
+| `deviceId` | string | ❌       | Used for device-level rate limiting |
 
 **Responses**
 
-| Status | Meaning |
-|--------|---------|
-| 200 | Code sent (or silently ignored for an unregistered/unverified `LOGIN` phone) |
-| 400 | Validation failed or phone not in E.164 format |
-| 409 | Phone already verified on a different account (`PHONE_VERIFICATION` only) |
-| 429 | IP, phone, or device rate limit reached |
+| Status | Meaning                                                                      |
+| ------ | ---------------------------------------------------------------------------- |
+| 200    | Code sent (or silently ignored for an unregistered/unverified `LOGIN` phone) |
+| 400    | Validation failed or phone not in E.164 format                               |
+| 409    | Phone already verified on a different account (`PHONE_VERIFICATION` only)    |
+| 429    | IP, phone, or device rate limit reached                                      |
 
 ```json
-{ "message": "If this phone number is registered, a verification code has been sent." }
+{
+  "message": "If this phone number is registered, a verification code has been sent."
+}
 ```
 
 ---
@@ -287,13 +290,13 @@ Verifies the code from `otp/request`. Codes are single-use, expire after 5 minut
 
 **Responses**
 
-| Status | Meaning |
-|--------|---------|
-| 200 | Verified — login response or `{ "message": "Phone number verified successfully" }` |
-| 400 | Invalid/expired code, or validation failed |
-| 401 | Invalid credentials (tombstoned account; `LOGIN` only) |
-| 403 | Account deactivated or pending deletion (`LOGIN` only) |
-| 429 | Too many wrong attempts — challenge locked |
+| Status | Meaning                                                                            |
+| ------ | ---------------------------------------------------------------------------------- |
+| 200    | Verified — login response or `{ "message": "Phone number verified successfully" }` |
+| 400    | Invalid/expired code, or validation failed                                         |
+| 401    | Invalid credentials (tombstoned account; `LOGIN` only)                             |
+| 403    | Account deactivated or pending deletion (`LOGIN` only)                             |
+| 429    | Too many wrong attempts — challenge locked                                         |
 
 ---
 
@@ -310,30 +313,56 @@ client does not have to fan out across four endpoints to render a settings or
 {
   "data": {
     "account": {
-      "id": "uuid", "email": "...", "username": "...",
-      "role": "LEARNER", "status": "ACTIVE",
-      "isVerified": true, "phoneVerifiedAt": null,
+      "id": "uuid",
+      "email": "...",
+      "username": "...",
+      "role": "LEARNER",
+      "status": "ACTIVE",
+      "isVerified": true,
+      "phoneVerifiedAt": null,
       "walletAddress": null,
-      "createdAt": "...", "updatedAt": "...", "lastLoginAt": null
+      "createdAt": "...",
+      "updatedAt": "...",
+      "lastLoginAt": null
     },
     "profile": {
-      "id": "uuid", "userId": "uuid",
-      "displayName": null, "bio": null, "avatarUrl": null,
-      "country": null, "timezone": null,
-      "languages": [], "level": "beginner",
-      "interests": [], "goals": [],
+      "id": "uuid",
+      "userId": "uuid",
+      "displayName": null,
+      "bio": null,
+      "avatarUrl": null,
+      "country": null,
+      "timezone": null,
+      "languages": [],
+      "level": "beginner",
+      "interests": [],
+      "goals": [],
       "visibility": "private",
-      "createdAt": "...", "updatedAt": "..."
+      "createdAt": "...",
+      "updatedAt": "..."
     },
-    "completion": { "percent": 0, "missingFields": ["displayName", "bio", "..."] },
+    "completion": {
+      "percent": 0,
+      "missingFields": ["displayName", "bio", "..."]
+    },
     "onboarding": {
-      "version": "v1", "status": "in_progress", "currentStep": "profile_basics",
-      "completedSteps": ["profile_basics"], "requiredStepsRemaining": ["consent"],
-      "startedAt": "...", "completedAt": null
+      "version": "v1",
+      "status": "in_progress",
+      "currentStep": "profile_basics",
+      "completedSteps": ["profile_basics"],
+      "requiredStepsRemaining": ["consent"],
+      "startedAt": "...",
+      "completedAt": null
     },
     "consents": [
-      { "purpose": "terms_of_service", "status": "granted", "required": true,
-        "policyVersion": "2026-01", "grantedAt": "...", "withdrawnAt": null }
+      {
+        "purpose": "terms_of_service",
+        "status": "granted",
+        "required": true,
+        "policyVersion": "2026-01",
+        "grantedAt": "...",
+        "withdrawnAt": null
+      }
     ],
     "requiredConsentsGranted": false
   }
@@ -358,18 +387,18 @@ its audit event in one transaction.
 
 **Request body** (any non-empty subset of):
 
-| Field | Type | Constraints |
-|-------|------|-------------|
-| `displayName` | string \| null | 1–80 chars |
-| `bio` | string \| null | max 1000 |
-| `avatarUrl` | string (URL) \| null | normally set by the avatar upload flow |
-| `country` | string \| null | 2–60 chars |
-| `timezone` | string \| null | |
-| `languages` | string[] | max 20 |
-| `level` | enum | `beginner` \| `intermediate` \| `advanced` \| `expert` |
-| `interests` | string[] | max 50 |
-| `goals` | string[] | max 20 |
-| `visibility` | enum | `private` \| `employer` \| `public` |
+| Field         | Type                 | Constraints                                            |
+| ------------- | -------------------- | ------------------------------------------------------ |
+| `displayName` | string \| null       | 1–80 chars                                             |
+| `bio`         | string \| null       | max 1000                                               |
+| `avatarUrl`   | string (URL) \| null | normally set by the avatar upload flow                 |
+| `country`     | string \| null       | 2–60 chars                                             |
+| `timezone`    | string \| null       |                                                        |
+| `languages`   | string[]             | max 20                                                 |
+| `level`       | enum                 | `beginner` \| `intermediate` \| `advanced` \| `expert` |
+| `interests`   | string[]             | max 50                                                 |
+| `goals`       | string[]             | max 20                                                 |
+| `visibility`  | enum                 | `private` \| `employer` \| `public`                    |
 
 **Response:** `200` `{ "message": "...", "data": { … } }` — the same aggregate as
 `GET /users/me`, recomputed from the persisted row.
@@ -389,9 +418,14 @@ redacted stub `{ "id": "...", "visible": false }`.
 ```json
 {
   "data": {
-    "id": "uuid", "displayName": "Grace H.", "bio": "Learning Soroban",
-    "avatarUrl": null, "country": "NG", "level": "intermediate",
-    "interests": ["soroban"], "visible": true
+    "id": "uuid",
+    "displayName": "Grace H.",
+    "bio": "Learning Soroban",
+    "avatarUrl": null,
+    "country": "NG",
+    "level": "intermediate",
+    "interests": ["soroban"],
+    "visible": true
   }
 }
 ```
@@ -457,13 +491,13 @@ Optional auth — when a valid token is provided, each module includes `userProg
 
 **Query parameters**
 
-| Param | Type | Default |
-|-------|------|---------|
-| `page` | integer | 1 |
-| `limit` | integer | 10 |
-| `category` | string | — |
-| `difficulty` | string | — |
-| `search` | string | — |
+| Param        | Type    | Default |
+| ------------ | ------- | ------- |
+| `page`       | integer | 1       |
+| `limit`      | integer | 10      |
+| `category`   | string  | —       |
+| `difficulty` | string  | —       |
+| `search`     | string  | —       |
 
 **Response `200`**
 
@@ -471,14 +505,26 @@ Optional auth — when a valid token is provided, each module includes `userProg
 {
   "modules": [
     {
-      "id": "...", "title": "...", "description": "...",
-      "category": "finance", "difficulty": "beginner",
-      "reward": 0.25, "createdAt": "...", "updatedAt": "...",
+      "id": "...",
+      "title": "...",
+      "description": "...",
+      "category": "finance",
+      "difficulty": "beginner",
+      "reward": 0.25,
+      "createdAt": "...",
+      "updatedAt": "...",
       "completionCount": 120,
       "userProgress": null
     }
   ],
-  "pagination": { "page": 1, "limit": 10, "total": 45, "totalPages": 5, "hasNext": true, "hasPrev": false }
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 45,
+    "totalPages": 5,
+    "hasNext": true,
+    "hasPrev": false
+  }
 }
 ```
 
@@ -498,8 +544,13 @@ Optional auth. Same `userProgress` inclusion behaviour.
 Creates a progress record. Must be called before `complete`.
 
 **Response `201`:**
+
 ```json
-{ "message": "Module started successfully", "completionId": "...", "startedAt": "..." }
+{
+  "message": "Module started successfully",
+  "completionId": "...",
+  "startedAt": "..."
+}
 ```
 
 **400** if already started or completed.
@@ -513,15 +564,15 @@ Submit quiz answers. Module must have been started first.
 A score ≥ 70% qualifies for the XLM reward and triggers a push notification.
 
 **Request body:**
+
 ```json
 {
-  "quizAnswers": [
-    { "questionId": "q1", "answer": "B" }
-  ]
+  "quizAnswers": [{ "questionId": "q1", "answer": "B" }]
 }
 ```
 
 **Response `200`:**
+
 ```json
 {
   "message": "Module completed successfully",
@@ -541,20 +592,37 @@ A score ≥ 70% qualifies for the XLM reward and triggers a push notification.
 
 **Query parameters**
 
-| Param | Type | Notes |
-|-------|------|-------|
-| `moduleId` | UUID | filter |
-| `fromDate` | ISO datetime | filter |
-| `toDate` | ISO datetime | filter |
-| `page` | integer | default 1 |
-| `limit` | integer | default 10, max 100 |
+| Param      | Type         | Notes               |
+| ---------- | ------------ | ------------------- |
+| `moduleId` | UUID         | filter              |
+| `fromDate` | ISO datetime | filter              |
+| `toDate`   | ISO datetime | filter              |
+| `page`     | integer      | default 1           |
+| `limit`    | integer      | default 10, max 100 |
 
 **Response `200`:**
+
 ```json
 {
   "success": true,
-  "data": [ { "id": "...", "moduleId": "...", "moduleName": "...", "onChainId": null, "issuedAt": "...", "shareableLink": "..." } ],
-  "meta": { "page": 1, "limit": 10, "total": 5, "totalPages": 1, "hasNextPage": false, "hasPrevPage": false }
+  "data": [
+    {
+      "id": "...",
+      "moduleId": "...",
+      "moduleName": "...",
+      "onChainId": null,
+      "issuedAt": "...",
+      "shareableLink": "..."
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 5,
+    "totalPages": 1,
+    "hasNextPage": false,
+    "hasPrevPage": false
+  }
 }
 ```
 
@@ -565,13 +633,24 @@ A score ≥ 70% qualifies for the XLM reward and triggers a push notification.
 Public — no auth needed. Looks up by `onChainId` first, falls back to credential UUID.
 
 **Response `200`:**
+
 ```json
 {
   "success": true,
   "data": {
     "valid": true,
-    "credential": { "id": "...", "holderName": "...", "moduleName": "...", "onChainId": "...", "issuedAt": "..." },
-    "verification": { "verifiedAt": "...", "status": "verified", "message": "This credential is valid and has been verified on-chain" }
+    "credential": {
+      "id": "...",
+      "holderName": "...",
+      "moduleName": "...",
+      "onChainId": "...",
+      "issuedAt": "..."
+    },
+    "verification": {
+      "verifiedAt": "...",
+      "status": "verified",
+      "message": "This credential is valid and has been verified on-chain"
+    }
   }
 }
 ```
@@ -608,21 +687,33 @@ All reward routes require authentication.
 
 **Query parameters**
 
-| Param | Values | Default |
-|-------|--------|---------|
-| `type` | `module_reward`, `streak_bonus`, `referral_reward`, `withdrawal` | — |
-| `status` | `pending`, `completed`, `failed` | — |
-| `fromDate` | ISO datetime | — |
-| `toDate` | ISO datetime | — |
-| `limit` | 1–100 | 20 |
-| `offset` | ≥ 0 | 0 |
+| Param      | Values                                                           | Default |
+| ---------- | ---------------------------------------------------------------- | ------- |
+| `type`     | `module_reward`, `streak_bonus`, `referral_reward`, `withdrawal` | —       |
+| `status`   | `pending`, `completed`, `failed`                                 | —       |
+| `fromDate` | ISO datetime                                                     | —       |
+| `toDate`   | ISO datetime                                                     | —       |
+| `limit`    | 1–100                                                            | 20      |
+| `offset`   | ≥ 0                                                              | 0       |
 
 **Response `200`:**
+
 ```json
 {
   "success": true,
   "data": {
-    "transactions": [ { "id": "...", "type": "module_reward", "status": "completed", "amount": 0.25, "moduleId": "...", "stellarTxHash": null, "createdAt": "...", "completedAt": "..." } ],
+    "transactions": [
+      {
+        "id": "...",
+        "type": "module_reward",
+        "status": "completed",
+        "amount": 0.25,
+        "moduleId": "...",
+        "stellarTxHash": null,
+        "createdAt": "...",
+        "completedAt": "..."
+      }
+    ],
     "pagination": { "total": 15, "limit": 20, "offset": 0, "hasMore": false }
   }
 }
@@ -634,18 +725,26 @@ All reward routes require authentication.
 
 **Request body:**
 
-| Field | Type | Required | Notes |
-|-------|------|----------|-------|
-| `walletAddress` | string | ✅ | Stellar address matching `^G[A-Z0-9]{50,55}$` |
-| `amount` | number | ✅ | XLM, must be > 0 |
-| `memo` | string | ❌ | |
+| Field           | Type   | Required | Notes                                         |
+| --------------- | ------ | -------- | --------------------------------------------- |
+| `walletAddress` | string | ✅       | Stellar address matching `^G[A-Z0-9]{50,55}$` |
+| `amount`        | number | ✅       | XLM, must be > 0                              |
+| `memo`          | string | ❌       |                                               |
 
 **Response `201`:**
+
 ```json
 {
   "success": true,
   "message": "Withdrawal processed successfully",
-  "data": { "transactionId": "...", "amount": 5.0, "stellarTxHash": "...", "status": "completed", "requestedAt": "...", "completedAt": "..." }
+  "data": {
+    "transactionId": "...",
+    "amount": 5.0,
+    "stellarTxHash": "...",
+    "status": "completed",
+    "requestedAt": "...",
+    "completedAt": "..."
+  }
 }
 ```
 
@@ -676,11 +775,11 @@ Apply a referral code. Cannot apply your own code or apply more than once.
 
 **Request body:** `{ "code": "A1B2C3D4" }`
 
-| Status | Meaning |
-|--------|---------|
-| 201 | Referral applied |
-| 400 | Missing code, self-referral, or code not found |
-| 409 | Already used a referral code |
+| Status | Meaning                                        |
+| ------ | ---------------------------------------------- |
+| 201    | Referral applied                               |
+| 400    | Missing code, self-referral, or code not found |
+| 409    | Already used a referral code                   |
 
 ---
 
@@ -713,10 +812,10 @@ Register a Firebase device token for push notifications.
 
 **Request body:**
 
-| Field | Type | Required |
-|-------|------|----------|
-| `token` | string | ✅ |
-| `platform` | `"ios"` \| `"android"` \| `"web"` | ✅ |
+| Field      | Type                              | Required |
+| ---------- | --------------------------------- | -------- |
+| `token`    | string                            | ✅       |
+| `platform` | `"ios"` \| `"android"` \| `"web"` | ✅       |
 
 **Response `201`:** device token record.
 
@@ -728,10 +827,10 @@ At least one field must be provided.
 
 **Request body** (any subset of):
 
-| Field | Type |
-|-------|------|
-| `rewardReceipt` | boolean |
-| `quizPassFail` | boolean |
+| Field             | Type    |
+| ----------------- | ------- |
+| `rewardReceipt`   | boolean |
+| `quizPassFail`    | boolean |
 | `streakReminders` | boolean |
 
 ---
@@ -742,7 +841,18 @@ At least one field must be provided.
 
 ```json
 {
-  "data": [ { "id": "...", "type": "quizPassFail", "title": "Quiz Passed!", "body": "...", "status": "success", "error": null, "attemptCount": 1, "createdAt": "..." } ],
+  "data": [
+    {
+      "id": "...",
+      "type": "quizPassFail",
+      "title": "Quiz Passed!",
+      "body": "...",
+      "status": "success",
+      "error": null,
+      "attemptCount": 1,
+      "createdAt": "..."
+    }
+  ],
   "count": 1
 }
 ```
@@ -758,6 +868,7 @@ All sync routes require authentication and are subject to the `authenticatedLimi
 Upload batched offline progress events. Each event is deduplicated by `idempotencyKey`. Events with a stale `syncVersion` are skipped without error.
 
 **Request body:**
+
 ```json
 {
   "events": [
@@ -774,6 +885,7 @@ Upload batched offline progress events. Each event is deduplicated by `idempoten
 ```
 
 **Response `200`:**
+
 ```json
 {
   "success": true,
@@ -794,6 +906,7 @@ Each result has `status`: `applied` | `skipped` | `rejected`, plus an optional `
 Reconcile offline quiz/completion attempts. If the user already has a completion with an equal or higher score, the event is skipped. A higher score updates the existing record.
 
 **Request body:**
+
 ```json
 {
   "events": [
@@ -825,29 +938,40 @@ Search the learner talent pool.
 
 **Query parameters**
 
-| Param | Type | Default | Notes |
-|-------|------|---------|-------|
-| `page` | integer | 1 | |
-| `limit` | integer | 20 | Capped by plan: starter ≤ 10, pro ≤ 50, enterprise ≤ 100 |
-| `skills` | string | — | Comma-separated keywords, e.g. `finance,defi` |
-| `location` | string | — | |
-| `credentials` | `any` \| `verified` \| `none` | `any` | |
-| `search` | string | — | Free-text search on username/email |
+| Param         | Type                          | Default | Notes                                                    |
+| ------------- | ----------------------------- | ------- | -------------------------------------------------------- |
+| `page`        | integer                       | 1       |                                                          |
+| `limit`       | integer                       | 20      | Capped by plan: starter ≤ 10, pro ≤ 50, enterprise ≤ 100 |
+| `skills`      | string                        | —       | Comma-separated keywords, e.g. `finance,defi`            |
+| `location`    | string                        | —       |                                                          |
+| `credentials` | `any` \| `verified` \| `none` | `any`   |                                                          |
+| `search`      | string                        | —       | Free-text search on username/email                       |
 
 **Request header:** `x-employer-plan: starter | pro | enterprise`
 
 **Response `200`:**
+
 ```json
 {
   "candidates": [
     {
-      "id": "...", "name": "alice42", "location": "lagos",
+      "id": "...",
+      "name": "alice42",
+      "location": "lagos",
       "skills": ["finance", "defi"],
-      "completions": 5, "averageScore": 82.4,
+      "completions": 5,
+      "averageScore": 82.4,
       "verifiedCredentialCount": 2
     }
   ],
-  "pagination": { "page": 1, "limit": 10, "total": 3, "totalPages": 1, "hasNext": false, "hasPrev": false },
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 3,
+    "totalPages": 1,
+    "hasNext": false,
+    "hasPrev": false
+  },
   "filters": { "skills": ["finance"], "location": null, "credentials": "any" },
   "plan": "starter"
 }
@@ -874,18 +998,25 @@ Record a candidate outreach attempt. Requires **pro** or **enterprise** plan —
 
 **Request body:**
 
-| Field | Type | Required | Constraints |
-|-------|------|----------|-------------|
-| `candidateId` | UUID | ✅ | |
-| `subject` | string | ✅ | 3–120 chars |
-| `message` | string | ✅ | 10–3000 chars |
-| `channel` | `"platform"` \| `"email"` \| `"both"` | ❌ | default `"platform"` |
+| Field         | Type                                  | Required | Constraints          |
+| ------------- | ------------------------------------- | -------- | -------------------- |
+| `candidateId` | UUID                                  | ✅       |                      |
+| `subject`     | string                                | ✅       | 3–120 chars          |
+| `message`     | string                                | ✅       | 10–3000 chars        |
+| `channel`     | `"platform"` \| `"email"` \| `"both"` | ❌       | default `"platform"` |
 
 **Response `201`:**
+
 ```json
 {
   "message": "Candidate outreach recorded",
-  "outreach": { "id": "...", "candidateId": "...", "channel": "platform", "status": "recorded", "createdAt": "..." }
+  "outreach": {
+    "id": "...",
+    "candidateId": "...",
+    "channel": "platform",
+    "status": "recorded",
+    "createdAt": "..."
+  }
 }
 ```
 
@@ -901,13 +1032,13 @@ two stubs here; both are Prisma-backed and audited as of the Profile API work
 
 ## Error Code Reference
 
-| HTTP | Typical cause |
-|------|--------------|
-| 400 | Validation failed, malformed body, business rule violation |
-| 401 | Missing, expired, or invalid JWT |
-| 402 | Employer plan upgrade required |
-| 403 | Authenticated but insufficient role or resource is private |
-| 404 | Resource not found |
-| 409 | Conflict (duplicate email, already applied referral, etc.) |
-| 429 | Rate limit exceeded — see `Retry-After` header |
-| 500 | Internal server error (includes not-yet-implemented stubs) |
+| HTTP | Typical cause                                              |
+| ---- | ---------------------------------------------------------- |
+| 400  | Validation failed, malformed body, business rule violation |
+| 401  | Missing, expired, or invalid JWT                           |
+| 402  | Employer plan upgrade required                             |
+| 403  | Authenticated but insufficient role or resource is private |
+| 404  | Resource not found                                         |
+| 409  | Conflict (duplicate email, already applied referral, etc.) |
+| 429  | Rate limit exceeded — see `Retry-After` header             |
+| 500  | Internal server error (includes not-yet-implemented stubs) |

@@ -156,7 +156,7 @@ export class UserController {
       await profileService.updateProfileAudited(
         userId,
         validation.data,
-        requestAuditContext(req)
+        requestAuditContext(req),
       )
 
       const aggregate = await profileService.getOwnerAccountProfile(userId)
@@ -166,7 +166,9 @@ export class UserController {
         return
       }
 
-      res.status(200).json({ message: 'Profile updated successfully', data: aggregate })
+      res
+        .status(200)
+        .json({ message: 'Profile updated successfully', data: aggregate })
     } catch (error) {
       logger.error('Update profile error:', error)
       res.status(500).json({ error: 'Internal server error' })
@@ -308,7 +310,7 @@ export class UserController {
         userId,
         validation.data.currentPassword,
         validation.data.newPassword,
-        requestAuditContext(req)
+        requestAuditContext(req),
       )
 
       if (result.kind === 'not-found') {
@@ -320,13 +322,17 @@ export class UserController {
       // 401, not 400: a wrong current password is a failed re-authentication,
       // and the body that carried it was perfectly well-formed.
       if (result.kind === 'invalid-password') {
-        res.status(401).json({ error: 'Current password is incorrect', code: 'STEP_UP_FAILED' })
+        res.status(401).json({
+          error: 'Current password is incorrect',
+          code: 'STEP_UP_FAILED',
+        })
 
         return
       }
 
       res.status(200).json({
-        message: 'Password updated successfully. All sessions have been signed out.',
+        message:
+          'Password updated successfully. All sessions have been signed out.',
         revokedSessionCount: result.revokedSessionCount,
       })
     } catch (error) {
@@ -405,7 +411,7 @@ export class UserController {
       const result = await userAccountService.updateWalletAddress(
         userId,
         validation.data.walletAddress,
-        requestAuditContext(req)
+        requestAuditContext(req),
       )
 
       if (result.kind === 'not-found') {

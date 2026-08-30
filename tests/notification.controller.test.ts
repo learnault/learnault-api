@@ -7,7 +7,7 @@ const {
   mockUpdateUserPreferences,
   mockQueueNotification,
   mockProcessQueue,
-  mockPrisma
+  mockPrisma,
 } = vi.hoisted(() => ({
   mockRegisterDeviceToken: vi.fn(),
   mockUpdateUserPreferences: vi.fn(),
@@ -15,9 +15,9 @@ const {
   mockProcessQueue: vi.fn(),
   mockPrisma: {
     notificationLog: {
-      findMany: vi.fn()
-    }
-  }
+      findMany: vi.fn(),
+    },
+  },
 }))
 
 vi.mock('../src/services/notification.service', () => ({
@@ -26,11 +26,11 @@ vi.mock('../src/services/notification.service', () => ({
     updateUserPreferences = mockUpdateUserPreferences
     queueNotification = mockQueueNotification
     processQueue = mockProcessQueue
-  }
+  },
 }))
 
 vi.mock('../src/config/database', () => ({
-  default: mockPrisma
+  default: mockPrisma,
 }))
 
 describe('NotificationController', () => {
@@ -44,11 +44,11 @@ describe('NotificationController', () => {
     req = {
       user: { id: 'user1' },
       body: {},
-      query: {}
+      query: {},
     }
     res = {
       status: vi.fn().mockReturnThis(),
-      json: vi.fn().mockReturnThis()
+      json: vi.fn().mockReturnThis(),
     }
   })
 
@@ -60,7 +60,9 @@ describe('NotificationController', () => {
       await controller.registerDevice(req, res)
 
       expect(res.status).toHaveBeenCalledWith(201)
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: { id: 'dt1' } }))
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { id: 'dt1' } }),
+      )
     })
 
     it('should return 400 on invalid body', async () => {
@@ -98,7 +100,9 @@ describe('NotificationController', () => {
       await controller.getDeliveryStatus(req, res)
 
       expect(res.status).toHaveBeenCalledWith(200)
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ count: 1 }))
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ count: 1 }),
+      )
     })
   })
 })

@@ -9,13 +9,13 @@
 `UserController` carried five private helpers that were never wired to a
 database:
 
-| Helper | What it did |
-|---|---|
-| `findUserById` | returned a hard-coded `test@example.com` / `testuser` record |
-| `updateUserProfile` | echoed the request body back as a fake persisted user |
-| `validatePassword` | returned `false`, unconditionally |
-| `updateUserPassword` | `throw new Error('Not implemented')` |
-| `updateUserWallet` | returned a fake user with the requested address |
+| Helper               | What it did                                                  |
+| -------------------- | ------------------------------------------------------------ |
+| `findUserById`       | returned a hard-coded `test@example.com` / `testuser` record |
+| `updateUserProfile`  | echoed the request body back as a fake persisted user        |
+| `validatePassword`   | returned `false`, unconditionally                            |
+| `updateUserPassword` | `throw new Error('Not implemented')`                         |
+| `updateUserWallet`   | returned a fake user with the requested address              |
 
 Every `/users` route was therefore either a fixture or a 500. Worse, the fixture
 described a schema that does not exist: `firstName`, `lastName`, `bio` and
@@ -37,13 +37,13 @@ services and one schema module.
 
 ### Where the code lives
 
-| Concern | Module |
-|---|---|
-| Owner-updatable field allow-list, password and wallet body schemas | `src/schemas/profile.schema.ts` |
-| Profile reads/writes, the owner aggregate, the disclosure gate | `src/services/profile.service.ts` |
-| Password change, wallet address | `src/services/user-account.service.ts` |
-| Response shaping | `src/services/profile-serializer.ts` |
-| Audit actor/context from a request | `src/utils/audit-context.ts` |
+| Concern                                                            | Module                                 |
+| ------------------------------------------------------------------ | -------------------------------------- |
+| Owner-updatable field allow-list, password and wallet body schemas | `src/schemas/profile.schema.ts`        |
+| Profile reads/writes, the owner aggregate, the disclosure gate     | `src/services/profile.service.ts`      |
+| Password change, wallet address                                    | `src/services/user-account.service.ts` |
+| Response shaping                                                   | `src/services/profile-serializer.ts`   |
+| Audit actor/context from a request                                 | `src/utils/audit-context.ts`           |
 
 `UserController` holds HTTP concerns only: auth check, parse, map a result kind
 to a status code. It does not import the Prisma client — a rule the mock scan
@@ -77,7 +77,7 @@ row is created for it.
 One Zod object (`updateProfileSchema`) is the allow-list, shared with
 `PATCH /users/me/profile` so the two routes cannot diverge on what an owner may
 write. `.strict()` is what enforces it: an unrecognised key is a `400` rather
-than a silently dropped field. The fields deliberately *absent* are the point —
+than a silently dropped field. The fields deliberately _absent_ are the point —
 `id`, `userId`, the `archived*` columns, and every account field (`status`,
 `isVerified`, `phoneVerifiedAt`, `role`, `email`, `password`, `walletAddress`).
 
@@ -89,7 +89,7 @@ cannot be scrubbed afterwards.
 ### `GET /users/:id` — consent-aware public read
 
 The visibility threshold from 0002 still applies, with two further gates that can
-only ever *narrow* disclosure (`isDisclosureAllowed`):
+only ever _narrow_ disclosure (`isDisclosureAllowed`):
 
 1. **Account status.** Only an `ACTIVE` account is disclosed, so deactivating
    drops third-party visibility immediately without the learner also having to
@@ -134,7 +134,7 @@ matches the step-up behaviour in `AccountController`.
 
 Persists the learner's Stellar **public** key to `User.walletAddress`. Re-sending
 the address on file is a no-op with no second audit event. An address claimed by
-another account is a `409`; the check is done up front for a clear error *and*
+another account is a `409`; the check is done up front for a clear error _and_
 again by catching Prisma's `P2002`, because two accounts claiming the same
 address concurrently both pass the up-front read.
 

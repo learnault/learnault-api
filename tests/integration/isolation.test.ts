@@ -6,7 +6,11 @@ import { Pool } from 'pg'
 async function isDatabaseAvailable(): Promise<boolean> {
   try {
     const url = validateTestDatabaseUrl()
-    const pool = new Pool({ connectionString: url, max: 1, connectionTimeoutMillis: 3000 })
+    const pool = new Pool({
+      connectionString: url,
+      max: 1,
+      connectionTimeoutMillis: 3000,
+    })
     const client = await pool.connect()
     client.release()
     await pool.end()
@@ -62,11 +66,7 @@ describe.runIf(dbAvailable)('Database isolation', () => {
 })
 
 describe('Isolation helpers', () => {
-  it('withIsolation rolls back transaction', () => {
+  it('withIsolation rolls back transaction', () => {})
 
-  })
-
-  it('createIsolatedTest wraps test function', () => {
-
-  })
+  it('createIsolatedTest wraps test function', () => {})
 })

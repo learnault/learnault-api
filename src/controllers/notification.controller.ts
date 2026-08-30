@@ -8,17 +8,21 @@ const notificationService = new NotificationService()
 const registerDeviceSchema = z.object({
   token: z.string().min(1, 'Device token is required'),
   platform: z.enum(['ios', 'android', 'web'], {
-    errorMap: () => ({ message: 'Platform must be "ios", "android", or "web"' })
-  })
+    errorMap: () => ({
+      message: 'Platform must be "ios", "android", or "web"',
+    }),
+  }),
 })
 
 const updatePreferencesSchema = z
   .object({
     rewardReceipt: z.boolean().optional(),
     quizPassFail: z.boolean().optional(),
-    streakReminders: z.boolean().optional()
+    streakReminders: z.boolean().optional(),
   })
-  .refine(data => Object.keys(data).length > 0, { message: 'At least one preference field is required' })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'At least one preference field is required',
+  })
 
 export class NotificationController {
   /**
@@ -65,18 +69,22 @@ export class NotificationController {
       if (!validation.success) {
         res.status(400).json({
           error: 'Validation failed',
-          details: validation.error.format()
+          details: validation.error.format(),
         })
 
         return
       }
 
       const { token, platform } = validation.data
-      const deviceToken = await notificationService.registerDeviceToken(userId, token, platform)
+      const deviceToken = await notificationService.registerDeviceToken(
+        userId,
+        token,
+        platform,
+      )
 
       res.status(201).json({
         message: 'Device token registered successfully',
-        data: deviceToken
+        data: deviceToken,
       })
     } catch (error) {
       console.error('Register device token error:', error)
@@ -128,17 +136,20 @@ export class NotificationController {
       if (!validation.success) {
         res.status(400).json({
           error: 'Validation failed',
-          details: validation.error.format()
+          details: validation.error.format(),
         })
 
         return
       }
 
-      const prefs = await notificationService.updateUserPreferences(userId, validation.data)
+      const prefs = await notificationService.updateUserPreferences(
+        userId,
+        validation.data,
+      )
 
       res.status(200).json({
         message: 'Preferences updated successfully',
-        data: prefs
+        data: prefs,
       })
     } catch (error) {
       console.error('Update notification preferences error:', error)
@@ -203,7 +214,7 @@ export class NotificationController {
       const logs = await prisma.notificationLog.findMany({
         where: {
           userId,
-          ...(status ? { status } : {})
+          ...(status ? { status } : {}),
         },
         orderBy: { createdAt: 'desc' },
         take: limit,
@@ -215,13 +226,13 @@ export class NotificationController {
           status: true,
           error: true,
           attemptCount: true,
-          createdAt: true
-        }
+          createdAt: true,
+        },
       })
 
       res.status(200).json({
         data: logs,
-        count: logs.length
+        count: logs.length,
       })
     } catch (error) {
       console.error('Get delivery status error:', error)

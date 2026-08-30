@@ -23,29 +23,20 @@ router.post(
  * @desc Finalize an uploaded avatar (validate, produce variants, promote)
  * @access Private
  */
-router.post(
-  '/finalize',
-  avatarController.finalize.bind(avatarController),
-)
+router.post('/finalize', avatarController.finalize.bind(avatarController))
 
 /**
  * @route GET /api/v1/users/me/avatar
  * @desc Get the current avatar with variant URLs
  * @access Private
  */
-router.get(
-  '/',
-  avatarController.getCurrentAvatar.bind(avatarController),
-)
+router.get('/', avatarController.getCurrentAvatar.bind(avatarController))
 
 /**
  * @route DELETE /api/v1/users/me/avatar
  * @desc Delete the current avatar and all variants
  * @access Private
  */
-router.delete(
-  '/',
-  avatarController.deleteAvatar.bind(avatarController),
-)
+router.delete('/', avatarController.deleteAvatar.bind(avatarController))
 
 export default router

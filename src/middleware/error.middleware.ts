@@ -40,7 +40,7 @@ export const errorHandler = (
   req: Request,
   res: Response,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  next?: NextFunction
+  next?: NextFunction,
 ): void => {
   let error = err
 
@@ -64,8 +64,7 @@ export const errorHandler = (
   }
 
   const statusCode = (error as AppError).statusCode || 500
-  const code =
-    (error as AppError).code || mapStatusCodeToErrorCode(statusCode)
+  const code = (error as AppError).code || mapStatusCodeToErrorCode(statusCode)
   const isDevelopment = env.NODE_ENV === 'development'
 
   const errorResponse: any = {
@@ -104,7 +103,7 @@ export const errorHandler = (
 export const notFoundHandler = (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void => {
   const notFound = new NotFoundError(`Cannot ${req.method} ${req.path}`)
   const requestId = req.requestId || 'unknown'
@@ -125,7 +124,7 @@ export const notFoundHandler = (
  * Prevents unhandled promise rejections
  */
 export const asyncHandler = (
-  fn: (req: Request, res: Response, next: NextFunction) => Promise<any>
+  fn: (req: Request, res: Response, next: NextFunction) => Promise<any>,
 ) => {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch((error) => {

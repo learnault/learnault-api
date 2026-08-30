@@ -66,6 +66,7 @@ CREATE INDEX on outbox_events(aggregateId, aggregateType); -- Trace aggregate hi
 ```
 
 **Status Lifecycle:**
+
 - `PENDING` → Event emitted, waiting for workers to publish
 - `PROCESSING` → Worker is publishing (JobAttempts being created)
 - `PUBLISHED` → All deliveries succeeded
@@ -103,6 +104,7 @@ CREATE INDEX on job_attempts(status, leasedUntil);    -- Find abandoned leases
 ```
 
 **Status Lifecycle:**
+
 - `PENDING` → Job waiting to be leased
 - `LEASED` → Worker holds leaseToken; currently processing
 - `COMPLETED` → Job succeeded; idempotency key set
@@ -131,33 +133,33 @@ CREATE INDEX on rolled_back_records(createdAt); -- For periodic cleanup
 ### 1. Write Domain Changes + Events Atomically
 
 ```typescript
-const outboxService = createOutboxService(prisma);
+const outboxService = createOutboxService(prisma)
 
 // In your controller or service:
 const result = await prisma.$transaction(async (tx) => {
   // Make domain change
   const user = await tx.user.create({
-    data: { email: "user@example.com", role: "LEARNER" },
-  });
+    data: { email: 'user@example.com', role: 'LEARNER' },
+  })
 
   // Write outbox event in same transaction
   const event = await outboxService.createEvent(tx, {
     aggregateId: user.id,
-    aggregateType: "User",
-    eventType: "UserCreated",
+    aggregateType: 'User',
+    eventType: 'UserCreated',
     eventVersion: 1,
     payload: { userId: user.id, email: user.email },
-    source: "api.auth.register",
-  });
+    source: 'api.auth.register',
+  })
 
   // Define jobs that should process this event
   await outboxService.createJobAttempts(tx, event.id, [
-    { jobType: "email.send", jobName: "Send welcome email" },
-    { jobType: "notification.push", jobName: "Send push notification" },
-  ]);
+    { jobType: 'email.send', jobName: 'Send welcome email' },
+    { jobType: 'notification.push', jobName: 'Send push notification' },
+  ])
 
-  return { user, event };
-});
+  return { user, event }
+})
 
 // ✅ If transaction succeeds: user and event both persisted
 // ✅ If transaction rolls back: neither user nor event are created
@@ -166,44 +168,36 @@ const result = await prisma.$transaction(async (tx) => {
 ### 2. Worker Leases Jobs
 
 ```typescript
-const jobLeaseService = createJobLeaseService(prisma);
+const jobLeaseService = createJobLeaseService(prisma)
 
 async function emailWorker() {
   while (true) {
     // Lease a job (only one worker gets it)
     const lease = await jobLeaseService.leaseJob({
-      jobType: "email.send",
+      jobType: 'email.send',
       maxLeaseMs: 30000, // Hold lease for 30 seconds
-    });
+    })
 
     if (!lease) {
       // No jobs available; sleep and retry
-      await sleep(5000);
-      continue;
+      await sleep(5000)
+      continue
     }
 
     try {
       // Process the job
-      const emailPayload = lease.payload as any;
-      const txHash = await sendWelcomeEmail(emailPayload.email);
+      const emailPayload = lease.payload as any
+      const txHash = await sendWelcomeEmail(emailPayload.email)
 
       // Mark as completed
-      await jobLeaseService.completeJob(
-        lease.jobId,
-        lease.leaseToken,
-        {
-          success: true,
-          idempotencyKey: `email_${lease.payload.userId}_${Date.now()}`,
-          result: { messageId: txHash },
-        }
-      );
+      await jobLeaseService.completeJob(lease.jobId, lease.leaseToken, {
+        success: true,
+        idempotencyKey: `email_${lease.payload.userId}_${Date.now()}`,
+        result: { messageId: txHash },
+      })
     } catch (error) {
       // Mark as failed (will retry with exponential backoff)
-      await jobLeaseService.failJob(
-        lease.jobId,
-        lease.leaseToken,
-        error
-      );
+      await jobLeaseService.failJob(lease.jobId, lease.leaseToken, error)
     }
   }
 }
@@ -213,13 +207,16 @@ async function emailWorker() {
 
 ```typescript
 // Run periodically (e.g., every 5 minutes) to reclaim abandoned leases
-const jobLeaseService = createJobLeaseService(prisma);
+const jobLeaseService = createJobLeaseService(prisma)
 
 async function leaseRecoverySchedule() {
-  setInterval(async () => {
-    const recovered = await jobLeaseService.recoverAbandonedLeases();
-    logger.info(`Recovered ${recovered} abandoned leases`);
-  }, 5 * 60 * 1000);
+  setInterval(
+    async () => {
+      const recovered = await jobLeaseService.recoverAbandonedLeases()
+      logger.info(`Recovered ${recovered} abandoned leases`)
+    },
+    5 * 60 * 1000,
+  )
 }
 ```
 
@@ -227,11 +224,14 @@ async function leaseRecoverySchedule() {
 
 ```typescript
 // Get jobs that permanently failed
-const deadLetterJobs = await jobLeaseService.getDeadLetterJobs(100);
+const deadLetterJobs = await jobLeaseService.getDeadLetterJobs(100)
 
 for (const job of deadLetterJobs) {
-  logger.warn(`Job ${job.id} failed after ${job.attempt} attempts:`, job.lastError);
-  
+  logger.warn(
+    `Job ${job.id} failed after ${job.attempt} attempts:`,
+    job.lastError,
+  )
+
   // After operator fixes the issue:
   // await jobLeaseService.resetJobForRetry(job.id);
 }
@@ -285,16 +285,17 @@ Attempt 4: availableAt = now + 8000ms (8s backoff)
 ```
 
 Configuration per job type:
+
 ```typescript
 await outboxService.createJobAttempts(tx, eventId, [
   {
-    jobType: "stellar.transfer",
-    jobName: "Transfer XLM",
+    jobType: 'stellar.transfer',
+    jobName: 'Transfer XLM',
     maxAttempts: 5,
-    backoffBaseMs: 2000,      // Start with 2 second delay
-    backoffMultiplier: 2.0,   // Double each time
+    backoffBaseMs: 2000, // Start with 2 second delay
+    backoffMultiplier: 2.0, // Double each time
   },
-]);
+])
 ```
 
 ### ✅ Abandoned Lease Recovery
@@ -317,19 +318,16 @@ Workers drain in-flight work before exiting:
 ```typescript
 // On SIGTERM signal:
 async function gracefulShutdown() {
-  console.log("Graceful shutdown: completing in-flight jobs...");
-  
+  console.log('Graceful shutdown: completing in-flight jobs...')
+
   // Worker loop checks this flag
-  SHUTDOWN_REQUESTED = true;
-  
+  SHUTDOWN_REQUESTED = true
+
   // Wait for current batch to complete (max 30 seconds)
-  await Promise.race([
-    activeJobs.complete(),
-    setTimeout(() => {}, 30000),
-  ]);
-  
-  await prisma.$disconnect();
-  process.exit(0);
+  await Promise.race([activeJobs.complete(), setTimeout(() => {}, 30000)])
+
+  await prisma.$disconnect()
+  process.exit(0)
 }
 ```
 
@@ -338,29 +336,26 @@ async function gracefulShutdown() {
 Use `EventSchemaRegistry` to validate event payloads:
 
 ```typescript
-import {
-  getEventSchemaRegistry,
-  createEventSchema,
-} from "@/lib/transactions";
-import { z } from "zod";
+import { getEventSchemaRegistry, createEventSchema } from '@/lib/transactions'
+import { z } from 'zod'
 
 // Register schemas
-const registry = getEventSchemaRegistry();
+const registry = getEventSchemaRegistry()
 
 registry.register(
   createEventSchema(
-    "UserCreated",
+    'UserCreated',
     1,
     z.object({
       userId: z.string().uuid(),
       email: z.string().email(),
-      role: z.enum(["ADMIN", "LEARNER", "INSTRUCTOR"]),
-    })
-  )
-);
+      role: z.enum(['ADMIN', 'LEARNER', 'INSTRUCTOR']),
+    }),
+  ),
+)
 
 // Validate events
-await registry.validate("UserCreated", 1, payload);
+await registry.validate('UserCreated', 1, payload)
 ```
 
 ## Testing
@@ -368,22 +363,26 @@ await registry.validate("UserCreated", 1, payload);
 Three comprehensive test suites cover:
 
 ### 1. Rollback Tests
+
 - Verify rolled-back domain changes emit no events
 - Workers skip ROLLED_BACK events
 - Concurrent rollback + lease attempts are handled correctly
 
 ### 2. Duplicate Delivery Tests
+
 - Idempotency keys prevent duplicate side effects
 - Completed jobs are recognized and skipped
 - External calls are made only once
 
 ### 3. Crash and Retry Tests
+
 - Abandoned leases are recovered after expiration
 - Exponential backoff prevents thundering herd
 - Max attempts are enforced before dead-lettering
 - Dead-letter jobs can be manually recovered
 
 Run tests:
+
 ```bash
 pnpm test src/lib/transactions/
 ```
@@ -396,15 +395,15 @@ All tables are heavily indexed for worker polling:
 
 ```sql
 -- Find PENDING jobs ready to lease
-CREATE INDEX job_attempts_status_availableAt_idx 
+CREATE INDEX job_attempts_status_availableAt_idx
   ON job_attempts(status, availableAt);
 
 -- Find abandoned leases
-CREATE INDEX job_attempts_status_leasedUntil_idx 
+CREATE INDEX job_attempts_status_leasedUntil_idx
   ON job_attempts(status, leasedUntil);
 
 -- Find PENDING events for publishing
-CREATE INDEX outbox_events_status_publishedAt_idx 
+CREATE INDEX outbox_events_status_publishedAt_idx
   ON outbox_events(status, publishedAt);
 ```
 
@@ -415,9 +414,9 @@ Workers query with `LIMIT` to avoid full-table scans:
 ```typescript
 // Good: polling with LIMIT
 const lease = await jobLeaseService.leaseJob({
-  jobType: "email.send",
+  jobType: 'email.send',
   maxLeaseMs: 30000,
-});
+})
 
 // This only scans first few rows before finding a PENDING job
 ```
@@ -430,10 +429,10 @@ Periodically archive completed events and jobs:
 // After 30 days, archive published events
 await prisma.outboxEvent.deleteMany({
   where: {
-    status: "PUBLISHED",
+    status: 'PUBLISHED',
     publishedAt: { lt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
   },
-});
+})
 ```
 
 ## Troubleshooting
@@ -445,9 +444,10 @@ await prisma.outboxEvent.deleteMany({
 **Cause**: Worker crashed without releasing lease.
 
 **Fix**:
+
 ```typescript
-const recovered = await jobLeaseService.recoverAbandonedLeases();
-console.log(`Recovered ${recovered} abandoned leases`);
+const recovered = await jobLeaseService.recoverAbandonedLeases()
+console.log(`Recovered ${recovered} abandoned leases`)
 ```
 
 ### Dead-Letter Accumulation
@@ -457,13 +457,14 @@ console.log(`Recovered ${recovered} abandoned leases`);
 **Cause**: Transient issue (network, database, service down) exhausted retries.
 
 **Fix**:
+
 1. Identify root cause from `job.lastError`
 2. Fix underlying issue
 3. Reset jobs for retry:
    ```typescript
-   const deadLetterJobs = await jobLeaseService.getDeadLetterJobs(100);
+   const deadLetterJobs = await jobLeaseService.getDeadLetterJobs(100)
    for (const job of deadLetterJobs) {
-     await jobLeaseService.resetJobForRetry(job.id);
+     await jobLeaseService.resetJobForRetry(job.id)
    }
    ```
 
@@ -474,16 +475,17 @@ console.log(`Recovered ${recovered} abandoned leases`);
 **Cause**: No workers running for specific jobType.
 
 **Fix**:
+
 1. Verify worker is running: `ps aux | grep worker`
 2. Check worker logs for errors
 3. Manually check job status:
    ```typescript
-   const jobs = await jobLeaseService.getJobsForEvent(eventId);
-   console.log(jobs);
+   const jobs = await jobLeaseService.getJobsForEvent(eventId)
+   console.log(jobs)
    ```
 
 ## References
 
 - [Transactional Outbox Pattern - Chris Richardson](https://microservices.io/patterns/data/transactional-outbox.html)
 - [Event Sourcing - Martin Fowler](https://martinfowler.com/eaaDev/EventSourcing.html)
-- [Lease-based Concurrency Control](https://en.wikipedia.org/wiki/Lease_(computer_science))
+- [Lease-based Concurrency Control](<https://en.wikipedia.org/wiki/Lease_(computer_science)>)

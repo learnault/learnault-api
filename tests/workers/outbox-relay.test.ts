@@ -8,7 +8,12 @@ vi.mock('../../src/utils/logger', () => ({
   default: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }))
 
-const silentLog = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+const silentLog = {
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+}
 
 interface FakeEvent {
   id: string
@@ -36,7 +41,9 @@ class FakeDb {
   jobs: FakeJob[] = []
   private seq = 0
 
-  addEvent(partial: Partial<FakeEvent> & { eventType: string; payload: unknown }): FakeEvent {
+  addEvent(
+    partial: Partial<FakeEvent> & { eventType: string; payload: unknown },
+  ): FakeEvent {
     const event: FakeEvent = {
       id: partial.id ?? `evt-${++this.seq}`,
       eventType: partial.eventType,
@@ -54,21 +61,25 @@ class FakeDb {
   get outboxEvent() {
     return {
       findMany: async (args: any) => {
-        let rows = this.events.filter(e => e.status === args.where.status)
+        let rows = this.events.filter((e) => e.status === args.where.status)
         if (args.where.jobAttempts?.none) {
-          rows = rows.filter(e => !this.jobs.some(j => j.outboxEventId === e.id))
+          rows = rows.filter(
+            (e) => !this.jobs.some((j) => j.outboxEventId === e.id),
+          )
         }
 
         return rows.slice(0, args.take ?? rows.length)
       },
       update: async (args: any) => {
-        const event = this.events.find(e => e.id === args.where.id)!
+        const event = this.events.find((e) => e.id === args.where.id)!
         Object.assign(event, args.data)
 
         return event
       },
-      count: async () => this.events.filter(e => e.status === 'PENDING').length,
-      findFirst: async () => this.events.find(e => e.status === 'PENDING') ?? null,
+      count: async () =>
+        this.events.filter((e) => e.status === 'PENDING').length,
+      findFirst: async () =>
+        this.events.find((e) => e.status === 'PENDING') ?? null,
     }
   }
 
@@ -90,18 +101,20 @@ class FakeDb {
         return job
       },
       findUnique: async (args: any) => {
-        const job = this.jobs.find(j => j.id === args.where.id)
+        const job = this.jobs.find((j) => j.id === args.where.id)
         if (!job) return null
 
         return {
           ...job,
-          outboxEvent: this.events.find(e => e.id === job.outboxEventId) ?? null,
+          outboxEvent:
+            this.events.find((e) => e.id === job.outboxEventId) ?? null,
         }
       },
       findMany: async (args: any) =>
         this.jobs.filter(
-          j =>
-            j.outboxEventId === args.where.outboxEventId && j.status === args.where.status
+          (j) =>
+            j.outboxEventId === args.where.outboxEventId &&
+            j.status === args.where.status,
         ),
     }
   }
@@ -116,11 +129,14 @@ class FakeLeaseService {
 
   async leaseJob({ jobType }: { jobType: string }) {
     const job = this.db.jobs.find(
-      j => j.jobType === jobType && j.status === 'PENDING' && j.availableAt <= Date.now()
+      (j) =>
+        j.jobType === jobType &&
+        j.status === 'PENDING' &&
+        j.availableAt <= Date.now(),
     )
     if (!job) return null
     job.status = 'LEASED'
-    const event = this.db.events.find(e => e.id === job.outboxEventId)!
+    const event = this.db.events.find((e) => e.id === job.outboxEventId)!
 
     return {
       jobId: job.id,
@@ -132,22 +148,26 @@ class FakeLeaseService {
   }
 
   async completeJob(jobId: string) {
-    const job = this.db.jobs.find(j => j.id === jobId)!
+    const job = this.db.jobs.find((j) => j.id === jobId)!
     job.status = 'COMPLETED'
-    const siblings = this.db.jobs.filter(j => j.outboxEventId === job.outboxEventId)
-    if (siblings.every(j => j.status === 'COMPLETED')) {
-      this.db.events.find(e => e.id === job.outboxEventId)!.status = 'PUBLISHED'
+    const siblings = this.db.jobs.filter(
+      (j) => j.outboxEventId === job.outboxEventId,
+    )
+    if (siblings.every((j) => j.status === 'COMPLETED')) {
+      this.db.events.find((e) => e.id === job.outboxEventId)!.status =
+        'PUBLISHED'
     }
   }
 
   async failJob(jobId: string, _token: string, error: Error | string) {
-    const job = this.db.jobs.find(j => j.id === jobId)!
+    const job = this.db.jobs.find((j) => j.id === jobId)!
     job.attempt += 1
     job.lastError = error instanceof Error ? error.message : String(error)
 
     if (job.attempt >= job.maxAttempts) {
       job.status = 'DEAD_LETTER'
-      this.db.events.find(e => e.id === job.outboxEventId)!.status = 'DEAD_LETTER'
+      this.db.events.find((e) => e.id === job.outboxEventId)!.status =
+        'DEAD_LETTER'
     } else {
       job.status = 'PENDING'
       job.availableAt = Date.now() + 60_000
@@ -155,7 +175,7 @@ class FakeLeaseService {
   }
 
   async resetJobForRetry(jobId: string) {
-    const job = this.db.jobs.find(j => j.id === jobId)!
+    const job = this.db.jobs.find((j) => j.id === jobId)!
     job.status = 'PENDING'
     job.attempt = 0
     job.lastError = null
@@ -169,8 +189,16 @@ class FakeLeaseService {
 
 function buildRelay(db: FakeDb, handlers: OutboxEventHandler[]) {
   const schemas = new EventSchemaRegistry()
-  schemas.register({ eventType: 'UserCreated', version: 1, validate: () => undefined })
-  schemas.register({ eventType: 'OrderPlaced', version: 1, validate: () => undefined })
+  schemas.register({
+    eventType: 'UserCreated',
+    version: 1,
+    validate: () => undefined,
+  })
+  schemas.register({
+    eventType: 'OrderPlaced',
+    version: 1,
+    validate: () => undefined,
+  })
 
   const registry = new OutboxHandlerRegistry(schemas)
   for (const handler of handlers) registry.register(handler)
@@ -204,7 +232,7 @@ describe('OutboxRelay', () => {
         name: 'h1',
         eventType: 'UserCreated',
         eventVersion: 1,
-        handle: async ctx => {
+        handle: async (ctx) => {
           seen.push(ctx.payload)
         },
       },
@@ -228,7 +256,7 @@ describe('OutboxRelay', () => {
         name: 'user-handler',
         eventType: 'UserCreated',
         eventVersion: 1,
-        handle: async ctx => {
+        handle: async (ctx) => {
           userSeen.push(ctx.eventId)
         },
       },
@@ -236,7 +264,7 @@ describe('OutboxRelay', () => {
         name: 'order-handler',
         eventType: 'OrderPlaced',
         eventVersion: 1,
-        handle: async ctx => {
+        handle: async (ctx) => {
           orderSeen.push(ctx.eventId)
         },
       },
@@ -253,7 +281,12 @@ describe('OutboxRelay', () => {
     let failNext = true
 
     const { relay, leases } = buildRelay(db, [
-      { name: 'ok', eventType: 'UserCreated', eventVersion: 1, handle: async () => undefined },
+      {
+        name: 'ok',
+        eventType: 'UserCreated',
+        eventVersion: 1,
+        handle: async () => undefined,
+      },
       {
         name: 'flaky',
         eventType: 'UserCreated',
@@ -279,14 +312,21 @@ describe('OutboxRelay', () => {
     db.addEvent({ eventType: 'OrderPlaced', payload: { orderId: 'o1' } })
 
     const { relay } = buildRelay(db, [
-      { name: 'user-handler', eventType: 'UserCreated', eventVersion: 1, handle: async () => undefined },
+      {
+        name: 'user-handler',
+        eventType: 'UserCreated',
+        eventVersion: 1,
+        handle: async () => undefined,
+      },
     ])
 
     const summary = await relay.runOnce()
 
     expect(summary.unhandled).toBe(1)
     expect(db.events[0].status).toBe('DEAD_LETTER')
-    expect(silentLog.error).toHaveBeenCalledWith(expect.stringContaining('no handler registered'))
+    expect(silentLog.error).toHaveBeenCalledWith(
+      expect.stringContaining('no handler registered'),
+    )
   })
 
   it('dead-letters after max attempts without blocking other event types', async () => {
@@ -303,7 +343,12 @@ describe('OutboxRelay', () => {
           throw new Error('provider down')
         },
       },
-      { name: 'healthy', eventType: 'OrderPlaced', eventVersion: 1, handle: async () => undefined },
+      {
+        name: 'healthy',
+        eventType: 'OrderPlaced',
+        eventVersion: 1,
+        handle: async () => undefined,
+      },
     ])
 
     await relay.runOnce()
@@ -313,7 +358,9 @@ describe('OutboxRelay', () => {
     const [userEvent, orderEvent] = db.events
     expect(userEvent.status).toBe('DEAD_LETTER')
     expect(orderEvent.status).toBe('PUBLISHED')
-    expect(db.jobs.find(j => j.jobType === 'always-fails')?.lastError).toContain('provider down')
+    expect(
+      db.jobs.find((j) => j.jobType === 'always-fails')?.lastError,
+    ).toContain('provider down')
   })
 
   it('replays a dead-lettered event without duplicating side effects', async () => {
@@ -327,7 +374,7 @@ describe('OutboxRelay', () => {
         eventType: 'UserCreated',
         eventVersion: 1,
         maxAttempts: 1,
-        handle: async ctx => {
+        handle: async (ctx) => {
           if (!healthy) throw new Error('downstream down')
           effects.push(ctx.eventId)
         },
@@ -353,7 +400,12 @@ describe('OutboxRelay', () => {
     db.addEvent({ eventType: 'UserCreated', payload: { userId: 'u1' } })
 
     const { relay } = buildRelay(db, [
-      { name: 'h1', eventType: 'UserCreated', eventVersion: 1, handle: async () => undefined },
+      {
+        name: 'h1',
+        eventType: 'UserCreated',
+        eventVersion: 1,
+        handle: async () => undefined,
+      },
     ])
 
     await relay.runOnce()

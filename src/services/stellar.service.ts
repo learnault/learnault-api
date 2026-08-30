@@ -30,123 +30,123 @@ import {
 // Local type aliases — keeps the rest of the file readable
 // ---------------------------------------------------------------------------
 
-export type RpcServer = rpc.Server;
-export type SimulateTransactionResponse = rpc.Api.SimulateTransactionResponse;
-export type GetTransactionResponse = rpc.Api.GetTransactionResponse;
+export type RpcServer = rpc.Server
+export type SimulateTransactionResponse = rpc.Api.SimulateTransactionResponse
+export type GetTransactionResponse = rpc.Api.GetTransactionResponse
 
 // ---------------------------------------------------------------------------
 // Balance row shape returned from Horizon via rpc.Server.getAccount()
 // ---------------------------------------------------------------------------
 
 interface NativeBalance {
-  asset_type: 'native';
-  balance: string;
+  asset_type: 'native'
+  balance: string
 }
 
 interface IssuedBalance {
-  asset_type: 'credit_alphanum4' | 'credit_alphanum12';
-  asset_code: string;
-  asset_issuer: string;
-  balance: string;
-  limit: string;
+  asset_type: 'credit_alphanum4' | 'credit_alphanum12'
+  asset_code: string
+  asset_issuer: string
+  balance: string
+  limit: string
 }
 
-export type HorizonBalance = NativeBalance | IssuedBalance;
+export type HorizonBalance = NativeBalance | IssuedBalance
 
 // ---------------------------------------------------------------------------
 // Public types
 // ---------------------------------------------------------------------------
 
 export interface StellarWallet {
-  publicKey: string;
-  secretKey: string;
+  publicKey: string
+  secretKey: string
 }
 
 export interface AccountBalance {
-  asset: string;
-  balance: string;
-  limit?: string;
+  asset: string
+  balance: string
+  limit?: string
 }
 
 export interface AccountBalanceDetail {
-  assetType: 'native' | 'credit_alphanum4' | 'credit_alphanum12';
-  assetCode: string;
-  issuer: string | null;
-  amount: string;
+  assetType: 'native' | 'credit_alphanum4' | 'credit_alphanum12'
+  assetCode: string
+  issuer: string | null
+  amount: string
 }
 
 export interface AccountSnapshot {
-  found: boolean;
-  lastModifiedTime: string | null;
-  balances: AccountBalanceDetail[];
+  found: boolean
+  lastModifiedTime: string | null
+  balances: AccountBalanceDetail[]
 }
 
 export interface PaymentHistoryRecord {
-  id: string;
-  pagingToken: string;
-  createdAt: string;
-  transactionHash: string;
-  transactionSuccessful: boolean;
-  ledger: number | null;
-  type: string;
-  from: string | null;
-  to: string | null;
-  assetType: string;
-  assetCode: string;
-  issuer: string | null;
-  amount: string | null;
-  memo: string | null;
-  memoType: string | null;
+  id: string
+  pagingToken: string
+  createdAt: string
+  transactionHash: string
+  transactionSuccessful: boolean
+  ledger: number | null
+  type: string
+  from: string | null
+  to: string | null
+  assetType: string
+  assetCode: string
+  issuer: string | null
+  amount: string | null
+  memo: string | null
+  memoType: string | null
 }
 
 export interface PaymentHistoryPage {
-  records: PaymentHistoryRecord[];
-  nextCursor: string | null;
+  records: PaymentHistoryRecord[]
+  nextCursor: string | null
 }
 
 export interface PaymentOptions {
-  sourceSecret: string;
-  destinationPublicKey: string;
-  amount: string;
-  asset?: Asset;
-  memo?: string;
+  sourceSecret: string
+  destinationPublicKey: string
+  amount: string
+  asset?: Asset
+  memo?: string
 }
 
 export interface PaymentResult {
-  hash: string;
-  ledger: number;
-  successful: boolean;
+  hash: string
+  ledger: number
+  successful: boolean
 }
 
 export interface CredentialData {
-  recipientPublicKey: string;
-  credentialType: string;
-  data: Record<string, unknown>;
-  expiresAt?: number;
+  recipientPublicKey: string
+  credentialType: string
+  data: Record<string, unknown>
+  expiresAt?: number
 }
 
 export interface CredentialResult {
-  contractId: string;
-  transactionHash: string;
-  credentialId: string;
+  contractId: string
+  transactionHash: string
+  credentialId: string
 }
 
 export interface VerificationResult {
-  isValid: boolean;
-  credentialId: string;
-  issuer: string;
-  recipient: string;
-  credentialType: string;
-  issuedAt: number;
-  expiresAt?: number;
-  data: Record<string, unknown>;
+  isValid: boolean
+  credentialId: string
+  issuer: string
+  recipient: string
+  credentialType: string
+  issuedAt: number
+  expiresAt?: number
+  data: Record<string, unknown>
 }
 
 // ---------------------------------------------------------------------------
 // Network configuration
 // ---------------------------------------------------------------------------
 
-type NetworkName = 'testnet' | 'mainnet';
+type NetworkName = 'testnet' | 'mainnet'
 
 const NETWORK_CONFIG: Record<
   NetworkName,
@@ -172,7 +172,7 @@ export class StellarServiceError extends Error {
   constructor(
     message: string,
     public readonly code: string,
-    public readonly cause?: unknown
+    public readonly cause?: unknown,
   ) {
     super(message)
     this.name = 'StellarServiceError'
@@ -191,8 +191,9 @@ export class StellarService {
   private readonly network: NetworkName
 
   constructor(
-    network: NetworkName = (process.env.STELLAR_NETWORK as NetworkName) ?? 'testnet',
-    contractId: string = process.env.SOROBAN_CONTRACT_ID ?? ''
+    network: NetworkName = (process.env.STELLAR_NETWORK as NetworkName) ??
+      'testnet',
+    contractId: string = process.env.SOROBAN_CONTRACT_ID ?? '',
   ) {
     this.network = network
     const config = NETWORK_CONFIG[network]
@@ -209,7 +210,7 @@ export class StellarService {
 
   // ── Wallet generation ─────────────────────────────────────────────────────
 
-  generateWallet (): StellarWallet {
+  generateWallet(): StellarWallet {
     try {
       const keypair = Keypair.random()
 
@@ -221,22 +222,22 @@ export class StellarService {
       throw new StellarServiceError(
         'Failed to generate Stellar wallet',
         'WALLET_GENERATION_ERROR',
-        err
+        err,
       )
     }
   }
 
   /** Fund a testnet account via Friendbot (testnet only). */
-  async fundTestnetAccount (publicKey: string): Promise<void> {
+  async fundTestnetAccount(publicKey: string): Promise<void> {
     if (this.network !== 'testnet') {
       throw new StellarServiceError(
         'Friendbot is only available on testnet',
-        'INVALID_NETWORK'
+        'INVALID_NETWORK',
       )
     }
     try {
       const res = await fetch(
-        `https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`
+        `https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`,
       )
       if (!res.ok) {
         throw new Error(`Friendbot returned ${res.status}`)
@@ -246,14 +247,14 @@ export class StellarService {
       throw new StellarServiceError(
         'Failed to fund testnet account via Friendbot',
         'FRIENDBOT_ERROR',
-        err
+        err,
       )
     }
   }
 
   // ── Balances ──────────────────────────────────────────────────────────────
 
-  async getBalances (publicKey: string): Promise<AccountBalance[]> {
+  async getBalances(publicKey: string): Promise<AccountBalance[]> {
     try {
       const account = await this.horizonServer.loadAccount(publicKey)
 
@@ -261,8 +262,9 @@ export class StellarService {
         const assetName =
           b.asset_type === 'native'
             ? 'XLM'
-            : `${(b as { asset_code: string }).asset_code}:${(b as { asset_issuer: string }).asset_issuer
-            }`
+            : `${(b as { asset_code: string }).asset_code}:${
+                (b as { asset_issuer: string }).asset_issuer
+              }`
 
         return {
           asset: assetName,
@@ -277,12 +279,12 @@ export class StellarService {
       throw new StellarServiceError(
         `Failed to fetch balances for ${publicKey}`,
         'BALANCE_FETCH_ERROR',
-        err
+        err,
       )
     }
   }
 
-  async getNativeBalance (publicKey: string): Promise<string> {
+  async getNativeBalance(publicKey: string): Promise<string> {
     const balances = await this.getBalances(publicKey)
 
     return balances.find((b) => b.asset === 'XLM')?.balance ?? '0'
@@ -293,12 +295,17 @@ export class StellarService {
    * A 404 (account not yet funded on-ledger) is a normal, non-error state and
    * resolves to `found: false` with no balances rather than throwing.
    */
-  async getAccountSnapshot (publicKey: string): Promise<AccountSnapshot> {
+  async getAccountSnapshot(publicKey: string): Promise<AccountSnapshot> {
     try {
       const account = await this.horizonServer.loadAccount(publicKey)
       const balances: AccountBalanceDetail[] = account.balances.map((b) => {
         if (b.asset_type === 'native') {
-          return { assetType: 'native', assetCode: 'XLM', issuer: null, amount: b.balance }
+          return {
+            assetType: 'native',
+            assetCode: 'XLM',
+            issuer: null,
+            amount: b.balance,
+          }
         }
         const issued = b as unknown as IssuedBalance
 
@@ -313,7 +320,8 @@ export class StellarService {
       return {
         found: true,
         lastModifiedTime:
-          (account as unknown as { last_modified_time?: string }).last_modified_time ?? null,
+          (account as unknown as { last_modified_time?: string })
+            .last_modified_time ?? null,
         balances,
       }
     } catch (err) {
@@ -321,9 +329,17 @@ export class StellarService {
         return { found: false, lastModifiedTime: null, balances: [] }
       }
       if (isHorizonTimeout(err)) {
-        throw new StellarServiceError('Horizon request timed out', 'HORIZON_TIMEOUT', err)
+        throw new StellarServiceError(
+          'Horizon request timed out',
+          'HORIZON_TIMEOUT',
+          err,
+        )
       }
-      throw new StellarServiceError('Horizon is unavailable', 'HORIZON_UNAVAILABLE', err)
+      throw new StellarServiceError(
+        'Horizon is unavailable',
+        'HORIZON_UNAVAILABLE',
+        err,
+      )
     }
   }
 
@@ -332,9 +348,9 @@ export class StellarService {
    * and account-creation credits), using Horizon's own paging_token as the
    * cursor so results stay stable under concurrent ledger writes.
    */
-  async getPaymentHistory (
+  async getPaymentHistory(
     publicKey: string,
-    options: { cursor?: string; limit?: number; order?: 'asc' | 'desc' } = {}
+    options: { cursor?: string; limit?: number; order?: 'asc' | 'desc' } = {},
   ): Promise<PaymentHistoryPage> {
     const limit = options.limit ?? 20
 
@@ -350,33 +366,47 @@ export class StellarService {
 
       const page = await builder.call()
       const relevant = page.records.filter((record) =>
-        HISTORY_OPERATION_TYPES.has((record as { type: string }).type)
+        HISTORY_OPERATION_TYPES.has((record as { type: string }).type),
       )
 
       return {
         records: relevant.map(toPaymentHistoryRecord),
         nextCursor:
           page.records.length > 0
-            ? (page.records[page.records.length - 1] as { paging_token: string }).paging_token
+            ? (
+                page.records[page.records.length - 1] as {
+                  paging_token: string
+                }
+              ).paging_token
             : null,
       }
     } catch (err) {
       if (isHorizonNotFound(err)) return { records: [], nextCursor: null }
       if (isHorizonTimeout(err)) {
-        throw new StellarServiceError('Horizon request timed out', 'HORIZON_TIMEOUT', err)
+        throw new StellarServiceError(
+          'Horizon request timed out',
+          'HORIZON_TIMEOUT',
+          err,
+        )
       }
-      throw new StellarServiceError('Horizon is unavailable', 'HORIZON_UNAVAILABLE', err)
+      throw new StellarServiceError(
+        'Horizon is unavailable',
+        'HORIZON_UNAVAILABLE',
+        err,
+      )
     }
   }
 
   // ── Payments ──────────────────────────────────────────────────────────────
 
   /** Alias kept for test compatibility. */
-  async sendPaymentWithOptions (options: PaymentOptions): Promise<PaymentResult> {
+  async sendPaymentWithOptions(
+    options: PaymentOptions,
+  ): Promise<PaymentResult> {
     return this.sendPayment(options)
   }
 
-  async sendPayment (options: PaymentOptions): Promise<PaymentResult> {
+  async sendPayment(options: PaymentOptions): Promise<PaymentResult> {
     const { sourceSecret, destinationPublicKey, amount, memo } = options
     const asset = options.asset ?? Asset.native()
 
@@ -385,7 +415,8 @@ export class StellarService {
       const sourcePublicKey = sourceKeypair.publicKey()
 
       // Load source account (needed for sequence number)
-      const sourceAccount = await this.horizonServer.loadAccount(sourcePublicKey)
+      const sourceAccount =
+        await this.horizonServer.loadAccount(sourcePublicKey)
 
       // Make sure destination exists (create it if sending XLM and it doesn't exist)
       let destinationExists = true
@@ -405,7 +436,7 @@ export class StellarService {
           Operation.createAccount({
             destination: destinationPublicKey,
             startingBalance: amount,
-          })
+          }),
         )
       } else {
         builder.addOperation(
@@ -413,7 +444,7 @@ export class StellarService {
             destination: destinationPublicKey,
             asset,
             amount,
-          })
+          }),
         )
       }
 
@@ -425,9 +456,7 @@ export class StellarService {
       const response = await this.horizonServer.submitTransaction(transaction)
 
       if (!response.successful) {
-        throw new Error(
-          `Transaction failed: ${JSON.stringify(response)}`
-        )
+        throw new Error(`Transaction failed: ${JSON.stringify(response)}`)
       }
 
       // Poll for confirmation
@@ -461,28 +490,28 @@ export class StellarService {
       throw new StellarServiceError(
         'Payment transaction failed',
         'PAYMENT_ERROR',
-        err
+        err,
       )
     }
   }
 
   // ── Credential issuance ───────────────────────────────────────────────────
 
-  async issueCredential (
+  async issueCredential(
     issuerSecret: string,
-    credential: CredentialData
+    credential: CredentialData,
   ): Promise<CredentialResult> {
     if (!this.contractId) {
       throw new StellarServiceError(
         'No Soroban contract ID configured',
-        'CONTRACT_NOT_CONFIGURED'
+        'CONTRACT_NOT_CONFIGURED',
       )
     }
 
     try {
       const issuerKeypair = Keypair.fromSecret(issuerSecret)
       const issuerAccount = await this.horizonServer.loadAccount(
-        issuerKeypair.publicKey()
+        issuerKeypair.publicKey(),
       )
 
       const contract = new Contract(this.contractId)
@@ -510,7 +539,9 @@ export class StellarService {
       }
 
       // assembleTransaction lives on the `rpc` namespace in v11
-      const assembledTx = rpc.assembleTransaction(transaction, simResult).build()
+      const assembledTx = rpc
+        .assembleTransaction(transaction, simResult)
+        .build()
       assembledTx.sign(issuerKeypair)
 
       const sendResult = await this.server.sendTransaction(assembledTx)
@@ -526,18 +557,18 @@ export class StellarService {
       throw new StellarServiceError(
         'Credential issuance failed',
         'CREDENTIAL_ISSUANCE_ERROR',
-        err
+        err,
       )
     }
   }
 
   // ── Credential verification ───────────────────────────────────────────────
 
-  async verifyCredential (credentialId: string): Promise<VerificationResult> {
+  async verifyCredential(credentialId: string): Promise<VerificationResult> {
     if (!this.contractId) {
       throw new StellarServiceError(
         'No Soroban contract ID configured',
-        'CONTRACT_NOT_CONFIGURED'
+        'CONTRACT_NOT_CONFIGURED',
       )
     }
 
@@ -545,13 +576,13 @@ export class StellarService {
       const contract = new Contract(this.contractId)
       const operation = contract.call(
         'verify_credential',
-        nativeToScVal(credentialId, { type: 'string' })
+        nativeToScVal(credentialId, { type: 'string' }),
       )
 
       // For read-only calls we simulate without signing
       const dummyAccount = await this.horizonServer.loadAccount(
         // Use a well-known testnet account for simulation if no source available
-        'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN'
+        'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN',
       )
 
       const tx = new TransactionBuilder(dummyAccount, {
@@ -603,14 +634,14 @@ export class StellarService {
       throw new StellarServiceError(
         'Credential verification failed',
         'CREDENTIAL_VERIFICATION_ERROR',
-        err
+        err,
       )
     }
   }
 
   // ── Transaction status check ──────────────────────────────────────────────
 
-  async verifyTransaction (hash: string): Promise<boolean> {
+  async verifyTransaction(hash: string): Promise<boolean> {
     try {
       const result = await this.server.getTransaction(hash)
 
@@ -619,17 +650,17 @@ export class StellarService {
       throw new StellarServiceError(
         `Failed to verify transaction ${hash}`,
         'TRANSACTION_VERIFY_ERROR',
-        err
+        err,
       )
     }
   }
 
   // ── Private helpers ───────────────────────────────────────────────────────
 
-  private async waitForTransaction (
+  private async waitForTransaction(
     hash: string,
     maxAttempts = 20,
-    intervalMs = 2000
+    intervalMs = 2000,
   ): Promise<rpc.Api.GetTransactionResponse> {
     for (let i = 0; i < maxAttempts; i++) {
       await new Promise((r) => setTimeout(r, intervalMs))
@@ -641,13 +672,11 @@ export class StellarService {
     }
     throw new StellarServiceError(
       `Transaction ${hash} not confirmed after ${maxAttempts} attempts`,
-      'TRANSACTION_TIMEOUT'
+      'TRANSACTION_TIMEOUT',
     )
   }
 
-  private extractReturnValue (
-    txResult: rpc.Api.GetTransactionResponse
-  ): string {
+  private extractReturnValue(txResult: rpc.Api.GetTransactionResponse): string {
     try {
       if (
         txResult.status === rpc.Api.GetTransactionStatus.SUCCESS &&
@@ -679,11 +708,15 @@ const HISTORY_OPERATION_TYPES = new Set([
 const MAX_MEMO_LENGTH = 256
 
 /** Text memos are free-form user input; hash/id/return memos are opaque public identifiers already. */
-function applyMemoPolicy (memoType: string | null, memo: string | null): string | null {
+function applyMemoPolicy(
+  memoType: string | null,
+  memo: string | null,
+): string | null {
   if (!memo) return null
   if (memoType === 'text') {
-    // eslint-disable-next-line no-control-regex
-    const sanitized = memo.replace(/[\x00-\x1F\x7F]/g, '').slice(0, MAX_MEMO_LENGTH)
+    const sanitized = memo
+      .replace(/[\x00-\x1F\x7F]/g, '')
+      .slice(0, MAX_MEMO_LENGTH)
 
     return sanitized.length > 0 ? sanitized : null
   }
@@ -691,9 +724,10 @@ function applyMemoPolicy (memoType: string | null, memo: string | null): string 
   return memo
 }
 
-function toPaymentHistoryRecord (record: unknown): PaymentHistoryRecord {
+function toPaymentHistoryRecord(record: unknown): PaymentHistoryRecord {
   const r = record as Record<string, unknown>
-  const transaction = (r.transaction ?? undefined) as Record<string, unknown> | undefined
+  const transaction = (r.transaction ?? undefined) as
+    Record<string, unknown> | undefined
   const memoType = (transaction?.memo_type as string | undefined) ?? null
   const rawMemo = (transaction?.memo as string | undefined) ?? null
   const assetType = (r.asset_type as string | undefined) ?? 'native'
@@ -704,26 +738,37 @@ function toPaymentHistoryRecord (record: unknown): PaymentHistoryRecord {
     createdAt: String(r.created_at),
     transactionHash: String(r.transaction_hash),
     transactionSuccessful: r.transaction_successful !== false,
-    ledger: typeof transaction?.ledger_attr === 'number' ? (transaction.ledger_attr as number) : null,
+    ledger:
+      typeof transaction?.ledger_attr === 'number'
+        ? (transaction.ledger_attr as number)
+        : null,
     type: String(r.type),
-    from: (r.from as string | undefined) ?? (r.funder as string | undefined) ?? null,
-    to: (r.to as string | undefined) ?? (r.account as string | undefined) ?? null,
+    from:
+      (r.from as string | undefined) ??
+      (r.funder as string | undefined) ??
+      null,
+    to:
+      (r.to as string | undefined) ?? (r.account as string | undefined) ?? null,
     assetType,
     assetCode: assetType === 'native' ? 'XLM' : String(r.asset_code ?? ''),
     issuer: (r.asset_issuer as string | undefined) ?? null,
-    amount: (r.amount as string | undefined) ?? (r.starting_balance as string | undefined) ?? null,
+    amount:
+      (r.amount as string | undefined) ??
+      (r.starting_balance as string | undefined) ??
+      null,
     memo: applyMemoPolicy(memoType, rawMemo),
     memoType,
   }
 }
 
-function isHorizonNotFound (err: unknown): boolean {
-  const status = (err as { response?: { status?: number } } | undefined)?.response?.status
+function isHorizonNotFound(err: unknown): boolean {
+  const status = (err as { response?: { status?: number } } | undefined)
+    ?.response?.status
 
   return status === 404
 }
 
-function isHorizonTimeout (err: unknown): boolean {
+function isHorizonTimeout(err: unknown): boolean {
   const code = (err as { code?: string } | undefined)?.code
   const name = (err as { name?: string } | undefined)?.name
   const message = err instanceof Error ? err.message.toLowerCase() : ''

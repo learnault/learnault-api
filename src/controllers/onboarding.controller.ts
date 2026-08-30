@@ -5,7 +5,9 @@ import { ONBOARDING_STEPS } from '../types/onboarding.types'
 
 const saveStepSchema = z.object({
   step: z.enum(ONBOARDING_STEPS, {
-    errorMap: () => ({ message: `Step must be one of: ${ONBOARDING_STEPS.join(', ')}` }),
+    errorMap: () => ({
+      message: `Step must be one of: ${ONBOARDING_STEPS.join(', ')}`,
+    }),
   }),
 })
 
@@ -79,15 +81,23 @@ export class OnboardingController {
         return
       }
 
-      const result = await onboardingService.saveStep(userId, validation.data.step)
+      const result = await onboardingService.saveStep(
+        userId,
+        validation.data.step,
+      )
 
       if (result.kind === 'already-completed') {
-        res.status(409).json({ error: 'Onboarding is already completed', data: result.progress })
+        res.status(409).json({
+          error: 'Onboarding is already completed',
+          data: result.progress,
+        })
 
         return
       }
 
-      res.status(200).json({ message: 'Step saved successfully', data: result.progress })
+      res
+        .status(200)
+        .json({ message: 'Step saved successfully', data: result.progress })
     } catch (error) {
       console.error('Save onboarding step error:', error)
       res.status(500).json({ error: 'Internal server error' })
@@ -122,7 +132,10 @@ export class OnboardingController {
       const result = await onboardingService.complete(userId)
 
       if (result.kind === 'incomplete-steps') {
-        res.status(409).json({ error: 'Required onboarding steps are missing', missingSteps: result.missingSteps })
+        res.status(409).json({
+          error: 'Required onboarding steps are missing',
+          missingSteps: result.missingSteps,
+        })
 
         return
       }
@@ -133,7 +146,10 @@ export class OnboardingController {
         return
       }
 
-      res.status(200).json({ message: 'Onboarding completed successfully', data: result.progress })
+      res.status(200).json({
+        message: 'Onboarding completed successfully',
+        data: result.progress,
+      })
     } catch (error) {
       console.error('Complete onboarding error:', error)
       res.status(500).json({ error: 'Internal server error' })

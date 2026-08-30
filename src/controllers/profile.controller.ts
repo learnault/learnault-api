@@ -85,7 +85,11 @@ export class ProfileController {
         return
       }
 
-      await profileService.updateProfileAudited(userId, validation.data, requestAuditContext(req))
+      await profileService.updateProfileAudited(
+        userId,
+        validation.data,
+        requestAuditContext(req),
+      )
       const profile = await profileService.getOwnerView(userId)
 
       res.status(200).json({
@@ -129,9 +133,10 @@ export class ProfileController {
         return
       }
 
-      const profile = req.user?.role === 'employer'
-        ? await profileService.getEmployerView(id)
-        : await profileService.getPublicView(id)
+      const profile =
+        req.user?.role === 'employer'
+          ? await profileService.getEmployerView(id)
+          : await profileService.getPublicView(id)
 
       if (!profile) {
         res.status(404).json({ error: 'Profile not found' })

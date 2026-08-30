@@ -1,5 +1,8 @@
 import prisma from '../config/database'
-import { PRIVACY_IMPACTING_FIELDS, UpdateLearnerPreferencesData } from '../types/preference.types'
+import {
+  PRIVACY_IMPACTING_FIELDS,
+  UpdateLearnerPreferencesData,
+} from '../types/preference.types'
 
 export class PreferenceService {
   /**
@@ -24,7 +27,9 @@ export class PreferenceService {
    * the same user cannot create duplicate rows or silently drop a write.
    */
   async updatePreferences(userId: string, data: UpdateLearnerPreferencesData) {
-    const before = await prisma.learnerPreference.findUnique({ where: { userId } })
+    const before = await prisma.learnerPreference.findUnique({
+      where: { userId },
+    })
 
     const updated = await prisma.learnerPreference.upsert({
       where: { userId },
@@ -41,17 +46,18 @@ export class PreferenceService {
     userId: string,
     before: { [key: string]: unknown } | null,
     after: { [key: string]: unknown },
-    changedFields: UpdateLearnerPreferencesData
+    changedFields: UpdateLearnerPreferencesData,
   ): Promise<void> {
-    const entries = PRIVACY_IMPACTING_FIELDS
-      .filter(field => field in changedFields)
-      .map(field => ({
+    const entries = PRIVACY_IMPACTING_FIELDS.filter(
+      (field) => field in changedFields,
+    )
+      .map((field) => ({
         userId,
         field,
         oldValue: before ? String(before[field]) : null,
         newValue: String(after[field]),
       }))
-      .filter(entry => entry.oldValue !== entry.newValue)
+      .filter((entry) => entry.oldValue !== entry.newValue)
 
     if (entries.length === 0) {
       return

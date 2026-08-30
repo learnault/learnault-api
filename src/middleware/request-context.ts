@@ -27,7 +27,7 @@ declare global {
 export const requestContext = (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void => {
   // Generate or use existing request ID
   const requestId = (req.headers['x-request-id'] as string) || randomUUID()

@@ -25,7 +25,7 @@ export interface RegisterHandlersOptions {
 }
 
 export function registerOutboxHandlers(
-  options: RegisterHandlersOptions = {}
+  options: RegisterHandlersOptions = {},
 ): OutboxHandlerRegistry {
   const prisma = options.prisma ?? defaultPrisma
   const registry = options.registry ?? getOutboxHandlerRegistry()
@@ -43,9 +43,9 @@ export function registerOutboxHandlers(
       new WalletProvisioningOutboxHandler(
         repository,
         new InMemoryEnvelopeKms(),
-        new SdkStellarKeypairGenerator()
-      )
-    )
+        new SdkStellarKeypairGenerator(),
+      ),
+    ),
   )
 
   registry.assertHandlersFor(EMITTED_EVENT_TYPES)

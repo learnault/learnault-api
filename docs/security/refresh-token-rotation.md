@@ -6,9 +6,9 @@ stateful, rotating refresh sessions.
 
 ## 1. Token model
 
-| Token | Type | Lifetime | Issued at | Sent back |
-| --- | --- | --- | --- | --- |
-| Access token | JWT (HS256, `kid`-pinned) | 15 min (`JWT_ACCESS_TTL_SECONDS`) | login, register, OTP-login, refresh | `Authorization: Bearer <token>` |
+| Token         | Type                               | Lifetime                              | Issued at                           | Sent back                                          |
+| ------------- | ---------------------------------- | ------------------------------------- | ----------------------------------- | -------------------------------------------------- |
+| Access token  | JWT (HS256, `kid`-pinned)          | 15 min (`JWT_ACCESS_TTL_SECONDS`)     | login, register, OTP-login, refresh | `Authorization: Bearer <token>`                    |
 | Refresh token | opaque, 64-char base64url, 256-bit | 30 days (`REFRESH_TOKEN_TTL_SECONDS`) | login, register, OTP-login, refresh | JSON body `refreshToken` or `refresh_token` cookie |
 
 The raw refresh token is **never persisted**. Only its SHA-256 hash is stored
@@ -44,9 +44,9 @@ copy of the token is now worthless.
 
 ## 4. Logout
 
-| Endpoint | Input | Effect |
-| --- | --- | --- |
-| `POST /auth/logout` | refresh token | revokes the session + its family (logout current) |
+| Endpoint                | Input         | Effect                                                         |
+| ----------------------- | ------------- | -------------------------------------------------------------- |
+| `POST /auth/logout`     | refresh token | revokes the session + its family (logout current)              |
 | `POST /auth/logout/all` | refresh token | revokes **every** session for the identified user (logout all) |
 
 Both are idempotent and return `revokedCount`. Unknown tokens are a neutral
@@ -78,19 +78,19 @@ first, then cookie.
   2. Reject cross-site requests at the edge, e.g. verify `Origin` /
      `Sec-Fetch-Site` before forwarding `/auth/refresh` and `/auth/logout`.
 
-The server does not set cookies itself; it only *reads* an existing
+The server does not set cookies itself; it only _reads_ an existing
 `refresh_token` cookie. This keeps the API contract transport-agnostic and
 leaves cookie lifecycle (and its CSRF obligations) to the client/edge.
 
 ## 7. Failure matrix
 
-| Condition | Result |
-| --- | --- |
-| Unknown token | `401 REFRESH_INVALID` |
+| Condition                | Result                                       |
+| ------------------------ | -------------------------------------------- |
+| Unknown token            | `401 REFRESH_INVALID`                        |
 | `ROTATED` token replayed | revoke family → `401 REFRESH_REUSE_DETECTED` |
-| `REVOKED` token/session | `401 REFRESH_REVOKED` |
-| Expired token or session | `401 REFRESH_EXPIRED` |
-| Missing token | `400 refreshToken is required` |
+| `REVOKED` token/session  | `401 REFRESH_REVOKED`                        |
+| Expired token or session | `401 REFRESH_EXPIRED`                        |
+| Missing token            | `400 refreshToken is required`               |
 
 ## 8. Verification
 

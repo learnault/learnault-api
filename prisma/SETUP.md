@@ -21,6 +21,7 @@ cp .env.example .env
 ```
 
 Example for local PostgreSQL:
+
 ```env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/learnault_dev?schema=public"
 ```
@@ -34,6 +35,7 @@ pnpm db:migrate
 ```
 
 This will:
+
 - Create all tables based on the schema defined in `schema.prisma`
 - Store migration history in the `_prisma_migrations` table
 - Generate the Prisma Client
@@ -47,6 +49,7 @@ npm run seed
 ```
 
 This will create deterministic local-only fixtures:
+
 - 6 test users (including admin, verified learner, unverified learner, disabled learner, instructor, employer)
 - 8 sample modules with different difficulties
 - Module completions and credentials for testing success/empty/pending states
@@ -55,6 +58,7 @@ This will create deterministic local-only fixtures:
 
 > **Note**: All fixture identities are strictly local-only and idempotent. Running `npm run seed` multiple times will not duplicate records.
 > To explicitly reset the database before seeding, use:
+>
 > ```bash
 > npm run seed:reset
 > ```
@@ -72,32 +76,38 @@ pnpm db:studio
 ### Models
 
 #### User
+
 - Email and wallet address are unique
 - Relates to completions, credentials, and transactions
 - Password is stored as bcrypt hash
 
-#### Module  
+#### Module
+
 - Contains course/learning content
 - Has difficulty (easy, medium, hard)
 - Associates reward amount
 - Relates to completions and credentials
 
 #### Completion
+
 - Links users to completed modules
 - Stores completion score
 - Unique constraint on userId + moduleId pair
 
 #### Credential
+
 - NFT/on-chain credential issued upon module completion
 - Stores on-chain ID if already issued
 - Unique constraint on userId + moduleId pair
 
 #### Transaction
+
 - Records all reward/transfer transactions
 - Status tracking: pending, completed, failed
 - Types: reward, refund, transfer
 
 #### WebhookEndpoint & WebhookDelivery
+
 - For event webhook delivery
 - Supports retry logic with configurable attempts
 
@@ -132,12 +142,14 @@ prisma format
 ## Environment Configuration
 
 ### Development
+
 ```env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/learnault_dev?schema=public"
 NODE_ENV=development
 ```
 
 ### Production
+
 ```env
 DATABASE_URL="postgresql://user:password@host:5432/learnault_prod?schema=public&sslmode=require"
 NODE_ENV=production
@@ -176,35 +188,39 @@ sudo -u postgres psql -c "CREATE DATABASE learnault_dev;"
 After setup, test the connection from the Node.js application:
 
 ```typescript
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient()
 
 async function main() {
-  const users = await prisma.user.findMany();
-  console.log("Users:", users);
+  const users = await prisma.user.findMany()
+  console.log('Users:', users)
 }
 
 main()
   .catch(console.error)
-  .finally(() => prisma.$disconnect());
+  .finally(() => prisma.$disconnect())
 ```
 
 ## Troubleshooting
 
 ### "Can't reach database server"
+
 - Verify PostgreSQL is running
 - Check DATABASE_URL format
 - Ensure correct host, port, credentials
 
 ### "Schema validation failed"
+
 - Run `prisma migrate reset` to reset database
 - Check for any migration files and review them
 
 ### "Prisma Client not found"
+
 - Run `pnpm install` to install dependencies
 - Run `pnpm db:migrate` to regenerate Prisma Client
 
 ### Import errors in seed.ts
+
 - Ensure dependencies are installed: `pnpm install`
 - Check that TypeScript and ts-node are in devDependencies

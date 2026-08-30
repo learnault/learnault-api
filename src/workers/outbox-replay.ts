@@ -6,7 +6,10 @@ import { createOutboxRelay } from './outbox-relay'
 
 async function main(): Promise<void> {
   const [command, ...args] = process.argv.slice(2)
-  const relay = createOutboxRelay({ prisma, handlers: registerOutboxHandlers({ prisma }) })
+  const relay = createOutboxRelay({
+    prisma,
+    handlers: registerOutboxHandlers({ prisma }),
+  })
 
   if (command === 'list') {
     const events = await relay.deadLetterEvents()
@@ -15,7 +18,9 @@ async function main(): Promise<void> {
       logger.info('[replay] no dead-lettered events')
     } else {
       for (const event of events) {
-        logger.info(`[replay] ${event.id}  ${event.eventType}  ${event.lastError ?? ''}`)
+        logger.info(
+          `[replay] ${event.id}  ${event.eventType}  ${event.lastError ?? ''}`,
+        )
       }
     }
 

@@ -99,7 +99,9 @@ router.get('/ready', async (req: Request, res: Response) => {
     checks.database = 'ok'
   } catch (error) {
     checks.database = 'error'
-    errors.push(`Database connection failed: ${error instanceof Error ? error.message : 'unknown error'}`)
+    errors.push(
+      `Database connection failed: ${error instanceof Error ? error.message : 'unknown error'}`,
+    )
     isReady = false
   }
 

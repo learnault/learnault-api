@@ -82,8 +82,7 @@ export function xlmStringToStroops(xlmString: string): bigint {
   const [wholePart = '0', fracPart = ''] = abs.split('.')
   const paddedFrac = fracPart.padEnd(7, '0')
 
-  const result =
-    BigInt(wholePart) * STROOPS_PER_XLM + BigInt(paddedFrac)
+  const result = BigInt(wholePart) * STROOPS_PER_XLM + BigInt(paddedFrac)
 
   const signed = isNegative ? -result : result
   assertInRange(signed)
@@ -176,7 +175,10 @@ export function multiplyStroops(
   denominator: bigint,
 ): bigint {
   if (denominator === 0n) {
-    throw new MoneyError('Division by zero in multiplyStroops', 'DIVIDE_BY_ZERO')
+    throw new MoneyError(
+      'Division by zero in multiplyStroops',
+      'DIVIDE_BY_ZERO',
+    )
   }
 
   const result = (stroops * numerator) / denominator
@@ -217,10 +219,7 @@ export function formatStroops(stroops: bigint, assetCode = 'XLM'): string {
  */
 export function assertInRange(stroops: bigint): void {
   if (stroops < 0n) {
-    throw new MoneyError(
-      `Stroop value ${stroops} is negative`,
-      'OUT_OF_RANGE',
-    )
+    throw new MoneyError(`Stroop value ${stroops} is negative`, 'OUT_OF_RANGE')
   }
 
   if (stroops > MAX_STROOPS) {
@@ -235,11 +234,7 @@ export function assertInRange(stroops: bigint): void {
  * Return `true` when `stroops` is a non-negative BigInt within range.
  */
 export function isValidStroopAmount(stroops: unknown): stroops is bigint {
-  return (
-    typeof stroops === 'bigint' &&
-    stroops >= 0n &&
-    stroops <= MAX_STROOPS
-  )
+  return typeof stroops === 'bigint' && stroops >= 0n && stroops <= MAX_STROOPS
 }
 
 // ---------------------------------------------------------------------------

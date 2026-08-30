@@ -13,7 +13,7 @@ export class AppError extends Error {
     message: string,
     statusCode: number = 500,
     code: ErrorCode | string = ErrorCode.INTERNAL_SERVER_ERROR,
-    isOperational: boolean = true
+    isOperational: boolean = true,
   ) {
     super(message)
     this.statusCode = statusCode
@@ -82,7 +82,7 @@ export class ValidationError extends AppError {
 
   constructor(
     message: string = 'Validation failed',
-    errors?: Record<string, string[]>
+    errors?: Record<string, string[]>,
   ) {
     super(message, 422, ErrorCode.VALIDATION_ERROR)
     this.errors = errors

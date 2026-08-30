@@ -1,9 +1,17 @@
 import type { PrismaClient } from '@prisma/client'
 import defaultPrisma from '../config/database'
 import { schedulerConfig, type SchedulerConfig } from '../config/scheduler'
-import { createJobLeaseService, JobLeaseService } from '../lib/transactions/job-lease.service'
+import {
+  createJobLeaseService,
+  JobLeaseService,
+} from '../lib/transactions/job-lease.service'
 import logger from '../utils/logger'
-import { queueMetrics, QueueMetricsRegistry, type QueueDepthSnapshot, type TickOutcome } from './queue-metrics'
+import {
+  queueMetrics,
+  QueueMetricsRegistry,
+  type QueueDepthSnapshot,
+  type TickOutcome,
+} from './queue-metrics'
 import { createDefaultQueues, type ScheduledQueue } from './queue-registry'
 
 export type QueueLeaseApi = Pick<
@@ -35,14 +43,16 @@ export class ScheduledJobRunner {
 
   constructor(options: ScheduledJobRunnerOptions) {
     this.config = options.config ?? schedulerConfig
-    this.queues = options.queues.filter(queue => this.config.isEnabled(queue.name))
+    this.queues = options.queues.filter((queue) =>
+      this.config.isEnabled(queue.name),
+    )
     this.leaseService = options.leaseService
     this.metrics = options.metrics ?? queueMetrics
     this.log = options.log ?? logger
   }
 
   get registeredQueues(): string[] {
-    return this.queues.map(queue => queue.name)
+    return this.queues.map((queue) => queue.name)
   }
 
   start(): void {
@@ -58,7 +68,7 @@ export class ScheduledJobRunner {
 
     for (const queue of this.queues) {
       this.log.info(
-        `[scheduler] registered queue "${queue.name}" (every ${this.config.intervalFor(queue.name)}ms)`
+        `[scheduler] registered queue "${queue.name}" (every ${this.config.intervalFor(queue.name)}ms)`,
       )
       this.schedule(queue, 0)
     }
@@ -88,13 +98,13 @@ export class ScheduledJobRunner {
       this.log.info(`[scheduler] draining ${pending.length} in-flight tick(s)`)
       const drained = await this.withDeadline(
         Promise.allSettled(pending),
-        this.config.shutdownTimeoutMs
+        this.config.shutdownTimeoutMs,
       )
 
       if (!drained) {
         this.log.warn(
           `[scheduler] shutdown deadline (${this.config.shutdownTimeoutMs}ms) reached; ` +
-            'remaining leases expire on their own'
+            'remaining leases expire on their own',
         )
       }
     }
@@ -151,13 +161,19 @@ export class ScheduledJobRunner {
       return this.record(queue, 'skipped', 0, before, lagMs)
     }
 
-    const heartbeat = setInterval(() => {
-      void this.leaseService
-        .renewQueueLease(queue.name, lease.leaseToken, leaseMs)
-        .catch(error =>
-          this.log.warn(`[scheduler] failed to renew lease for "${queue.name}"`, error)
-        )
-    }, Math.max(1_000, Math.floor(leaseMs / 2)))
+    const heartbeat = setInterval(
+      () => {
+        void this.leaseService
+          .renewQueueLease(queue.name, lease.leaseToken, leaseMs)
+          .catch((error) =>
+            this.log.warn(
+              `[scheduler] failed to renew lease for "${queue.name}"`,
+              error,
+            ),
+          )
+      },
+      Math.max(1_000, Math.floor(leaseMs / 2)),
+    )
 
     const startedAt = Date.now()
 
@@ -166,13 +182,23 @@ export class ScheduledJobRunner {
 
       return this.record(queue, 'ran', Date.now() - startedAt, before, lagMs)
     } catch (error) {
-      return this.record(queue, 'failed', Date.now() - startedAt, before, lagMs, error)
+      return this.record(
+        queue,
+        'failed',
+        Date.now() - startedAt,
+        before,
+        lagMs,
+        error,
+      )
     } finally {
       clearInterval(heartbeat)
       await this.leaseService
         .releaseQueueLease(queue.name, lease.leaseToken)
-        .catch(error =>
-          this.log.warn(`[scheduler] failed to release lease for "${queue.name}"`, error)
+        .catch((error) =>
+          this.log.warn(
+            `[scheduler] failed to release lease for "${queue.name}"`,
+            error,
+          ),
         )
     }
   }
@@ -193,7 +219,7 @@ export class ScheduledJobRunner {
     durationMs: number,
     depth: QueueDepthSnapshot,
     lagMs: number,
-    error?: unknown
+    error?: unknown,
   ): TickOutcome {
     this.metrics.record({
       queue: queue.name,
@@ -208,10 +234,13 @@ export class ScheduledJobRunner {
     return outcome
   }
 
-  private async withDeadline(work: Promise<unknown>, timeoutMs: number): Promise<boolean> {
+  private async withDeadline(
+    work: Promise<unknown>,
+    timeoutMs: number,
+  ): Promise<boolean> {
     let timer: NodeJS.Timeout | undefined
 
-    const deadline = new Promise<false>(resolve => {
+    const deadline = new Promise<false>((resolve) => {
       timer = setTimeout(() => resolve(false), timeoutMs)
     })
 
@@ -228,7 +257,9 @@ function toMessage(error: unknown): string {
 }
 
 export function createScheduledJobRunner(
-  overrides: Partial<ScheduledJobRunnerOptions> & { prisma?: PrismaClient } = {}
+  overrides: Partial<ScheduledJobRunnerOptions> & {
+    prisma?: PrismaClient
+  } = {},
 ): ScheduledJobRunner {
   const prisma = overrides.prisma ?? defaultPrisma
 

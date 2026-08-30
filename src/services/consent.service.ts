@@ -14,8 +14,13 @@ export type WithdrawConsentResult =
   | { kind: 'required-cannot-withdraw' }
 
 export class ConsentService {
-  async grant(userId: string, data: GrantConsentData): Promise<ConsentRecordEntry> {
-    const required = (REQUIRED_CONSENT_PURPOSES as readonly string[]).includes(data.purpose)
+  async grant(
+    userId: string,
+    data: GrantConsentData,
+  ): Promise<ConsentRecordEntry> {
+    const required = (REQUIRED_CONSENT_PURPOSES as readonly string[]).includes(
+      data.purpose,
+    )
 
     return prisma.consentRecord.create({
       data: {
@@ -30,10 +35,16 @@ export class ConsentService {
     }) as unknown as ConsentRecordEntry
   }
 
-  async withdraw(userId: string, data: WithdrawConsentData): Promise<WithdrawConsentResult> {
+  async withdraw(
+    userId: string,
+    data: WithdrawConsentData,
+  ): Promise<WithdrawConsentResult> {
     const latest = await this.getCurrentForPurpose(userId, data.purpose)
 
-    if (!latest || !canTransition(CONSENT_TRANSITIONS, latest.status, 'withdrawn')) {
+    if (
+      !latest ||
+      !canTransition(CONSENT_TRANSITIONS, latest.status, 'withdrawn')
+    ) {
       return { kind: 'not-granted' }
     }
 
@@ -53,10 +64,16 @@ export class ConsentService {
       },
     })
 
-    return { kind: 'withdrawn', record: record as unknown as ConsentRecordEntry }
+    return {
+      kind: 'withdrawn',
+      record: record as unknown as ConsentRecordEntry,
+    }
   }
 
-  async getCurrentForPurpose(userId: string, purpose: string): Promise<ConsentRecordEntry | null> {
+  async getCurrentForPurpose(
+    userId: string,
+    purpose: string,
+  ): Promise<ConsentRecordEntry | null> {
     return prisma.consentRecord.findFirst({
       where: { userId, purpose },
       orderBy: { createdAt: 'desc' },
@@ -71,7 +88,10 @@ export class ConsentService {
     }) as unknown as ConsentRecordEntry[]
   }
 
-  async getHistory(userId: string, purpose?: string): Promise<ConsentRecordEntry[]> {
+  async getHistory(
+    userId: string,
+    purpose?: string,
+  ): Promise<ConsentRecordEntry[]> {
     return prisma.consentRecord.findMany({
       where: { userId, ...(purpose ? { purpose } : {}) },
       orderBy: { createdAt: 'asc' },
@@ -80,9 +100,11 @@ export class ConsentService {
 
   async hasAllRequiredGranted(userId: string): Promise<boolean> {
     const current = await this.getCurrent(userId)
-    const byPurpose = new Map(current.map(entry => [entry.purpose, entry]))
+    const byPurpose = new Map(current.map((entry) => [entry.purpose, entry]))
 
-    return REQUIRED_CONSENT_PURPOSES.every(purpose => byPurpose.get(purpose)?.status === 'granted')
+    return REQUIRED_CONSENT_PURPOSES.every(
+      (purpose) => byPurpose.get(purpose)?.status === 'granted',
+    )
   }
 }
 

@@ -5,20 +5,28 @@ import { CONSENT_PURPOSES, CONSENT_SOURCES } from '../types/consent.types'
 
 const grantConsentSchema = z.object({
   purpose: z.enum(CONSENT_PURPOSES, {
-    errorMap: () => ({ message: `Purpose must be one of: ${CONSENT_PURPOSES.join(', ')}` }),
+    errorMap: () => ({
+      message: `Purpose must be one of: ${CONSENT_PURPOSES.join(', ')}`,
+    }),
   }),
   policyVersion: z.string().min(1),
   source: z.enum(CONSENT_SOURCES, {
-    errorMap: () => ({ message: `Source must be one of: ${CONSENT_SOURCES.join(', ')}` }),
+    errorMap: () => ({
+      message: `Source must be one of: ${CONSENT_SOURCES.join(', ')}`,
+    }),
   }),
 })
 
 const withdrawConsentSchema = z.object({
   purpose: z.enum(CONSENT_PURPOSES, {
-    errorMap: () => ({ message: `Purpose must be one of: ${CONSENT_PURPOSES.join(', ')}` }),
+    errorMap: () => ({
+      message: `Purpose must be one of: ${CONSENT_PURPOSES.join(', ')}`,
+    }),
   }),
   source: z.enum(CONSENT_SOURCES, {
-    errorMap: () => ({ message: `Source must be one of: ${CONSENT_SOURCES.join(', ')}` }),
+    errorMap: () => ({
+      message: `Source must be one of: ${CONSENT_SOURCES.join(', ')}`,
+    }),
   }),
 })
 
@@ -94,7 +102,10 @@ export class ConsentController {
         return
       }
 
-      const history = await consentService.getHistory(userId, validation.data.purpose)
+      const history = await consentService.getHistory(
+        userId,
+        validation.data.purpose,
+      )
 
       res.status(200).json({ data: history })
     } catch (error) {
@@ -140,7 +151,9 @@ export class ConsentController {
 
       const record = await consentService.grant(userId, validation.data)
 
-      res.status(200).json({ message: 'Consent granted successfully', data: record })
+      res
+        .status(200)
+        .json({ message: 'Consent granted successfully', data: record })
     } catch (error) {
       console.error('Grant consent error:', error)
       res.status(500).json({ error: 'Internal server error' })
@@ -198,7 +211,10 @@ export class ConsentController {
         return
       }
 
-      res.status(200).json({ message: 'Consent withdrawn successfully', data: result.record })
+      res.status(200).json({
+        message: 'Consent withdrawn successfully',
+        data: result.record,
+      })
     } catch (error) {
       console.error('Withdraw consent error:', error)
       res.status(500).json({ error: 'Internal server error' })

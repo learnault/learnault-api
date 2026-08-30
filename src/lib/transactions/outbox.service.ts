@@ -9,11 +9,7 @@
  */
 
 import { PrismaClient, Prisma } from '@prisma/client'
-import {
-  CreateOutboxEventOptions,
-  OutboxEvent,
-  JobConfig,
-} from './types.js'
+import { CreateOutboxEventOptions, OutboxEvent, JobConfig } from './types.js'
 
 export class OutboxService {
   constructor(private prisma: PrismaClient) {}
@@ -46,7 +42,7 @@ export class OutboxService {
    */
   async createEvent(
     tx: Prisma.TransactionClient,
-    options: CreateOutboxEventOptions
+    options: CreateOutboxEventOptions,
   ): Promise<OutboxEvent> {
     return tx.outboxEvent.create({
       data: {
@@ -76,7 +72,7 @@ export class OutboxService {
   async createJobAttempts(
     tx: Prisma.TransactionClient,
     eventId: string,
-    jobs: JobConfig[]
+    jobs: JobConfig[],
   ): Promise<void> {
     for (const job of jobs) {
       await tx.jobAttempt.create({
@@ -190,7 +186,7 @@ export class OutboxService {
   async getEventsByAggregate(
     aggregateId: string,
     aggregateType: string,
-    limit: number = 100
+    limit: number = 100,
   ): Promise<OutboxEvent[]> {
     return this.prisma.outboxEvent.findMany({
       where: { aggregateId, aggregateType },

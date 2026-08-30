@@ -4,10 +4,7 @@
 
 import { describe, it, expect } from 'vitest'
 import { z } from 'zod'
-import {
-  EventSchemaRegistry,
-  createEventSchema,
-} from '../event-schema'
+import { EventSchemaRegistry, createEventSchema } from '../event-schema'
 
 describe('EventSchemaRegistry', () => {
   it('should create a new registry instance', () => {
@@ -23,7 +20,7 @@ describe('EventSchemaRegistry', () => {
       z.object({
         userId: z.string().uuid(),
         email: z.string().email(),
-      })
+      }),
     )
 
     registry.register(schema)
@@ -37,7 +34,7 @@ describe('EventSchemaRegistry', () => {
     const schema = createEventSchema(
       'UserCreated',
       1,
-      z.object({ userId: z.string() })
+      z.object({ userId: z.string() }),
     )
     registry.register(schema)
 
@@ -49,12 +46,12 @@ describe('EventSchemaRegistry', () => {
     const schema1 = createEventSchema(
       'UserCreated',
       1,
-      z.object({ userId: z.string() })
+      z.object({ userId: z.string() }),
     )
     const schema2 = createEventSchema(
       'UserUpdated',
       1,
-      z.object({ userId: z.string() })
+      z.object({ userId: z.string() }),
     )
 
     registry.register(schema1)
@@ -72,7 +69,7 @@ describe('EventSchemaRegistry', () => {
       z.object({
         userId: z.string().uuid(),
         email: z.string().email(),
-      })
+      }),
     )
 
     registry.register(schema)
@@ -94,7 +91,7 @@ describe('EventSchemaRegistry', () => {
       z.object({
         userId: z.string().uuid(),
         email: z.string().email(),
-      })
+      }),
     )
 
     registry.register(schema)
@@ -134,12 +131,12 @@ describe('EventSchemaRegistry', () => {
     const schemaV1 = createEventSchema(
       'UserCreated',
       1,
-      z.object({ userId: z.string() })
+      z.object({ userId: z.string() }),
     )
     const schemaV2 = createEventSchema(
       'UserCreated',
       2,
-      z.object({ userId: z.string(), email: z.string() })
+      z.object({ userId: z.string(), email: z.string() }),
     )
 
     registry.register(schemaV1)

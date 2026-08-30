@@ -36,16 +36,19 @@ function fakeTransaction() {
 
   const tx = { auditEvent: { create: auditCreate } }
 
-  vi.mocked(prisma.$transaction).mockImplementation(
-    (async (callback: (client: unknown) => Promise<unknown>) => callback(tx)) as never
-  )
+  vi.mocked(prisma.$transaction).mockImplementation((async (
+    callback: (client: unknown) => Promise<unknown>,
+  ) => callback(tx)) as never)
 
   return { calls, auditCreate, tx }
 }
 
 /** The audit row a fake transaction received. */
-function auditRow(auditCreate: ReturnType<typeof vi.fn>): Record<string, unknown> {
-  return (auditCreate.mock.calls[0][0] as { data: Record<string, unknown> }).data
+function auditRow(
+  auditCreate: ReturnType<typeof vi.fn>,
+): Record<string, unknown> {
+  return (auditCreate.mock.calls[0][0] as { data: Record<string, unknown> })
+    .data
 }
 
 describe('auditedMutation', () => {
@@ -94,11 +97,12 @@ describe('auditedMutation', () => {
     })
 
     it('propagates a failed audit write, so an unaudited change cannot land', async () => {
-      const auditCreate = vi.fn().mockRejectedValue(new Error('audit constraint'))
-      vi.mocked(prisma.$transaction).mockImplementation(
-        (async (callback: (client: unknown) => Promise<unknown>) =>
-          callback({ auditEvent: { create: auditCreate } })) as never
-      )
+      const auditCreate = vi
+        .fn()
+        .mockRejectedValue(new Error('audit constraint'))
+      vi.mocked(prisma.$transaction).mockImplementation((async (
+        callback: (client: unknown) => Promise<unknown>,
+      ) => callback({ auditEvent: { create: auditCreate } })) as never)
 
       await expect(
         auditedMutation({
@@ -106,7 +110,7 @@ describe('auditedMutation', () => {
           actor: { type: ActorType.WORKER, id: 'provisioning' },
           target: { type: 'Wallet', id: 'w-1' },
           mutate: async () => ({ id: 'w-1' }),
-        })
+        }),
       ).rejects.toThrow('audit constraint')
     })
 
@@ -121,7 +125,7 @@ describe('auditedMutation', () => {
           mutate: async () => {
             throw new Error('lease lost')
           },
-        })
+        }),
       ).rejects.toThrow('lease lost')
 
       // Auditing a change that never happened is as wrong as missing one.
@@ -231,7 +235,10 @@ describe('auditedMutation', () => {
       const metadata = auditRow(auditCreate).metadata as string
 
       expect(metadata).not.toContain('hunter2')
-      expect(JSON.parse(metadata)).toMatchObject({ newPassword: REDACTED, method: 'reset-link' })
+      expect(JSON.parse(metadata)).toMatchObject({
+        newPassword: REDACTED,
+        method: 'reset-link',
+      })
     })
 
     it('hashes the IP and coarsens the User-Agent it is given', async () => {
@@ -278,7 +285,7 @@ describe('auditedMutation', () => {
           actor: { type: ActorType.ADMIN, id: 'admin-1', role: 'ADMIN' },
           target: { type: 'User', id: 'learner-2' },
           mutate,
-        })
+        }),
       ).rejects.toThrow(AuditPolicyError)
 
       // Rejected before anything ran, so there is nothing to roll back.
@@ -297,7 +304,7 @@ describe('auditedMutation', () => {
           target: { type: 'User', id: 'learner-2' },
           reason: '   ',
           mutate: async () => null,
-        })
+        }),
       ).rejects.toThrow(AuditPolicyError)
     })
 
@@ -310,7 +317,7 @@ describe('auditedMutation', () => {
           actor: systemActor('lifecycle-sweep'),
           target: { type: 'DataExportRequest', id: 'e-1' },
           mutate: async () => null,
-        })
+        }),
       ).resolves.toBeNull()
 
       await expect(
@@ -319,7 +326,7 @@ describe('auditedMutation', () => {
           actor: workerActor('wallet-provisioning'),
           target: { type: 'Wallet', id: 'w-1' },
           mutate: async () => null,
-        })
+        }),
       ).resolves.toBeNull()
     })
 
@@ -332,7 +339,7 @@ describe('auditedMutation', () => {
           actor: { type: ActorType.USER },
           target: { type: 'User', id: 'u-1' },
           mutate: async () => null,
-        })
+        }),
       ).rejects.toThrow(/unattributable/)
     })
 
@@ -345,7 +352,7 @@ describe('auditedMutation', () => {
           actor: systemActor('sweep'),
           target: { type: 'User', id: 'u-1' },
           mutate: async () => null,
-        })
+        }),
       ).rejects.toThrow(AuditPolicyError)
 
       await expect(
@@ -354,7 +361,7 @@ describe('auditedMutation', () => {
           actor: systemActor('sweep'),
           target: { type: '' },
           mutate: async () => null,
-        })
+        }),
       ).rejects.toThrow(AuditPolicyError)
     })
   })
@@ -420,7 +427,7 @@ describe('auditedArchive', () => {
         reason: 'mistake',
         actor: { type: ActorType.ADMIN, id: 'admin-1', role: 'ADMIN' },
         archive,
-      })
+      }),
     ).rejects.toThrow(/IMMUTABLE, not ARCHIVABLE/)
 
     expect(archive).not.toHaveBeenCalled()
@@ -434,7 +441,7 @@ describe('auditedArchive', () => {
         reason: 'because',
         actor: systemActor('sweep'),
         archive: async () => null,
-      })
+      }),
     ).rejects.toThrow(/no rule in the lifecycle matrix/)
   })
 
@@ -448,7 +455,7 @@ describe('auditedArchive', () => {
         reason: '  ',
         actor: systemActor('sweep'),
         archive: async () => null,
-      })
+      }),
     ).rejects.toThrow(/requires a reason/)
   })
 })
@@ -490,7 +497,7 @@ describe('auditedRestore', () => {
         reason: 'x',
         actor: systemActor('sweep'),
         restore: async () => null,
-      })
+      }),
     ).rejects.toThrow(/MUTABLE, not ARCHIVABLE/)
   })
 })
@@ -503,7 +510,7 @@ describe('actorFromRequest', () => {
         requestId: 'req-1',
         ip: '203.0.113.5',
         headers: { 'user-agent': 'curl/8.4.0' },
-      })
+      }),
     ).toEqual({
       actor: { type: ActorType.USER, id: 'u-1', role: 'LEARNER' },
       requestId: 'req-1',
@@ -514,7 +521,9 @@ describe('actorFromRequest', () => {
 
   it('builds an ADMIN actor from a staff request', () => {
     // It is the actor's authority that decides the scrutiny, not the endpoint.
-    expect(actorFromRequest({ actor: { id: 'a-1', role: 'ADMIN' } }).actor).toEqual({
+    expect(
+      actorFromRequest({ actor: { id: 'a-1', role: 'ADMIN' } }).actor,
+    ).toEqual({
       type: ActorType.ADMIN,
       id: 'a-1',
       role: 'ADMIN',
@@ -539,7 +548,7 @@ describe('actorFromRequest', () => {
 
   it('ignores a non-string User-Agent header', () => {
     expect(
-      actorFromRequest({ headers: { 'user-agent': ['a', 'b'] } }).userAgent
+      actorFromRequest({ headers: { 'user-agent': ['a', 'b'] } }).userAgent,
     ).toBeNull()
   })
 })

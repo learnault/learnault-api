@@ -92,7 +92,11 @@ describe('AvatarController', () => {
     })
 
     it('returns 201 on success', async () => {
-      req.body = { contentType: 'image/jpeg', originalName: 'photo.jpg', sizeBytes: 50_000 }
+      req.body = {
+        contentType: 'image/jpeg',
+        originalName: 'photo.jpg',
+        sizeBytes: 50_000,
+      }
       mockCreateUploadIntent.mockResolvedValue({
         uploadKey: 'key',
         uploadUrl: 'url',
@@ -109,12 +113,16 @@ describe('AvatarController', () => {
 
     it('maps AvatarValidationError to its status code', async () => {
       req.body = { contentType: 'application/pdf' }
-      mockCreateUploadIntent.mockRejectedValue(new AvatarValidationError('Unsupported content type', 422))
+      mockCreateUploadIntent.mockRejectedValue(
+        new AvatarValidationError('Unsupported content type', 422),
+      )
 
       await controller.createUploadIntent(req, res)
 
       expect(res.status).toHaveBeenCalledWith(422)
-      expect(res.json).toHaveBeenCalledWith({ error: 'Unsupported content type' })
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Unsupported content type',
+      })
     })
 
     it('returns 500 on unexpected error', async () => {
@@ -171,7 +179,9 @@ describe('AvatarController', () => {
 
     it('maps 403 Forbidden for cross-user access', async () => {
       req.body = { uploadKey: 'key' }
-      mockFinalize.mockRejectedValue(new AvatarValidationError('Forbidden', 403))
+      mockFinalize.mockRejectedValue(
+        new AvatarValidationError('Forbidden', 403),
+      )
 
       await controller.finalize(req, res)
 
@@ -180,7 +190,9 @@ describe('AvatarController', () => {
 
     it('maps 404 for missing upload', async () => {
       req.body = { uploadKey: 'key' }
-      mockFinalize.mockRejectedValue(new AvatarValidationError('Upload not found', 404))
+      mockFinalize.mockRejectedValue(
+        new AvatarValidationError('Upload not found', 404),
+      )
 
       await controller.finalize(req, res)
 
@@ -189,7 +201,9 @@ describe('AvatarController', () => {
 
     it('maps 422 for validation failure', async () => {
       req.body = { uploadKey: 'key' }
-      mockFinalize.mockRejectedValue(new AvatarValidationError('MIME mismatch', 422))
+      mockFinalize.mockRejectedValue(
+        new AvatarValidationError('MIME mismatch', 422),
+      )
 
       await controller.finalize(req, res)
 
@@ -215,7 +229,9 @@ describe('AvatarController', () => {
     })
 
     it('returns 404 when no avatar exists', async () => {
-      mockDeleteAvatar.mockRejectedValue(new AvatarValidationError('No active avatar', 404))
+      mockDeleteAvatar.mockRejectedValue(
+        new AvatarValidationError('No active avatar', 404),
+      )
 
       await controller.deleteAvatar(req, res)
 
@@ -244,14 +260,18 @@ describe('AvatarController', () => {
     it('returns 200 with avatar data', async () => {
       mockGetCurrentAvatar.mockResolvedValue({
         id: 'avatar-1',
-        variants: [{ label: 'original', url: '/storage/key', width: 100, height: 80 }],
+        variants: [
+          { label: 'original', url: '/storage/key', width: 100, height: 80 },
+        ],
         createdAt: '2026-01-01T00:00:00.000Z',
       })
 
       await controller.getCurrentAvatar(req, res)
 
       expect(res.status).toHaveBeenCalledWith(200)
-      expect(res.json).toHaveBeenCalledWith({ data: expect.objectContaining({ id: 'avatar-1' }) })
+      expect(res.json).toHaveBeenCalledWith({
+        data: expect.objectContaining({ id: 'avatar-1' }),
+      })
     })
   })
 })

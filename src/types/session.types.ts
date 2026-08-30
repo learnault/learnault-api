@@ -66,4 +66,5 @@ export const SessionAuditAction = {
   REFRESH_REUSE_DETECTED: 'REFRESH_REUSE_DETECTED',
 } as const
 
-export type SessionAuditActionValue = (typeof SessionAuditAction)[keyof typeof SessionAuditAction]
+export type SessionAuditActionValue =
+  (typeof SessionAuditAction)[keyof typeof SessionAuditAction]

@@ -32,11 +32,19 @@ export class OnboardingService {
     }) as unknown as OnboardingProgressRecord
   }
 
-  async saveStep(userId: string, step: OnboardingStep): Promise<SaveStepResult> {
-    const existing = await prisma.onboardingProgress.findUnique({ where: { userId } })
+  async saveStep(
+    userId: string,
+    step: OnboardingStep,
+  ): Promise<SaveStepResult> {
+    const existing = await prisma.onboardingProgress.findUnique({
+      where: { userId },
+    })
 
     if (existing && existing.status === 'completed') {
-      return { kind: 'already-completed', progress: existing as unknown as OnboardingProgressRecord }
+      return {
+        kind: 'already-completed',
+        progress: existing as unknown as OnboardingProgressRecord,
+      }
     }
 
     const completedSteps = existing
@@ -54,7 +62,10 @@ export class OnboardingService {
       },
     })
 
-    return { kind: 'saved', progress: progress as unknown as OnboardingProgressRecord }
+    return {
+      kind: 'saved',
+      progress: progress as unknown as OnboardingProgressRecord,
+    }
   }
 
   async resume(userId: string): Promise<OnboardingProgressRecord> {
@@ -68,12 +79,15 @@ export class OnboardingService {
       return { kind: 'already-completed', progress }
     }
 
-    const missingSteps = REQUIRED_ONBOARDING_STEPS.filter(step => !progress.completedSteps.includes(step))
+    const missingSteps = REQUIRED_ONBOARDING_STEPS.filter(
+      (step) => !progress.completedSteps.includes(step),
+    )
     if (missingSteps.length > 0) {
       return { kind: 'incomplete-steps', missingSteps: [...missingSteps] }
     }
 
-    const requiredConsentsGranted = await consentService.hasAllRequiredGranted(userId)
+    const requiredConsentsGranted =
+      await consentService.hasAllRequiredGranted(userId)
     if (!requiredConsentsGranted) {
       return { kind: 'missing-required-consent' }
     }
@@ -83,7 +97,10 @@ export class OnboardingService {
       data: { status: 'completed', completedAt: new Date() },
     })
 
-    return { kind: 'completed', progress: updated as unknown as OnboardingProgressRecord }
+    return {
+      kind: 'completed',
+      progress: updated as unknown as OnboardingProgressRecord,
+    }
   }
 }
 

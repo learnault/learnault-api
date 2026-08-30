@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  validateTestDatabaseUrl,
-  UnsafeDatabaseError,
-} from '../helpers/guard'
+import { validateTestDatabaseUrl, UnsafeDatabaseError } from '../helpers/guard'
 
 describe('Database safety guard', () => {
   it('rejects production database URLs', () => {
@@ -42,7 +39,9 @@ describe('Database safety guard', () => {
 
   it('throws UnsafeDatabaseError with descriptive message', () => {
     try {
-      validateTestDatabaseUrl('postgresql://user:pass@prod.example.com:5432/mydb')
+      validateTestDatabaseUrl(
+        'postgresql://user:pass@prod.example.com:5432/mydb',
+      )
       expect.fail('Should have thrown')
     } catch (err) {
       expect(err).toBeInstanceOf(UnsafeDatabaseError)

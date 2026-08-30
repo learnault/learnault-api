@@ -13,7 +13,7 @@ import type {
 import type { StorageProvider } from '../types/avatar.types'
 import { validateAvatarBytes } from './asset-validation.service'
 
-const VARIANT_SPECS: Array<{ label: string, suffix: string }> = [
+const VARIANT_SPECS: Array<{ label: string; suffix: string }> = [
   { label: 'original', suffix: '' },
   { label: 'thumb', suffix: '_thumb' },
   { label: 'medium', suffix: '_medium' },
@@ -35,8 +35,12 @@ export class AvatarService {
     sizeBytes?: number,
   ): Promise<UploadIntentResponse> {
     const normalisedMime = contentType.split(';')[0].trim().toLowerCase()
-    if (!(AVATAR_ALLOWED_MIME_TYPES as readonly string[]).includes(normalisedMime)) {
-      throw new AvatarValidationError(`Unsupported content type: ${contentType}`)
+    if (
+      !(AVATAR_ALLOWED_MIME_TYPES as readonly string[]).includes(normalisedMime)
+    ) {
+      throw new AvatarValidationError(
+        `Unsupported content type: ${contentType}`,
+      )
     }
 
     if (sizeBytes !== undefined && sizeBytes > AVATAR_MAX_BYTES) {
@@ -44,7 +48,9 @@ export class AvatarService {
     }
 
     const id = crypto.randomUUID()
-    const safeName = (originalName ?? 'avatar').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80)
+    const safeName = (originalName ?? 'avatar')
+      .replace(/[^a-zA-Z0-9._-]/g, '_')
+      .slice(0, 80)
     const storageKey = `avatars/${userId}/${id}/${safeName}`
 
     const intent = await this.storage.createSignedUpload(
@@ -89,7 +95,9 @@ export class AvatarService {
     sha256?: string,
   ): Promise<AvatarFinalizeResponse> {
     // ── Load the PENDING avatar and verify ownership ─────────────
-    const avatar = await prisma.avatar.findUnique({ where: { id: uploadKey.split('/')[2] } })
+    const avatar = await prisma.avatar.findUnique({
+      where: { id: uploadKey.split('/')[2] },
+    })
     if (!avatar) {
       throw new AvatarValidationError('Upload not found', 404)
     }
@@ -107,18 +115,28 @@ export class AvatarService {
     if (sha256) {
       const actual = crypto.createHash('sha256').update(data).digest('hex')
       if (actual !== sha256) {
-        await this.markFailed(avatar.id, 'Integrity check failed (SHA-256 mismatch)')
+        await this.markFailed(
+          avatar.id,
+          'Integrity check failed (SHA-256 mismatch)',
+        )
 
         throw new AvatarValidationError('Integrity check failed', 422)
       }
     }
 
     // ── Server-side validation ───────────────────────────────────
-    const validation = validateAvatarBytes(data, avatar.contentType, avatar.originalBytes || undefined)
+    const validation = validateAvatarBytes(
+      data,
+      avatar.contentType,
+      avatar.originalBytes || undefined,
+    )
     if (!validation.ok) {
       await this.markFailed(avatar.id, validation.error ?? 'Validation failed')
 
-      throw new AvatarValidationError(validation.error ?? 'Validation failed', 422)
+      throw new AvatarValidationError(
+        validation.error ?? 'Validation failed',
+        422,
+      )
     }
 
     // ── Produce variants ─────────────────────────────────────────
@@ -171,7 +189,10 @@ export class AvatarService {
     await prisma.learnerProfile.upsert({
       where: { userId },
       update: { avatarUrl: this.storage.getServingUrl(avatar.storageKey) },
-      create: { userId, avatarUrl: this.storage.getServingUrl(avatar.storageKey) },
+      create: {
+        userId,
+        avatarUrl: this.storage.getServingUrl(avatar.storageKey),
+      },
     })
 
     // Clean up retired avatar objects
@@ -205,7 +226,9 @@ export class AvatarService {
     }
 
     // Delete variant objects from storage
-    const variants = await prisma.avatarVariant.findMany({ where: { avatarId: avatar.id } })
+    const variants = await prisma.avatarVariant.findMany({
+      where: { avatarId: avatar.id },
+    })
     for (const v of variants) {
       await this.storage.deleteObject(v.storageKey)
     }
@@ -224,7 +247,9 @@ export class AvatarService {
   /**
    * Return the current avatar for a user.
    */
-  async getCurrentAvatar(userId: string): Promise<AvatarCurrentResponse | null> {
+  async getCurrentAvatar(
+    userId: string,
+  ): Promise<AvatarCurrentResponse | null> {
     const avatar = await prisma.avatar.findFirst({
       where: { userId, status: 'ACTIVE' },
       include: { variants: true },

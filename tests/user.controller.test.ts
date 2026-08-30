@@ -56,7 +56,11 @@ const aggregate = {
   },
   profile: { id: 'profile1', userId: USER_ID, displayName: 'Ada' },
   completion: { percent: 25, missingFields: ['bio'] },
-  onboarding: { status: 'in_progress', currentStep: 'consent', requiredStepsRemaining: ['consent'] },
+  onboarding: {
+    status: 'in_progress',
+    currentStep: 'consent',
+    requiredStepsRemaining: ['consent'],
+  },
   consents: [],
   requiredConsentsGranted: false,
 }
@@ -86,7 +90,7 @@ describe('UserController', () => {
   const call = (handler: keyof UserController) =>
     (controller[handler] as (r: Request, s: Response) => Promise<void>)(
       req as Request,
-      res as Response
+      res as Response,
     )
 
   describe('getCurrentUser', () => {
@@ -125,7 +129,10 @@ describe('UserController', () => {
 
       const body = (res.json as ReturnType<typeof vi.fn>).mock.calls[0][0]
 
-      expect(body.data.completion).toEqual({ percent: 25, missingFields: ['bio'] })
+      expect(body.data.completion).toEqual({
+        percent: 25,
+        missingFields: ['bio'],
+      })
       expect(body.data.onboarding.currentStep).toBe('consent')
       expect(body.data.requiredConsentsGranted).toBe(false)
     })
@@ -177,14 +184,17 @@ describe('UserController', () => {
       ['password', { password: 'Hacked1!pass' }],
       ['email', { email: 'attacker@example.com' }],
       ['walletAddress', { walletAddress: VALID_ADDRESS }],
-    ])('rejects %s: an owner may only write allow-listed profile fields', async (_field, body) => {
-      req.body = body
+    ])(
+      'rejects %s: an owner may only write allow-listed profile fields',
+      async (_field, body) => {
+        req.body = body
 
-      await call('updateProfile')
+        await call('updateProfile')
 
-      expect(res.status).toHaveBeenCalledWith(400)
-      expect(mockUpdateProfileAudited).not.toHaveBeenCalled()
-    })
+        expect(res.status).toHaveBeenCalledWith(400)
+        expect(mockUpdateProfileAudited).not.toHaveBeenCalled()
+      },
+    )
 
     it('rejects an allowed field carried alongside a forbidden one', async () => {
       req.body = { displayName: 'Ada', role: 'ADMIN' }
@@ -219,7 +229,7 @@ describe('UserController', () => {
       expect(mockUpdateProfileAudited).toHaveBeenCalledWith(
         USER_ID,
         { displayName: 'Ada', interests: ['stellar'] },
-        expect.anything()
+        expect.anything(),
       )
       expect(res.status).toHaveBeenCalledWith(200)
       expect(res.json).toHaveBeenCalledWith({
@@ -253,7 +263,9 @@ describe('UserController', () => {
 
     it('returns 500 when the audited write fails', async () => {
       req.body = { displayName: 'Ada' }
-      mockUpdateProfileAudited.mockRejectedValue(new Error('audit trail unavailable'))
+      mockUpdateProfileAudited.mockRejectedValue(
+        new Error('audit trail unavailable'),
+      )
 
       await call('updateProfile')
 
@@ -282,7 +294,11 @@ describe('UserController', () => {
 
     it('serves the public view, never the owner view, even to the owner', async () => {
       req.params = { id: USER_ID }
-      mockGetPublicView.mockResolvedValue({ id: 'profile1', visible: true, displayName: 'Ada' })
+      mockGetPublicView.mockResolvedValue({
+        id: 'profile1',
+        visible: true,
+        displayName: 'Ada',
+      })
 
       await call('getUserById')
 
@@ -297,7 +313,9 @@ describe('UserController', () => {
 
       await call('getUserById')
 
-      expect(res.json).toHaveBeenCalledWith({ data: { id: 'profile2', visible: false } })
+      expect(res.json).toHaveBeenCalledWith({
+        data: { id: 'profile2', visible: false },
+      })
     })
 
     it('never emits private account data in the public response', async () => {
@@ -315,9 +333,19 @@ describe('UserController', () => {
 
       await call('getUserById')
 
-      const body = JSON.stringify((res.json as ReturnType<typeof vi.fn>).mock.calls[0][0])
+      const body = JSON.stringify(
+        (res.json as ReturnType<typeof vi.fn>).mock.calls[0][0],
+      )
 
-      for (const leak of ['email', 'password', 'walletAddress', 'status', 'isVerified', 'phoneVerifiedAt', 'userId']) {
+      for (const leak of [
+        'email',
+        'password',
+        'walletAddress',
+        'status',
+        'isVerified',
+        'phoneVerifiedAt',
+        'userId',
+      ]) {
         expect(body).not.toContain(leak)
       }
     })
@@ -347,8 +375,14 @@ describe('UserController', () => {
 
     it.each([
       ['a missing current password', { newPassword: 'NewPass1!' }],
-      ['a weak new password', { currentPassword: 'OldPass1!', newPassword: 'short' }],
-      ['reusing the current password', { currentPassword: 'NewPass1!', newPassword: 'NewPass1!' }],
+      [
+        'a weak new password',
+        { currentPassword: 'OldPass1!', newPassword: 'short' },
+      ],
+      [
+        'reusing the current password',
+        { currentPassword: 'NewPass1!', newPassword: 'NewPass1!' },
+      ],
       ['an unknown extra field', { ...body, userId: OTHER_ID }],
     ])('returns 400 for %s', async (_case, invalid) => {
       req.body = invalid
@@ -383,7 +417,10 @@ describe('UserController', () => {
 
     it('reports the revoked session count on success', async () => {
       req.body = body
-      mockChangePassword.mockResolvedValue({ kind: 'changed', revokedSessionCount: 3 })
+      mockChangePassword.mockResolvedValue({
+        kind: 'changed',
+        revokedSessionCount: 3,
+      })
 
       await call('changePassword')
 
@@ -391,21 +428,28 @@ describe('UserController', () => {
         USER_ID,
         'OldPass1!',
         'NewPass1!',
-        expect.anything()
+        expect.anything(),
       )
       expect(res.status).toHaveBeenCalledWith(200)
-      expect((res.json as ReturnType<typeof vi.fn>).mock.calls[0][0]).toMatchObject({
+      expect(
+        (res.json as ReturnType<typeof vi.fn>).mock.calls[0][0],
+      ).toMatchObject({
         revokedSessionCount: 3,
       })
     })
 
     it('never echoes either password back to the caller', async () => {
       req.body = body
-      mockChangePassword.mockResolvedValue({ kind: 'changed', revokedSessionCount: 0 })
+      mockChangePassword.mockResolvedValue({
+        kind: 'changed',
+        revokedSessionCount: 0,
+      })
 
       await call('changePassword')
 
-      const responseBody = JSON.stringify((res.json as ReturnType<typeof vi.fn>).mock.calls[0][0])
+      const responseBody = JSON.stringify(
+        (res.json as ReturnType<typeof vi.fn>).mock.calls[0][0],
+      )
 
       expect(responseBody).not.toContain('OldPass1!')
       expect(responseBody).not.toContain('NewPass1!')
@@ -437,7 +481,10 @@ describe('UserController', () => {
       ['a too-short address', { walletAddress: 'GABC123' }],
       ['a secret seed', { walletAddress: `S${'A'.repeat(55)}` }],
       ['a missing address', {}],
-      ['an unknown extra field', { walletAddress: VALID_ADDRESS, userId: OTHER_ID }],
+      [
+        'an unknown extra field',
+        { walletAddress: VALID_ADDRESS, userId: OTHER_ID },
+      ],
     ])('returns 400 for %s', async (_case, body) => {
       req.body = body
 
@@ -454,7 +501,9 @@ describe('UserController', () => {
       await call('updateWalletAddress')
 
       expect(res.status).toHaveBeenCalledWith(409)
-      expect((res.json as ReturnType<typeof vi.fn>).mock.calls[0][0]).toMatchObject({
+      expect(
+        (res.json as ReturnType<typeof vi.fn>).mock.calls[0][0],
+      ).toMatchObject({
         code: 'WALLET_ADDRESS_TAKEN',
       })
     })
@@ -470,14 +519,17 @@ describe('UserController', () => {
 
     it('persists a valid address for the authenticated owner', async () => {
       req.body = { walletAddress: VALID_ADDRESS }
-      mockUpdateWalletAddress.mockResolvedValue({ kind: 'updated', walletAddress: VALID_ADDRESS })
+      mockUpdateWalletAddress.mockResolvedValue({
+        kind: 'updated',
+        walletAddress: VALID_ADDRESS,
+      })
 
       await call('updateWalletAddress')
 
       expect(mockUpdateWalletAddress).toHaveBeenCalledWith(
         USER_ID,
         VALID_ADDRESS,
-        expect.anything()
+        expect.anything(),
       )
       expect(res.status).toHaveBeenCalledWith(200)
       expect(res.json).toHaveBeenCalledWith({
@@ -488,14 +540,17 @@ describe('UserController', () => {
 
     it('is idempotent when the address is already on file', async () => {
       req.body = { walletAddress: VALID_ADDRESS }
-      mockUpdateWalletAddress.mockResolvedValue({ kind: 'unchanged', walletAddress: VALID_ADDRESS })
+      mockUpdateWalletAddress.mockResolvedValue({
+        kind: 'unchanged',
+        walletAddress: VALID_ADDRESS,
+      })
 
       await call('updateWalletAddress')
 
       expect(res.status).toHaveBeenCalledWith(200)
-      expect((res.json as ReturnType<typeof vi.fn>).mock.calls[0][0].message).toBe(
-        'Wallet address unchanged'
-      )
+      expect(
+        (res.json as ReturnType<typeof vi.fn>).mock.calls[0][0].message,
+      ).toBe('Wallet address unchanged')
     })
 
     it('returns 500 on an unexpected failure', async () => {

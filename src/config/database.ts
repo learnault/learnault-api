@@ -37,7 +37,7 @@ function createPrismaClient(): PrismaClient {
   // shape. Widening every injection site to a union of both client types is a
   // worse trade — a union of overloaded $transaction signatures stops resolving.
   return new PrismaClient({ adapter }).$extends(
-    archiveExclusionExtension
+    archiveExclusionExtension,
   ) as unknown as PrismaClient
 }
 

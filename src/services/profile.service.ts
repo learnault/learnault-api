@@ -44,7 +44,10 @@ export class ProfileService {
     }) as unknown as LearnerProfileRecord
   }
 
-  async updateProfile(userId: string, data: UpdateLearnerProfileData): Promise<LearnerProfileRecord> {
+  async updateProfile(
+    userId: string,
+    data: UpdateLearnerProfileData,
+  ): Promise<LearnerProfileRecord> {
     return prisma.learnerProfile.upsert({
       where: { userId },
       update: data,
@@ -66,7 +69,7 @@ export class ProfileService {
   async updateProfileAudited(
     userId: string,
     data: UpdateLearnerProfileData,
-    context: AuditContext
+    context: AuditContext,
   ): Promise<LearnerProfileRecord> {
     return auditedMutation({
       action: 'learner_profile.updated',
@@ -77,13 +80,13 @@ export class ProfileService {
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
       metadata: { userId, fields: Object.keys(data).sort() },
-      mutate: tx =>
+      mutate: (tx) =>
         tx.learnerProfile.upsert({
           where: { userId },
           update: data,
           create: { userId, ...data },
         }) as unknown as Promise<LearnerProfileRecord>,
-      resolveTargetId: profile => profile.id,
+      resolveTargetId: (profile) => profile.id,
     })
   }
 
@@ -100,7 +103,9 @@ export class ProfileService {
    * Returns null for an unknown or tombstoned account, so the route answers 404
    * rather than materialising a profile row for a user that no longer exists.
    */
-  async getOwnerAccountProfile(userId: string): Promise<OwnerAccountProfileView | null> {
+  async getOwnerAccountProfile(
+    userId: string,
+  ): Promise<OwnerAccountProfileView | null> {
     const account = await prisma.user.findUnique({
       where: { id: userId },
       select: ACCOUNT_SELECT,
@@ -125,8 +130,11 @@ export class ProfileService {
       profile,
       onboarding,
       consents,
-      requiredConsentsGranted: REQUIRED_CONSENT_PURPOSES.every(purpose =>
-        consents.some(consent => consent.purpose === purpose && consent.status === 'granted')
+      requiredConsentsGranted: REQUIRED_CONSENT_PURPOSES.every((purpose) =>
+        consents.some(
+          (consent) =>
+            consent.purpose === purpose && consent.status === 'granted',
+        ),
       ),
     })
   }
@@ -185,12 +193,15 @@ export class ProfileService {
    * maps to 404. A loaded context with `allowed: false` means the profile exists
    * but must be redacted — a distinction the caller keeps to itself.
    */
-  private async disclosureContext(userId: string): Promise<
-    { profile: LearnerProfileRecord; allowed: boolean } | null
-  > {
+  private async disclosureContext(
+    userId: string,
+  ): Promise<{ profile: LearnerProfileRecord; allowed: boolean } | null> {
     const [profile, account, consents] = await Promise.all([
       prisma.learnerProfile.findFirst({ where: { userId } }),
-      prisma.user.findUnique({ where: { id: userId }, select: { status: true } }),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { status: true },
+      }),
       prisma.consentRecord.findMany({
         where: { userId },
         orderBy: { createdAt: 'desc' },

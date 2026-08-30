@@ -1,7 +1,4 @@
-# CI: lint, format check, type check, and tests on PR and push to main
-# Branch protection: enable "Require status checks to pass" for this workflow in repo Settings > Branches
-
-name: CI
+name: Backend CI Quality Gates
 
 on:
   pull_request:
@@ -10,14 +7,46 @@ on:
     branches: [main]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  ci:
-    name: Lint, typecheck, format, test
+  quality:
+    name: Quality gates
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: learnault_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d learnault_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/learnault_ci?schema=public
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ci-test-secret
+      AUDIT_IP_HASH_SECRET: ci-audit-secret
 
     steps:
       - name: Checkout
@@ -26,6 +55,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
+          version: 10.0.0
           run_install: false
 
       - name: Setup Node.js
@@ -35,26 +65,52 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
+
+      - name: Check Prisma formatting
+        run: pnpm prisma:format:check
 
       - name: Generate Prisma Client
-        run: npx prisma generate
-        env:
-          DATABASE_URL: "file:./dev.db"
+        run: pnpm db:generate
 
-      - name: Lint (ESLint)
-        run: pnpm run lint
+      - name: Validate migrations on an empty database
+        run: pnpm db:deploy
 
-      - name: Validate Docker Compose stack
-        run: docker compose config --quiet
+      - name: Check formatting
+        run: pnpm format:check
 
-      - name: Run tests with coverage
-        run: pnpm run test:coverage
+      - name: Lint
+        run: pnpm lint
 
-      - name: Upload coverage (optional)
+      - name: Type check
+        run: pnpm typecheck
+
+      - name: Run tests
+        run: pnpm test:ci
+
+      - name: Enforce coverage
+        run: pnpm test:coverage
+
+      - name: Build
+        run: pnpm build
+
+      - name: Upload failure diagnostics
+        if: failure()
         uses: actions/upload-artifact@v4
-        if: success() && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
+        with:
+          name: ci-failure-diagnostics
+          path: |
+            coverage/
+            **/test-results/**
+            **/*.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage/
           if-no-files-found: ignore
+          retention-days: 7

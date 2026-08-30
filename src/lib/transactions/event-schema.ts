@@ -55,14 +55,14 @@ export class EventSchemaRegistry {
   async validate(
     eventType: string,
     eventVersion: number,
-    payload: unknown
+    payload: unknown,
   ): Promise<void> {
     const key = `${eventType}:v${eventVersion}`
     const schema = this.schemas.get(key)
 
     if (!schema) {
       throw new Error(
-        `No schema registered for ${eventType} version ${eventVersion}`
+        `No schema registered for ${eventType} version ${eventVersion}`,
       )
     }
 
@@ -71,7 +71,7 @@ export class EventSchemaRegistry {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       const err = new Error(
-        `Event payload validation failed for ${eventType} v${eventVersion}: ${message}`
+        `Event payload validation failed for ${eventType} v${eventVersion}: ${message}`,
       )
       if (error instanceof Error) {
         err.cause = error
@@ -301,7 +301,7 @@ export function registerBuiltInSchemas(): void {
 export function createEventSchema(
   eventType: string,
   version: number,
-  zodSchema: z.ZodSchema
+  zodSchema: z.ZodSchema,
 ): EventSchema {
   return {
     eventType,

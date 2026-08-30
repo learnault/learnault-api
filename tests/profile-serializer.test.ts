@@ -13,7 +13,10 @@ import {
   toProfileRecord,
   toPublicProfile,
 } from '../src/services/profile-serializer'
-import { AccountSummary, LearnerProfileRecord } from '../src/types/profile.types'
+import {
+  AccountSummary,
+  LearnerProfileRecord,
+} from '../src/types/profile.types'
 
 const baseProfile: LearnerProfileRecord = {
   id: 'profile1',
@@ -34,7 +37,10 @@ const baseProfile: LearnerProfileRecord = {
 
 describe('computeProfileCompletion', () => {
   it('is 100% when every tracked field is filled', () => {
-    expect(computeProfileCompletion(baseProfile)).toEqual({ percent: 100, missingFields: [] })
+    expect(computeProfileCompletion(baseProfile)).toEqual({
+      percent: 100,
+      missingFields: [],
+    })
   })
 
   it('is deterministic for the same input', () => {
@@ -61,7 +67,14 @@ describe('computeProfileCompletion', () => {
 
     expect(result.percent).toBe(0)
     expect(result.missingFields).toEqual([
-      'displayName', 'bio', 'avatarUrl', 'country', 'timezone', 'languages', 'interests', 'goals',
+      'displayName',
+      'bio',
+      'avatarUrl',
+      'country',
+      'timezone',
+      'languages',
+      'interests',
+      'goals',
     ])
   })
 
@@ -74,7 +87,10 @@ describe('computeProfileCompletion', () => {
 
 describe('toOwnerProfile', () => {
   it('always returns every field regardless of visibility', () => {
-    const privateProfile: LearnerProfileRecord = { ...baseProfile, visibility: 'private' }
+    const privateProfile: LearnerProfileRecord = {
+      ...baseProfile,
+      visibility: 'private',
+    }
 
     const view = toOwnerProfile(privateProfile)
 
@@ -110,14 +126,17 @@ describe('toProfileRecord', () => {
     } as unknown as LearnerProfileRecord
 
     expect(Object.keys(toProfileRecord(loaded)).sort()).toEqual(
-      Object.keys(baseProfile).sort()
+      Object.keys(baseProfile).sort(),
     )
   })
 })
 
 describe('toEmployerProfile', () => {
   it('redacts fields when visibility is private', () => {
-    const profile: LearnerProfileRecord = { ...baseProfile, visibility: 'private' }
+    const profile: LearnerProfileRecord = {
+      ...baseProfile,
+      visibility: 'private',
+    }
 
     const view = toEmployerProfile(profile)
 
@@ -125,7 +144,10 @@ describe('toEmployerProfile', () => {
   })
 
   it('exposes fields when visibility is employer', () => {
-    const profile: LearnerProfileRecord = { ...baseProfile, visibility: 'employer' }
+    const profile: LearnerProfileRecord = {
+      ...baseProfile,
+      visibility: 'employer',
+    }
 
     const view = toEmployerProfile(profile)
 
@@ -142,7 +164,10 @@ describe('toEmployerProfile', () => {
   })
 
   it('never includes account-private fields', () => {
-    const view = toEmployerProfile({ ...baseProfile, visibility: 'employer' }) as Record<string, unknown>
+    const view = toEmployerProfile({
+      ...baseProfile,
+      visibility: 'employer',
+    }) as Record<string, unknown>
 
     expect(view).not.toHaveProperty('status')
     expect(view).not.toHaveProperty('isVerified')
@@ -152,9 +177,15 @@ describe('toEmployerProfile', () => {
 
 describe('toPublicProfile', () => {
   it('redacts fields unless visibility is public', () => {
-    const employerOnly: LearnerProfileRecord = { ...baseProfile, visibility: 'employer' }
+    const employerOnly: LearnerProfileRecord = {
+      ...baseProfile,
+      visibility: 'employer',
+    }
 
-    expect(toPublicProfile(employerOnly)).toEqual({ id: employerOnly.id, visible: false })
+    expect(toPublicProfile(employerOnly)).toEqual({
+      id: employerOnly.id,
+      visible: false,
+    })
   })
 
   it('exposes only the public-safe subset when visibility is public', () => {
@@ -194,7 +225,9 @@ describe('toPrivateProfile', () => {
 
 describe('isDisclosureAllowed', () => {
   it('allows disclosure for an active account with no data-sharing record', () => {
-    expect(isDisclosureAllowed({ accountStatus: 'ACTIVE', consents: [] })).toBe(true)
+    expect(isDisclosureAllowed({ accountStatus: 'ACTIVE', consents: [] })).toBe(
+      true,
+    )
   })
 
   it('allows disclosure while data-sharing consent is granted', () => {
@@ -202,7 +235,7 @@ describe('isDisclosureAllowed', () => {
       isDisclosureAllowed({
         accountStatus: 'ACTIVE',
         consents: [{ purpose: 'data_sharing', status: 'granted' }],
-      })
+      }),
     ).toBe(true)
   })
 
@@ -211,7 +244,7 @@ describe('isDisclosureAllowed', () => {
       isDisclosureAllowed({
         accountStatus: 'ACTIVE',
         consents: [{ purpose: 'data_sharing', status: 'withdrawn' }],
-      })
+      }),
     ).toBe(false)
   })
 
@@ -220,26 +253,29 @@ describe('isDisclosureAllowed', () => {
       isDisclosureAllowed({
         accountStatus: 'ACTIVE',
         consents: [{ purpose: 'marketing_emails', status: 'withdrawn' }],
-      })
+      }),
     ).toBe(true)
   })
 
   it.each(['DEACTIVATED', 'PENDING_DELETION', 'DELETED'])(
     'refuses disclosure for a %s account even with consent granted',
-    status => {
+    (status) => {
       expect(
         isDisclosureAllowed({
           accountStatus: status,
           consents: [{ purpose: 'data_sharing', status: 'granted' }],
-        })
+        }),
       ).toBe(false)
-    }
+    },
   )
 })
 
 describe('redactedProfile', () => {
   it('is indistinguishable from a below-threshold redaction, so a refusal leaks nothing', () => {
-    const belowThreshold = toPublicProfile({ ...baseProfile, visibility: 'private' })
+    const belowThreshold = toPublicProfile({
+      ...baseProfile,
+      visibility: 'private',
+    })
 
     expect(redactedProfile(baseProfile.id)).toEqual(belowThreshold)
   })
@@ -263,7 +299,10 @@ const baseAccount: AccountSummary = {
 
 describe('toAccountSummary', () => {
   it('never carries the password column, even when it is present on the input', () => {
-    const withSecret = { ...baseAccount, password: '$2b$12$hash' } as unknown as AccountSummary
+    const withSecret = {
+      ...baseAccount,
+      password: '$2b$12$hash',
+    } as unknown as AccountSummary
 
     const view = toAccountSummary(withSecret) as Record<string, unknown>
 
@@ -277,7 +316,9 @@ describe('toAccountSummary', () => {
       internalRiskScore: 99,
     } as unknown as AccountSummary
 
-    expect(toAccountSummary(withNewColumn)).not.toHaveProperty('internalRiskScore')
+    expect(toAccountSummary(withNewColumn)).not.toHaveProperty(
+      'internalRiskScore',
+    )
   })
 })
 
@@ -292,7 +333,9 @@ describe('toOnboardingSummary', () => {
   }
 
   it('computes the required steps still outstanding', () => {
-    expect(toOnboardingSummary(progress).requiredStepsRemaining).toEqual(['consent'])
+    expect(toOnboardingSummary(progress).requiredStepsRemaining).toEqual([
+      'consent',
+    ])
   })
 
   it('reports nothing outstanding once every required step is done', () => {
@@ -389,7 +432,10 @@ describe('toOwnerAccountProfile', () => {
 
   it('never carries the password column', () => {
     const view = toOwnerAccountProfile({
-      account: { ...baseAccount, password: 'secret' } as unknown as AccountSummary,
+      account: {
+        ...baseAccount,
+        password: 'secret',
+      } as unknown as AccountSummary,
       profile: baseProfile,
       onboarding: null,
       consents: [],

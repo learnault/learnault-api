@@ -7,17 +7,19 @@ import { validateAvatarBytes } from '../src/services/asset-validation.service'
 /** 1×1 red PNG */
 function makePng(width = 1, height = 1): Buffer {
   // Minimal PNG: signature + IHDR + IDAT + IEND
-  const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+  const signature = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+  ])
 
   // IHDR chunk
   const ihdrData = Buffer.alloc(13)
-  ihdrData.writeUInt32BE(width, 0)   // width
-  ihdrData.writeUInt32BE(height, 4)  // height
-  ihdrData.writeUInt8(8, 8)          // bit depth
-  ihdrData.writeUInt8(2, 9)          // color type (RGB)
-  ihdrData.writeUInt8(0, 10)         // compression
-  ihdrData.writeUInt8(0, 11)         // filter
-  ihdrData.writeUInt8(0, 12)         // interlace
+  ihdrData.writeUInt32BE(width, 0) // width
+  ihdrData.writeUInt32BE(height, 4) // height
+  ihdrData.writeUInt8(8, 8) // bit depth
+  ihdrData.writeUInt8(2, 9) // color type (RGB)
+  ihdrData.writeUInt8(0, 10) // compression
+  ihdrData.writeUInt8(0, 11) // filter
+  ihdrData.writeUInt8(0, 12) // interlace
   const ihdrCrc = crc32(Buffer.concat([Buffer.from('IHDR'), ihdrData]))
   const ihdr = Buffer.alloc(25)
   ihdr.writeUInt32BE(13, 0) // length
@@ -26,7 +28,9 @@ function makePng(width = 1, height = 1): Buffer {
   ihdr.writeUInt32BE(ihdrCrc, 21)
 
   // IDAT chunk (empty compressed data — just valid enough for dimension parsing)
-  const idatData = Buffer.from([0x08, 0xd7, 0x01, 0x04, 0x00, 0xfb, 0xff, 0xfd, 0x02, 0x40, 0x02])
+  const idatData = Buffer.from([
+    0x08, 0xd7, 0x01, 0x04, 0x00, 0xfb, 0xff, 0xfd, 0x02, 0x40, 0x02,
+  ])
   const idatCrc = crc32(Buffer.concat([Buffer.from('IDAT'), idatData]))
   const idat = Buffer.alloc(4 + 4 + idatData.length + 4)
   idat.writeUInt32BE(idatData.length, 0)
@@ -54,7 +58,7 @@ function makeJpeg(width = 100, height = 50): Buffer {
   buf.writeUInt8(0xff, 2)
   buf.writeUInt8(0xc0, 3) // SOF0
   buf.writeUInt16BE(17, 4) // segment length
-  buf.writeUInt8(8, 6)     // precision
+  buf.writeUInt8(8, 6) // precision
   buf.writeUInt16BE(height, 7)
   buf.writeUInt16BE(width, 9)
 
@@ -75,7 +79,7 @@ function makeGif(width = 20, height = 10): Buffer {
 function makeWebp(width = 80, height = 60): Buffer {
   const buf = Buffer.alloc(50)
   buf.write('RIFF', 0, 'ascii')
-  buf.writeUInt32LE(38, 4)  // file size
+  buf.writeUInt32LE(38, 4) // file size
   buf.write('WEBP', 8, 'ascii')
   buf.write('VP8 ', 12, 'ascii')
   buf.writeUInt32LE(30, 16) // chunk size

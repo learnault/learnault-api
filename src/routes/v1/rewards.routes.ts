@@ -1,6 +1,9 @@
 import { Router } from 'express'
 import { RewardController } from '../../controllers/reward.controller'
-import { authenticate, requireVerifiedEmail } from '../../middleware/auth.middleware'
+import {
+  authenticate,
+  requireVerifiedEmail,
+} from '../../middleware/auth.middleware'
 
 const router: Router = Router()
 const rewardController = new RewardController()

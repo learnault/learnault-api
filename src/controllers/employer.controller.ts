@@ -16,9 +16,15 @@ const searchQuerySchema = z.object({
             .filter(Boolean)
         : [],
     ),
-  location: z.string().optional().transform((value) => value?.trim().toLowerCase()),
+  location: z
+    .string()
+    .optional()
+    .transform((value) => value?.trim().toLowerCase()),
   credentials: z.enum(['any', 'verified', 'none']).optional().default('any'),
-  search: z.string().optional().transform((value) => value?.trim()),
+  search: z
+    .string()
+    .optional()
+    .transform((value) => value?.trim()),
 })
 
 const contactBodySchema = z.object({
@@ -132,8 +138,10 @@ function profileFromCandidate(candidate: CandidateRecord) {
       candidate.completions.length > 0
         ? Number(
             (
-              candidate.completions.reduce((sum, completion) => sum + completion.score, 0) /
-              candidate.completions.length
+              candidate.completions.reduce(
+                (sum, completion) => sum + completion.score,
+                0,
+              ) / candidate.completions.length
             ).toFixed(2),
           )
         : 0,
@@ -233,7 +241,8 @@ export const searchTalent = async (req: Request, res: Response) => {
 
   const { page, limit, skills, location, credentials, search } = parsed.data
   const employerPlan = getEmployerPlan(req)
-  const maxLimit = PLAN_MAX_SEARCH_LIMIT[employerPlan] ?? PLAN_MAX_SEARCH_LIMIT.starter
+  const maxLimit =
+    PLAN_MAX_SEARCH_LIMIT[employerPlan] ?? PLAN_MAX_SEARCH_LIMIT.starter
   if (limit > maxLimit) {
     return res.status(400).json({
       message: `Current plan allows up to ${maxLimit} results per page`,
@@ -296,7 +305,10 @@ export const searchTalent = async (req: Request, res: Response) => {
     })
     .filter((candidate) => {
       if (credentials === 'any') return true
-      if (credentials === 'verified') return candidate.credentials.some((credential) => Boolean(credential.onChainId))
+      if (credentials === 'verified')
+        return candidate.credentials.some((credential) =>
+          Boolean(credential.onChainId),
+        )
 
       return candidate.credentials.length === 0
     })
@@ -316,7 +328,9 @@ export const searchTalent = async (req: Request, res: Response) => {
         skills: profile.skills,
         completions: profile.completions,
         averageScore: profile.averageScore,
-        verifiedCredentialCount: profile.verifiedCredentials.filter((credential) => credential.verified).length,
+        verifiedCredentialCount: profile.verifiedCredentials.filter(
+          (credential) => credential.verified,
+        ).length,
       }
     })
 
@@ -541,14 +555,16 @@ export const contactCandidate = async (req: Request, res: Response) => {
     where: { id: 'system-employer-outreach-log' },
     update: {
       url: 'https://internal.learnault/employer-outreach',
-      description: 'System log endpoint for employer candidate outreach attempts',
+      description:
+        'System log endpoint for employer candidate outreach attempts',
       isActive: true,
       events: 'employer.contact_attempt',
     },
     create: {
       id: 'system-employer-outreach-log',
       url: 'https://internal.learnault/employer-outreach',
-      description: 'System log endpoint for employer candidate outreach attempts',
+      description:
+        'System log endpoint for employer candidate outreach attempts',
       secret: null,
       isActive: true,
       events: 'employer.contact_attempt',

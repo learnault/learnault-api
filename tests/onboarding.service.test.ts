@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { OnboardingService } from '../src/services/onboarding.service'
 
-const { mockUpsert, mockFindUnique, mockUpdate, mockHasAllRequiredGranted } = vi.hoisted(() => ({
-  mockUpsert: vi.fn(),
-  mockFindUnique: vi.fn(),
-  mockUpdate: vi.fn(),
-  mockHasAllRequiredGranted: vi.fn(),
-}))
+const { mockUpsert, mockFindUnique, mockUpdate, mockHasAllRequiredGranted } =
+  vi.hoisted(() => ({
+    mockUpsert: vi.fn(),
+    mockFindUnique: vi.fn(),
+    mockUpdate: vi.fn(),
+    mockHasAllRequiredGranted: vi.fn(),
+  }))
 
 vi.mock('../src/config/database', () => ({
   default: {
@@ -54,7 +55,12 @@ describe('OnboardingService', () => {
       expect(mockUpsert).toHaveBeenCalledWith({
         where: { userId: 'user1' },
         update: {},
-        create: { userId: 'user1', version: 'v1', currentStep: 'profile_basics', completedSteps: [] },
+        create: {
+          userId: 'user1',
+          version: 'v1',
+          currentStep: 'profile_basics',
+          completedSteps: [],
+        },
       })
       expect(result.status).toBe('in_progress')
     })
@@ -63,38 +69,68 @@ describe('OnboardingService', () => {
   describe('saveStep', () => {
     it('creates a new row on first save', async () => {
       mockFindUnique.mockResolvedValue(null)
-      mockUpsert.mockResolvedValue({ ...baseProgress, completedSteps: ['profile_basics'] })
+      mockUpsert.mockResolvedValue({
+        ...baseProgress,
+        completedSteps: ['profile_basics'],
+      })
 
       const result = await service.saveStep('user1', 'profile_basics')
 
       expect(mockUpsert).toHaveBeenCalledWith({
         where: { userId: 'user1' },
-        update: { currentStep: 'profile_basics', completedSteps: ['profile_basics'] },
-        create: { userId: 'user1', version: 'v1', currentStep: 'profile_basics', completedSteps: ['profile_basics'] },
+        update: {
+          currentStep: 'profile_basics',
+          completedSteps: ['profile_basics'],
+        },
+        create: {
+          userId: 'user1',
+          version: 'v1',
+          currentStep: 'profile_basics',
+          completedSteps: ['profile_basics'],
+        },
       })
       expect(result.kind).toBe('saved')
     })
 
     it('does not duplicate a step that is saved twice (idempotent)', async () => {
-      mockFindUnique.mockResolvedValue({ ...baseProgress, completedSteps: ['profile_basics'] })
+      mockFindUnique.mockResolvedValue({
+        ...baseProgress,
+        completedSteps: ['profile_basics'],
+      })
       mockUpsert.mockResolvedValue(baseProgress)
 
       await service.saveStep('user1', 'profile_basics')
 
-      expect(mockUpsert).toHaveBeenCalledWith(expect.objectContaining({
-        update: { currentStep: 'profile_basics', completedSteps: ['profile_basics'] },
-      }))
+      expect(mockUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          update: {
+            currentStep: 'profile_basics',
+            completedSteps: ['profile_basics'],
+          },
+        }),
+      )
     })
 
     it('appends a new step onto existing progress', async () => {
-      mockFindUnique.mockResolvedValue({ ...baseProgress, completedSteps: ['profile_basics'] })
-      mockUpsert.mockResolvedValue({ ...baseProgress, completedSteps: ['profile_basics', 'consent'] })
+      mockFindUnique.mockResolvedValue({
+        ...baseProgress,
+        completedSteps: ['profile_basics'],
+      })
+      mockUpsert.mockResolvedValue({
+        ...baseProgress,
+        completedSteps: ['profile_basics', 'consent'],
+      })
 
       await service.saveStep('user1', 'consent')
 
-      expect(mockUpsert).toHaveBeenCalledWith(expect.objectContaining({
-        update: { currentStep: 'consent', completedSteps: ['profile_basics', 'consent'] },
-      }))
+      expect(mockUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          update: {
+            currentStep: 'consent',
+            completedSteps: ['profile_basics', 'consent'],
+          },
+        }),
+      )
     })
 
     it('refuses to modify a completed onboarding record', async () => {
@@ -118,16 +154,25 @@ describe('OnboardingService', () => {
     })
 
     it('blocks completion when required steps are missing', async () => {
-      mockUpsert.mockResolvedValue({ ...baseProgress, completedSteps: ['profile_basics'] })
+      mockUpsert.mockResolvedValue({
+        ...baseProgress,
+        completedSteps: ['profile_basics'],
+      })
 
       const result = await service.complete('user1')
 
-      expect(result).toEqual({ kind: 'incomplete-steps', missingSteps: ['consent'] })
+      expect(result).toEqual({
+        kind: 'incomplete-steps',
+        missingSteps: ['consent'],
+      })
       expect(mockHasAllRequiredGranted).not.toHaveBeenCalled()
     })
 
     it('blocks completion when required consent is missing', async () => {
-      mockUpsert.mockResolvedValue({ ...baseProgress, completedSteps: ['profile_basics', 'consent'] })
+      mockUpsert.mockResolvedValue({
+        ...baseProgress,
+        completedSteps: ['profile_basics', 'consent'],
+      })
       mockHasAllRequiredGranted.mockResolvedValue(false)
 
       const result = await service.complete('user1')
@@ -137,9 +182,16 @@ describe('OnboardingService', () => {
     })
 
     it('completes when all required steps and consents are satisfied', async () => {
-      mockUpsert.mockResolvedValue({ ...baseProgress, completedSteps: ['profile_basics', 'consent'] })
+      mockUpsert.mockResolvedValue({
+        ...baseProgress,
+        completedSteps: ['profile_basics', 'consent'],
+      })
       mockHasAllRequiredGranted.mockResolvedValue(true)
-      mockUpdate.mockResolvedValue({ ...baseProgress, status: 'completed', completedAt: new Date() })
+      mockUpdate.mockResolvedValue({
+        ...baseProgress,
+        status: 'completed',
+        completedAt: new Date(),
+      })
 
       const result = await service.complete('user1')
 

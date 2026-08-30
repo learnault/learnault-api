@@ -46,7 +46,7 @@ export class UserAccountService {
     userId: string,
     currentPassword: string,
     newPassword: string,
-    context: AuditContext
+    context: AuditContext,
   ): Promise<ChangePasswordResult> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -71,14 +71,17 @@ export class UserAccountService {
       requestId: context.requestId,
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
-      mutate: async tx => {
-        await tx.user.update({ where: { id: userId }, data: { password: passwordHash } })
+      mutate: async (tx) => {
+        await tx.user.update({
+          where: { id: userId },
+          data: { password: passwordHash },
+        })
 
         const sessions = await tx.session.findMany({
           where: { userId, isRevoked: false },
           select: { id: true },
         })
-        const sessionIds = sessions.map(session => session.id)
+        const sessionIds = sessions.map((session) => session.id)
 
         if (sessionIds.length === 0) {
           return 0
@@ -97,7 +100,7 @@ export class UserAccountService {
       },
       // The password itself never appears here, and cannot: `redaction.ts`
       // denies every `*password*` key. The count is the reviewable part.
-      resolveMetadata: count => ({ revokedSessionCount: count }),
+      resolveMetadata: (count) => ({ revokedSessionCount: count }),
     })
 
     return { kind: 'changed', revokedSessionCount }
@@ -115,7 +118,7 @@ export class UserAccountService {
   async updateWalletAddress(
     userId: string,
     walletAddress: string,
-    context: AuditContext
+    context: AuditContext,
   ): Promise<UpdateWalletAddressResult> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -151,8 +154,12 @@ export class UserAccountService {
         // A Stellar *public* key is not a secret; the corresponding seed never
         // touches this path. Recording it is what makes a hijacked payout
         // address traceable afterwards.
-        metadata: { walletAddress, hadPreviousAddress: user.walletAddress !== null },
-        mutate: tx => tx.user.update({ where: { id: userId }, data: { walletAddress } }),
+        metadata: {
+          walletAddress,
+          hadPreviousAddress: user.walletAddress !== null,
+        },
+        mutate: (tx) =>
+          tx.user.update({ where: { id: userId }, data: { walletAddress } }),
       })
     } catch (error) {
       if (isUniqueViolation(error)) {
