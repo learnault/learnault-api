@@ -179,7 +179,7 @@ describe('StellarService — wallet status additions', () => {
 
       const page = await service.getPaymentHistory('GRECEIVER')
 
-      expect(page.records[0].memo).not.toMatch(/\x00/)
+      expect(page.records[0].memo).not.toContain('\x00')
       expect(page.records[0].memo!.length).toBeLessThanOrEqual(256)
     })
 
