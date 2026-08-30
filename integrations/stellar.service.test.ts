@@ -306,7 +306,7 @@ describe('StellarService', () => {
       expect(await service.getNativeBalance('GPUBKEY...')).toBe('42.0000000')
     })
 
-    it('returns \'0\' when no native balance exists', async () => {
+    it("returns '0' when no native balance exists", async () => {
       mockGetAccount.mockResolvedValue({ balances: [] })
       expect(await service.getNativeBalance('GPUBKEY...')).toBe('0')
     })

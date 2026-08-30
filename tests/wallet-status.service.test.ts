@@ -90,7 +90,7 @@ describe('WalletStatusService', () => {
       expect(status.status).toBe('UNAVAILABLE')
     })
 
-    it('never exposes another user\'s wallet', async () => {
+    it("never exposes another user's wallet", async () => {
       const service = new WalletStatusService(
         repositoryFor(wallet()),
         {} as WalletStatusStellarProvider,
@@ -230,7 +230,7 @@ describe('WalletStatusService', () => {
       memoType: null,
     }
 
-    it('marks records as incoming or outgoing relative to the owner\'s address', async () => {
+    it("marks records as incoming or outgoing relative to the owner's address", async () => {
       const stellar: WalletStatusStellarProvider = {
         getAccountSnapshot: async () => ({
           found: true,

@@ -47,7 +47,9 @@ export default defineConfig(
       // 'no-ternary': 'error',
       'newline-before-return': 'error',
       semi: ['error', 'never'],
-      quotes: ['error', 'single'],
+      // Match Prettier: prefer single quotes, but avoid needless escaping in
+      // strings that contain apostrophes.
+      quotes: ['error', 'single', { avoidEscape: true }],
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': [
         'warn',
