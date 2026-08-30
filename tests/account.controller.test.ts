@@ -182,7 +182,7 @@ describe('AccountController', () => {
   })
 
   describe('getExportStatus', () => {
-    it("scopes the lookup to the requesting user and 404s on other users' requests", async () => {
+    it('scopes the lookup to the requesting user and 404s on other users\' requests', async () => {
       req.params = { id: '123e4567-e89b-42d3-a456-426614174000' }
       vi.mocked(prisma.dataExportRequest.findFirst).mockResolvedValue(null)
 

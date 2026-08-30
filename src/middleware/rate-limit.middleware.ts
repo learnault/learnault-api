@@ -6,8 +6,6 @@ interface RateLimitOptions {
   windowMs: number
   max: number
   message?: string
-  skipSuccessfulRequests?: boolean
-  skipFailedRequests?: boolean
 }
 
 interface RateLimitData {
@@ -38,8 +36,6 @@ function createRateLimiter(
     windowMs,
     max,
     message = 'Too many requests, please try again later.',
-    skipSuccessfulRequests = false,
-    skipFailedRequests = false,
   } = options
   const isTest = process.env.NODE_ENV === 'test'
 

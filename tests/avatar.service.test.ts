@@ -375,7 +375,7 @@ describe('AvatarService', () => {
       )
     })
 
-    it("prevents deleting another user's avatar", async () => {
+    it('prevents deleting another user\'s avatar', async () => {
       // The query is scoped to userId, so a different user simply gets no result
       mockFindFirst.mockResolvedValue(null)
 
