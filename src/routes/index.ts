@@ -12,6 +12,7 @@ import accountRoutes from './v1/account.routes'
 import onboardingRoutes from './v1/onboarding.routes'
 import consentRoutes from './v1/consent.routes'
 import sessionRoutes from './v1/sessions.routes'
+import walletRoutes from './v1/wallet.routes'
 
 const router: Router = Router()
 
@@ -32,5 +33,6 @@ router.use('/v1/account', accountRoutes)
 router.use('/v1/onboarding', onboardingRoutes)
 router.use('/v1/consents', consentRoutes)
 router.use('/v1/sessions', sessionRoutes)
+router.use('/v1/wallet', walletRoutes)
 
 export default router

@@ -68,6 +68,42 @@ export interface AccountBalance {
   limit?: string;
 }
 
+export interface AccountBalanceDetail {
+  assetType: 'native' | 'credit_alphanum4' | 'credit_alphanum12';
+  assetCode: string;
+  issuer: string | null;
+  amount: string;
+}
+
+export interface AccountSnapshot {
+  found: boolean;
+  lastModifiedTime: string | null;
+  balances: AccountBalanceDetail[];
+}
+
+export interface PaymentHistoryRecord {
+  id: string;
+  pagingToken: string;
+  createdAt: string;
+  transactionHash: string;
+  transactionSuccessful: boolean;
+  ledger: number | null;
+  type: string;
+  from: string | null;
+  to: string | null;
+  assetType: string;
+  assetCode: string;
+  issuer: string | null;
+  amount: string | null;
+  memo: string | null;
+  memoType: string | null;
+}
+
+export interface PaymentHistoryPage {
+  records: PaymentHistoryRecord[];
+  nextCursor: string | null;
+}
+
 export interface PaymentOptions {
   sourceSecret: string;
   destinationPublicKey: string;
@@ -250,6 +286,87 @@ export class StellarService {
     const balances = await this.getBalances(publicKey)
 
     return balances.find((b) => b.asset === 'XLM')?.balance ?? '0'
+  }
+
+  /**
+   * Load the account's exact balances plus its Horizon last-modified time.
+   * A 404 (account not yet funded on-ledger) is a normal, non-error state and
+   * resolves to `found: false` with no balances rather than throwing.
+   */
+  async getAccountSnapshot (publicKey: string): Promise<AccountSnapshot> {
+    try {
+      const account = await this.horizonServer.loadAccount(publicKey)
+      const balances: AccountBalanceDetail[] = account.balances.map((b) => {
+        if (b.asset_type === 'native') {
+          return { assetType: 'native', assetCode: 'XLM', issuer: null, amount: b.balance }
+        }
+        const issued = b as unknown as IssuedBalance
+
+        return {
+          assetType: issued.asset_type,
+          assetCode: issued.asset_code,
+          issuer: issued.asset_issuer,
+          amount: issued.balance,
+        }
+      })
+
+      return {
+        found: true,
+        lastModifiedTime:
+          (account as unknown as { last_modified_time?: string }).last_modified_time ?? null,
+        balances,
+      }
+    } catch (err) {
+      if (isHorizonNotFound(err)) {
+        return { found: false, lastModifiedTime: null, balances: [] }
+      }
+      if (isHorizonTimeout(err)) {
+        throw new StellarServiceError('Horizon request timed out', 'HORIZON_TIMEOUT', err)
+      }
+      throw new StellarServiceError('Horizon is unavailable', 'HORIZON_UNAVAILABLE', err)
+    }
+  }
+
+  /**
+   * Cursor-paginated payment history for an account (payments, path payments,
+   * and account-creation credits), using Horizon's own paging_token as the
+   * cursor so results stay stable under concurrent ledger writes.
+   */
+  async getPaymentHistory (
+    publicKey: string,
+    options: { cursor?: string; limit?: number; order?: 'asc' | 'desc' } = {}
+  ): Promise<PaymentHistoryPage> {
+    const limit = options.limit ?? 20
+
+    try {
+      let builder = this.horizonServer
+        .payments()
+        .forAccount(publicKey)
+        .order(options.order ?? 'desc')
+        .limit(limit)
+        .join('transactions')
+
+      if (options.cursor) builder = builder.cursor(options.cursor)
+
+      const page = await builder.call()
+      const relevant = page.records.filter((record) =>
+        HISTORY_OPERATION_TYPES.has((record as { type: string }).type)
+      )
+
+      return {
+        records: relevant.map(toPaymentHistoryRecord),
+        nextCursor:
+          page.records.length > 0
+            ? (page.records[page.records.length - 1] as { paging_token: string }).paging_token
+            : null,
+      }
+    } catch (err) {
+      if (isHorizonNotFound(err)) return { records: [], nextCursor: null }
+      if (isHorizonTimeout(err)) {
+        throw new StellarServiceError('Horizon request timed out', 'HORIZON_TIMEOUT', err)
+      }
+      throw new StellarServiceError('Horizon is unavailable', 'HORIZON_UNAVAILABLE', err)
+    }
   }
 
   // ── Payments ──────────────────────────────────────────────────────────────
@@ -546,6 +663,77 @@ export class StellarService {
 
     return `cred_${Date.now()}`
   }
+}
+
+// ---------------------------------------------------------------------------
+// Payment history helpers
+// ---------------------------------------------------------------------------
+
+const HISTORY_OPERATION_TYPES = new Set([
+  'payment',
+  'create_account',
+  'path_payment_strict_receive',
+  'path_payment_strict_send',
+])
+
+const MAX_MEMO_LENGTH = 256
+
+/** Text memos are free-form user input; hash/id/return memos are opaque public identifiers already. */
+function applyMemoPolicy (memoType: string | null, memo: string | null): string | null {
+  if (!memo) return null
+  if (memoType === 'text') {
+    // eslint-disable-next-line no-control-regex
+    const sanitized = memo.replace(/[\x00-\x1F\x7F]/g, '').slice(0, MAX_MEMO_LENGTH)
+
+    return sanitized.length > 0 ? sanitized : null
+  }
+
+  return memo
+}
+
+function toPaymentHistoryRecord (record: unknown): PaymentHistoryRecord {
+  const r = record as Record<string, unknown>
+  const transaction = (r.transaction ?? undefined) as Record<string, unknown> | undefined
+  const memoType = (transaction?.memo_type as string | undefined) ?? null
+  const rawMemo = (transaction?.memo as string | undefined) ?? null
+  const assetType = (r.asset_type as string | undefined) ?? 'native'
+
+  return {
+    id: String(r.id),
+    pagingToken: String(r.paging_token),
+    createdAt: String(r.created_at),
+    transactionHash: String(r.transaction_hash),
+    transactionSuccessful: r.transaction_successful !== false,
+    ledger: typeof transaction?.ledger_attr === 'number' ? (transaction.ledger_attr as number) : null,
+    type: String(r.type),
+    from: (r.from as string | undefined) ?? (r.funder as string | undefined) ?? null,
+    to: (r.to as string | undefined) ?? (r.account as string | undefined) ?? null,
+    assetType,
+    assetCode: assetType === 'native' ? 'XLM' : String(r.asset_code ?? ''),
+    issuer: (r.asset_issuer as string | undefined) ?? null,
+    amount: (r.amount as string | undefined) ?? (r.starting_balance as string | undefined) ?? null,
+    memo: applyMemoPolicy(memoType, rawMemo),
+    memoType,
+  }
+}
+
+function isHorizonNotFound (err: unknown): boolean {
+  const status = (err as { response?: { status?: number } } | undefined)?.response?.status
+
+  return status === 404
+}
+
+function isHorizonTimeout (err: unknown): boolean {
+  const code = (err as { code?: string } | undefined)?.code
+  const name = (err as { name?: string } | undefined)?.name
+  const message = err instanceof Error ? err.message.toLowerCase() : ''
+
+  return (
+    code === 'ETIMEDOUT' ||
+    code === 'ECONNABORTED' ||
+    name === 'TimeoutError' ||
+    message.includes('timeout')
+  )
 }
 
 // ---------------------------------------------------------------------------
