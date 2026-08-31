@@ -11,7 +11,7 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     environment: staging
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -44,7 +44,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # We simulate the staging deployment locally on the GitHub Runner 
+      # We simulate the staging deployment locally on the GitHub Runner
       # since there's no remote target specified yet.
       - name: Deploy to Staging (Runner)
         env:
@@ -53,11 +53,11 @@ jobs:
         run: |
           echo "Actor: ${{ github.actor }}"
           echo "Digest/Tag: ${{ steps.meta.outputs.version }}"
-          
+
           # We need to run the postgres db as a mock for staging
           docker compose -f docker-compose.staging.yml up -d db
           sleep 10 # Wait for db to initialize
-          
+
           # Run deployment
           ./scripts/deploy-staging.sh ${{ steps.meta.outputs.version }}
 
@@ -68,16 +68,16 @@ jobs:
         if: failure()
         run: |
           echo "Deployment or Smoke Tests failed. Initiating Rollback..."
-          
+
           # Get the previous commit SHA to rollback to
           PREV_SHA=$(git rev-parse HEAD^)
           PREV_TAG="sha-$PREV_SHA"
-          
+
           echo "Rolling back to tag: $PREV_TAG"
-          
+
           # Since this is a CI mock, we just run the rollback script
           # In reality, this tag would be pulled from the registry
           # We'll just build it to simulate
           docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$PREV_TAG .
-          
+
           ./scripts/rollback-staging.sh ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$PREV_TAG

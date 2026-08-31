@@ -29,11 +29,13 @@ const initFirebase = () => {
     const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
     if (serviceAccount) {
       admin.initializeApp({
-        credential: admin.credential.cert(JSON.parse(serviceAccount))
+        credential: admin.credential.cert(JSON.parse(serviceAccount)),
       })
       console.log('[NotificationService] Firebase Admin initialized.')
     } else {
-      console.warn('[NotificationService] FIREBASE_SERVICE_ACCOUNT_KEY not set. Push notifications will be simulated.')
+      console.warn(
+        '[NotificationService] FIREBASE_SERVICE_ACCOUNT_KEY not set. Push notifications will be simulated.',
+      )
     }
     firebaseInitialized = true
   } catch (e) {
@@ -49,7 +51,7 @@ export class NotificationService {
     return prisma.deviceToken.upsert({
       where: { token },
       update: { userId, platform },
-      create: { userId, token, platform }
+      create: { userId, token, platform },
     })
   }
 
@@ -62,12 +64,12 @@ export class NotificationService {
       rewardReceipt?: boolean
       quizPassFail?: boolean
       streakReminders?: boolean
-    }
+    },
   ) {
     return prisma.notificationPreference.upsert({
       where: { userId },
       update: preferences,
-      create: { userId, ...preferences }
+      create: { userId, ...preferences },
     })
   }
 
@@ -79,9 +81,11 @@ export class NotificationService {
     userId: string,
     type: 'rewardReceipt' | 'quizPassFail' | 'streakReminders',
     title: string,
-    body: string
+    body: string,
   ): Promise<NotificationLog | null> {
-    const prefs = await prisma.notificationPreference.findUnique({ where: { userId } })
+    const prefs = await prisma.notificationPreference.findUnique({
+      where: { userId },
+    })
 
     // Default to enabled when no preference row exists
     const isEnabled = prefs ? Boolean(prefs[type as keyof typeof prefs]) : true
@@ -91,7 +95,14 @@ export class NotificationService {
     }
 
     const log = await prisma.notificationLog.create({
-      data: { userId, type, title, body, status: 'pending', nextAttemptAt: new Date() }
+      data: {
+        userId,
+        type,
+        title,
+        body,
+        status: 'pending',
+        nextAttemptAt: new Date(),
+      },
     })
 
     return log as unknown as NotificationLog
@@ -107,11 +118,11 @@ export class NotificationService {
       where: {
         status: 'pending',
         nextAttemptAt: { lte: new Date() },
-        attemptCount: { lt: 5 }
+        attemptCount: { lt: 5 },
       },
       include: {
-        user: { include: { deviceTokens: true } }
-      }
+        user: { include: { deviceTokens: true } },
+      },
     })
 
     for (const log of pendingLogs) {
@@ -123,15 +134,17 @@ export class NotificationService {
     // Increment attempt counter first
     await prisma.notificationLog.update({
       where: { id: log.id },
-      data: { attemptCount: { increment: 1 } }
+      data: { attemptCount: { increment: 1 } },
     })
 
-    const tokens: string[] = (log.user?.deviceTokens ?? []).map((dt: any) => dt.token)
+    const tokens: string[] = (log.user?.deviceTokens ?? []).map(
+      (dt: any) => dt.token,
+    )
 
     if (tokens.length === 0) {
       await prisma.notificationLog.update({
         where: { id: log.id },
-        data: { status: 'failed', error: 'No device tokens found for user' }
+        data: { status: 'failed', error: 'No device tokens found for user' },
       })
 
       return
@@ -141,7 +154,7 @@ export class NotificationService {
       if (admin.apps.length > 0) {
         const response = await admin.messaging().sendEachForMulticast({
           notification: { title: log.title, body: log.body },
-          tokens
+          tokens,
         })
 
         if (response.failureCount > 0) {
@@ -153,14 +166,14 @@ export class NotificationService {
         } else {
           await prisma.notificationLog.update({
             where: { id: log.id },
-            data: { status: 'success' }
+            data: { status: 'success' },
           })
         }
       } else {
         // Simulated success when Firebase is not configured (development mode)
         await prisma.notificationLog.update({
           where: { id: log.id },
-          data: { status: 'success' }
+          data: { status: 'success' },
         })
       }
     } catch (error: any) {
@@ -168,14 +181,17 @@ export class NotificationService {
     }
   }
 
-  private async handleFailure(log: NotificationLog, error: string): Promise<void> {
+  private async handleFailure(
+    log: NotificationLog,
+    error: string,
+  ): Promise<void> {
     const nextAttemptCount = log.attemptCount + 1
 
     if (nextAttemptCount >= log.maxAttempts) {
       // Dead-letter: exhausted all retries
       await prisma.notificationLog.update({
         where: { id: log.id },
-        data: { status: 'dead-letter', error }
+        data: { status: 'dead-letter', error },
       })
     } else {
       // Exponential backoff: 1min, 5min, 25min…
@@ -184,7 +200,7 @@ export class NotificationService {
 
       await prisma.notificationLog.update({
         where: { id: log.id },
-        data: { error, nextAttemptAt }
+        data: { error, nextAttemptAt },
       })
     }
   }

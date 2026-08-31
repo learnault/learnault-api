@@ -43,7 +43,9 @@ describe('PreferenceController', () => {
       await controller.getPreferences(req, res)
 
       expect(res.status).toHaveBeenCalledWith(200)
-      expect(res.json).toHaveBeenCalledWith({ data: { userId: 'user1', locale: 'en-US' } })
+      expect(res.json).toHaveBeenCalledWith({
+        data: { userId: 'user1', locale: 'en-US' },
+      })
     })
 
     it('returns 500 on unexpected error', async () => {
@@ -99,11 +101,17 @@ describe('PreferenceController', () => {
 
     it('accepts a partial update and preserves omitted fields', async () => {
       req.body = { lowDataMode: true }
-      mockUpdatePreferences.mockResolvedValue({ userId: 'user1', lowDataMode: true, locale: 'en-US' })
+      mockUpdatePreferences.mockResolvedValue({
+        userId: 'user1',
+        lowDataMode: true,
+        locale: 'en-US',
+      })
 
       await controller.updatePreferences(req, res)
 
-      expect(mockUpdatePreferences).toHaveBeenCalledWith('user1', { lowDataMode: true })
+      expect(mockUpdatePreferences).toHaveBeenCalledWith('user1', {
+        lowDataMode: true,
+      })
       expect(res.status).toHaveBeenCalledWith(200)
     })
 

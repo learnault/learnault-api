@@ -1,13 +1,7 @@
 import configLogger from '../config/logger'
 
 export type LogLevel =
-  | 'error'
-  | 'warn'
-  | 'info'
-  | 'http'
-  | 'verbose'
-  | 'debug'
-  | 'silly';
+  'error' | 'warn' | 'info' | 'http' | 'verbose' | 'debug' | 'silly'
 
 const logger = {
   error: (message: string, meta?: any) => configLogger.error(message, meta),

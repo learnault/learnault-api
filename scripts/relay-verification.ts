@@ -6,7 +6,10 @@ import { createOutboxRelay } from '../src/workers/outbox-relay'
 
 const TAG = 'relay-evidence'
 
-const relay = createOutboxRelay({ prisma, handlers: registerOutboxHandlers({ prisma }) })
+const relay = createOutboxRelay({
+  prisma,
+  handlers: registerOutboxHandlers({ prisma }),
+})
 
 function banner(title: string): void {
   console.log('')
@@ -20,7 +23,7 @@ async function cleanup(): Promise<void> {
     where: { username: { startsWith: TAG } },
     select: { id: true },
   })
-  const ids = users.map(u => u.id)
+  const ids = users.map((u) => u.id)
 
   await prisma.outboxEvent.deleteMany({
     where: { source: { in: [TAG, 'relay.user-created'] } },
@@ -48,14 +51,24 @@ async function makeUser(suffix: string, withConsent: boolean): Promise<string> {
 
   if (withConsent) {
     await prisma.consentRecord.create({
-      data: { userId: user.id, purpose: 'custodial_wallet', policyVersion: '1', status: 'granted', source: 'api' },
+      data: {
+        userId: user.id,
+        purpose: 'custodial_wallet',
+        policyVersion: '1',
+        status: 'granted',
+        source: 'api',
+      },
     })
   }
 
   return user.id
 }
 
-async function emit(eventType: string, aggregateId: string, payload: unknown): Promise<string> {
+async function emit(
+  eventType: string,
+  aggregateId: string,
+  payload: unknown,
+): Promise<string> {
   const event = await prisma.outboxEvent.create({
     data: {
       id: randomUUID(),
@@ -108,9 +121,11 @@ async function showEvents(): Promise<void> {
 
   for (const event of events) {
     const jobs = event.jobAttempts
-      .map(j => `${j.jobType}=${j.status}(attempt ${j.attempt})`)
+      .map((j) => `${j.jobType}=${j.status}(attempt ${j.attempt})`)
       .join('  ')
-    console.log(`  ${event.eventType.padEnd(28)} ${event.status.padEnd(12)} ${jobs}`)
+    console.log(
+      `  ${event.eventType.padEnd(28)} ${event.status.padEnd(12)} ${jobs}`,
+    )
   }
 }
 
@@ -128,8 +143,12 @@ async function main(): Promise<void> {
   console.log('')
   await showEvents()
   console.log('')
-  console.log('  One UserCreated event fanned out to its handler, which emitted')
-  console.log('  WalletProvisioningRequested; the relay dispatched that to a different handler.')
+  console.log(
+    '  One UserCreated event fanned out to its handler, which emitted',
+  )
+  console.log(
+    '  WalletProvisioningRequested; the relay dispatched that to a different handler.',
+  )
 
   banner('B. Event type with no registered handler')
   await emit('ModuleCompleted', okUser, {
@@ -145,7 +164,9 @@ async function main(): Promise<void> {
     where: { source: TAG, eventType: 'ModuleCompleted' },
     select: { status: true },
   })
-  console.log(`  ModuleCompleted -> ${unhandled?.status} (dead-lettered, not left PENDING)`)
+  console.log(
+    `  ModuleCompleted -> ${unhandled?.status} (dead-lettered, not left PENDING)`,
+  )
 
   banner('C. Failing handler dead-letters, then replays cleanly')
   const blockedUser = await makeUser('blocked', false)
@@ -155,16 +176,23 @@ async function main(): Promise<void> {
     role: 'LEARNER',
   })
   console.log('')
-  console.log('  User has no custodial-wallet consent, so the handler keeps failing.')
+  console.log(
+    '  User has no custodial-wallet consent, so the handler keeps failing.',
+  )
   await drain(12)
 
   const dead = await prisma.outboxEvent.findUnique({
     where: { id: blockedEvent },
-    select: { status: true, jobAttempts: { select: { status: true, attempt: true, lastError: true } } },
+    select: {
+      status: true,
+      jobAttempts: { select: { status: true, attempt: true, lastError: true } },
+    },
   })
   const failedJob = dead?.jobAttempts[0]
   console.log(`  event  -> ${dead?.status}`)
-  console.log(`  job    -> ${failedJob?.status} after ${failedJob?.attempt} attempts`)
+  console.log(
+    `  job    -> ${failedJob?.status} after ${failedJob?.attempt} attempts`,
+  )
   console.log(`  error  -> ${failedJob?.lastError?.split('\n')[0]}`)
 
   const before = await prisma.wallet.count({ where: { userId: blockedUser } })
@@ -172,27 +200,47 @@ async function main(): Promise<void> {
   console.log('')
   console.log('  Operator grants the missing consent, then replays:')
   await prisma.consentRecord.create({
-    data: { userId: blockedUser, purpose: 'custodial_wallet', policyVersion: '1', status: 'granted', source: 'api' },
+    data: {
+      userId: blockedUser,
+      purpose: 'custodial_wallet',
+      policyVersion: '1',
+      status: 'granted',
+      source: 'api',
+    },
   })
   await relay.replayDeadLetter(blockedEvent)
   await drain(6)
 
   const replayed = await prisma.outboxEvent.findUnique({
     where: { id: blockedEvent },
-    select: { status: true, jobAttempts: { select: { jobType: true, status: true } } },
+    select: {
+      status: true,
+      jobAttempts: { select: { jobType: true, status: true } },
+    },
   })
   const after = await prisma.wallet.count({ where: { userId: blockedUser } })
 
   console.log(`  event  -> ${replayed?.status}`)
-  console.log(`  jobs   -> ${replayed?.jobAttempts.map(j => `${j.jobType}=${j.status}`).join('  ')}`)
+  console.log(
+    `  jobs   -> ${replayed?.jobAttempts.map((j) => `${j.jobType}=${j.status}`).join('  ')}`,
+  )
   console.log(`  wallets for user: ${before} before replay, ${after} after`)
 
   banner('D. Re-delivering an already-published event is idempotent')
   await prisma.jobAttempt.updateMany({
     where: { outboxEventId: blockedEvent },
-    data: { status: 'PENDING', attempt: 0, availableAt: new Date(), leaseToken: null, leasedUntil: null },
+    data: {
+      status: 'PENDING',
+      attempt: 0,
+      availableAt: new Date(),
+      leaseToken: null,
+      leasedUntil: null,
+    },
   })
-  await prisma.outboxEvent.update({ where: { id: blockedEvent }, data: { status: 'PENDING' } })
+  await prisma.outboxEvent.update({
+    where: { id: blockedEvent },
+    data: { status: 'PENDING' },
+  })
   console.log('')
   console.log('  Forcing the same event through the relay a second time:')
   await drain(6)
@@ -201,14 +249,16 @@ async function main(): Promise<void> {
     where: { id: blockedEvent },
     select: { status: true },
   })
-  const afterRedelivery = await prisma.wallet.count({ where: { userId: blockedUser } })
+  const afterRedelivery = await prisma.wallet.count({
+    where: { userId: blockedUser },
+  })
   const walletJobs = await prisma.walletProvisioningJob.count({
     where: { wallet: { userId: blockedUser } },
   })
 
   console.log(`  event -> ${redelivered?.status}`)
   console.log(
-    `  wallets for user: ${after} before re-delivery, ${afterRedelivery} after; provisioning jobs: ${walletJobs}`
+    `  wallets for user: ${after} before re-delivery, ${afterRedelivery} after; provisioning jobs: ${walletJobs}`,
   )
   console.log('  The handler ran again and produced no second wallet.')
 

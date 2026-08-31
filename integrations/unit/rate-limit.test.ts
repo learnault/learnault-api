@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { Request, Response, NextFunction } from 'express'
-import { generalLimiter, authLimiter, employerLimiter, authenticatedLimiter, dynamicRateLimiter } from '../../src/middleware/rate-limit.middleware'
+import {
+  generalLimiter,
+  authLimiter,
+  employerLimiter,
+  authenticatedLimiter,
+  dynamicRateLimiter,
+} from '../../src/middleware/rate-limit.middleware'
 
 // Mock the env
 vi.mock('../../src/config/env', () => ({
@@ -51,7 +57,9 @@ describe('Rate Limiting Middleware', () => {
       }
       expect(mockNext).toHaveBeenCalledTimes(100)
       expect(mockRes.status).toHaveBeenCalledWith(429)
-      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Too many requests, please try again later.' })
+      expect(mockRes.json).toHaveBeenCalledWith({
+        error: 'Too many requests, please try again later.',
+      })
     })
 
     it('should set correct headers', () => {
@@ -101,13 +109,13 @@ describe('Rate Limiting Middleware', () => {
     })
 
     it('should use authenticated limiter for authenticated users', () => {
-      (mockReq as any).user = { role: 'user' }
+      ;(mockReq as any).user = { role: 'user' }
       dynamicRateLimiter(mockReq as Request, mockRes as Response, mockNext)
       expect(mockNext).toHaveBeenCalled()
     })
 
     it('should use employer limiter for employers', () => {
-      (mockReq as any).user = { role: 'employer' }
+      ;(mockReq as any).user = { role: 'employer' }
       dynamicRateLimiter(mockReq as Request, mockRes as Response, mockNext)
       expect(mockNext).toHaveBeenCalled()
     })

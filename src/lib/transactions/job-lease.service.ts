@@ -156,7 +156,7 @@ export class JobLeaseService {
   async completeJob(
     jobId: string,
     leaseToken: string,
-    result: JobResult
+    result: JobResult,
   ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       // Verify lease token and update job to COMPLETED
@@ -177,7 +177,7 @@ export class JobLeaseService {
 
       if (updated.count === 0) {
         throw new Error(
-          `Job ${jobId} lease mismatch or already completed (token: ${leaseToken})`
+          `Job ${jobId} lease mismatch or already completed (token: ${leaseToken})`,
         )
       }
 
@@ -228,10 +228,12 @@ export class JobLeaseService {
   async failJob(
     jobId: string,
     leaseToken: string,
-    error: Error | string
+    error: Error | string,
   ): Promise<void> {
     const errorMessage =
-      error instanceof Error ? `${error.message}\n${error.stack}` : String(error)
+      error instanceof Error
+        ? `${error.message}\n${error.stack}`
+        : String(error)
 
     await this.prisma.$transaction(async (tx) => {
       // Get current job to check attempt count
@@ -245,7 +247,7 @@ export class JobLeaseService {
 
       if (job.leaseToken !== leaseToken) {
         throw new Error(
-          `Job ${jobId} lease mismatch (provided: ${leaseToken}, held: ${job.leaseToken})`
+          `Job ${jobId} lease mismatch (provided: ${leaseToken}, held: ${job.leaseToken})`,
         )
       }
 
@@ -271,7 +273,8 @@ export class JobLeaseService {
         })
       } else {
         // Calculate exponential backoff
-        const delayMs = job.backoffBaseMs * Math.pow(job.backoffMultiplier, nextAttempt)
+        const delayMs =
+          job.backoffBaseMs * Math.pow(job.backoffMultiplier, nextAttempt)
         const availableAt = new Date(Date.now() + delayMs)
 
         // Retry with backoff
@@ -317,7 +320,7 @@ export class JobLeaseService {
   }
 
   async acquireQueueLease(
-    options: AcquireQueueLeaseOptions
+    options: AcquireQueueLeaseOptions,
   ): Promise<QueueLeaseResult | null> {
     const leaseMs = options.leaseMs ?? DEFAULT_QUEUE_LEASE_MS
     const leaseToken = randomUUID()
@@ -359,7 +362,7 @@ export class JobLeaseService {
   async renewQueueLease(
     queueName: string,
     leaseToken: string,
-    leaseMs: number = DEFAULT_QUEUE_LEASE_MS
+    leaseMs: number = DEFAULT_QUEUE_LEASE_MS,
   ): Promise<boolean> {
     const updated = await this.prisma.$executeRaw`
       UPDATE "queue_leases"
@@ -372,7 +375,10 @@ export class JobLeaseService {
     return updated > 0
   }
 
-  async releaseQueueLease(queueName: string, leaseToken: string): Promise<boolean> {
+  async releaseQueueLease(
+    queueName: string,
+    leaseToken: string,
+  ): Promise<boolean> {
     const updated = await this.prisma.$executeRaw`
       UPDATE "queue_leases"
       SET "leaseToken" = NULL,

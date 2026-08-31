@@ -6,31 +6,34 @@ This directory contains comprehensive documentation for the Learnault API domain
 
 ## Quick Links
 
-| Document | Purpose |
-|----------|---------|
+| Document                                                  | Purpose                                                          |
+| --------------------------------------------------------- | ---------------------------------------------------------------- |
 | **[Implementation Summary](./IMPLEMENTATION_SUMMARY.md)** | 📋 Start here - Overview of deliverables and acceptance criteria |
-| **[Domain Map](./DOMAIN_MAP.md)** | 🗺️ Visual diagrams, dependency graphs, and metrics |
-| **[Domain Definitions](./DOMAIN_DEFINITIONS.md)** | 📚 Complete specifications for all 10 domains |
-| **[Domain Inventory](./DOMAIN_INVENTORY.md)** | 🔍 Analysis of current codebase and dependencies |
-| **[Shared Kernel](./SHARED_KERNEL.md)** | 🛠️ Shared infrastructure specification |
-| **[Request & Event Flows](./REQUEST_AND_EVENT_FLOWS.md)** | 🔄 Detailed flow diagrams for all features |
-| **[Architecture](../ARCHITECTURE.md)** | 🏗️ Main architecture documentation |
+| **[Domain Map](./DOMAIN_MAP.md)**                         | 🗺️ Visual diagrams, dependency graphs, and metrics               |
+| **[Domain Definitions](./DOMAIN_DEFINITIONS.md)**         | 📚 Complete specifications for all 10 domains                    |
+| **[Domain Inventory](./DOMAIN_INVENTORY.md)**             | 🔍 Analysis of current codebase and dependencies                 |
+| **[Shared Kernel](./SHARED_KERNEL.md)**                   | 🛠️ Shared infrastructure specification                           |
+| **[Request & Event Flows](./REQUEST_AND_EVENT_FLOWS.md)** | 🔄 Detailed flow diagrams for all features                       |
+| **[Architecture](../ARCHITECTURE.md)**                    | 🏗️ Main architecture documentation                               |
 
 ---
 
 ## Reading Guide
 
 ### For New Developers
+
 1. Start with **[Domain Map](./DOMAIN_MAP.md)** for visual overview
 2. Read **[Domain Definitions](./DOMAIN_DEFINITIONS.md)** to understand boundaries
 3. Check **[Request & Event Flows](./REQUEST_AND_EVENT_FLOWS.md)** for feature workflows
 
 ### For Architecture Review
+
 1. Read **[Implementation Summary](./IMPLEMENTATION_SUMMARY.md)** for acceptance criteria
 2. Review **[Domain Definitions](./DOMAIN_DEFINITIONS.md)** for boundary rules
 3. Examine **[Domain Map](./DOMAIN_MAP.md)** for dependency graphs
 
 ### For Implementation
+
 1. Read **[Shared Kernel](./SHARED_KERNEL.md)** for infrastructure setup
 2. Check **[Domain Definitions](./DOMAIN_DEFINITIONS.md)** for your domain's responsibilities
 3. Follow **[Request & Event Flows](./REQUEST_AND_EVENT_FLOWS.md)** for integration patterns
@@ -104,6 +107,7 @@ pnpm test integrations/architecture/domain-boundaries.test.ts
 ```
 
 Tests verify:
+
 - No forbidden cross-domain imports
 - No circular dependencies
 - Infrastructure isolation
@@ -117,6 +121,7 @@ Tests verify:
 **Phase 0:** ✅ Complete - Documentation & Planning
 
 **Deliverables:**
+
 - ✅ Domain inventory
 - ✅ Domain definitions with boundaries
 - ✅ Shared kernel specification

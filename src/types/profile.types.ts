@@ -1,8 +1,13 @@
-export const LEARNER_LEVELS = ['beginner', 'intermediate', 'advanced', 'expert'] as const
-export type LearnerLevel = typeof LEARNER_LEVELS[number]
+export const LEARNER_LEVELS = [
+  'beginner',
+  'intermediate',
+  'advanced',
+  'expert',
+] as const
+export type LearnerLevel = (typeof LEARNER_LEVELS)[number]
 
 export const PROFILE_VISIBILITIES = ['private', 'employer', 'public'] as const
-export type ProfileVisibility = typeof PROFILE_VISIBILITIES[number]
+export type ProfileVisibility = (typeof PROFILE_VISIBILITIES)[number]
 
 // Ordered from most to least restrictive. A profile's `visibility` is the
 // widest audience allowed to see its non-private fields; the owner can
@@ -61,14 +66,36 @@ export interface OwnerProfileView extends LearnerProfileRecord {
 }
 
 export type EmployerProfileView =
-  | (Pick<LearnerProfileRecord, 'id' | 'displayName' | 'bio' | 'avatarUrl' | 'country' | 'timezone' | 'languages' | 'level' | 'interests' | 'goals'> & { visible: true })
+  | (Pick<
+      LearnerProfileRecord,
+      | 'id'
+      | 'displayName'
+      | 'bio'
+      | 'avatarUrl'
+      | 'country'
+      | 'timezone'
+      | 'languages'
+      | 'level'
+      | 'interests'
+      | 'goals'
+    > & { visible: true })
   | { id: string; visible: false }
 
 export type PublicProfileView =
-  | (Pick<LearnerProfileRecord, 'id' | 'displayName' | 'bio' | 'avatarUrl' | 'country' | 'level' | 'interests'> & { visible: true })
+  | (Pick<
+      LearnerProfileRecord,
+      | 'id'
+      | 'displayName'
+      | 'bio'
+      | 'avatarUrl'
+      | 'country'
+      | 'level'
+      | 'interests'
+    > & { visible: true })
   | { id: string; visible: false }
 
-export interface PrivateProfileView extends LearnerProfileRecord, AccountPrivateFields {}
+export interface PrivateProfileView
+  extends LearnerProfileRecord, AccountPrivateFields {}
 
 // ── Owner account/profile aggregate ────────────────────────────────────────
 

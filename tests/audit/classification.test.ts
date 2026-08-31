@@ -14,7 +14,10 @@ import { DataCategory, ErasureAction, RecordClass } from '../../src/audit/types'
 
 /** Model names declared in prisma/schema.prisma. */
 function schemaModels(): string[] {
-  const schema = readFileSync(join(process.cwd(), 'prisma', 'schema.prisma'), 'utf8')
+  const schema = readFileSync(
+    join(process.cwd(), 'prisma', 'schema.prisma'),
+    'utf8',
+  )
   const matches = schema.matchAll(/^model\s+(\w+)\s*\{/gm)
 
   return [...matches].map((match) => match[1])
@@ -23,7 +26,9 @@ function schemaModels(): string[] {
 describe('lifecycle classification', () => {
   describe('coverage', () => {
     it('classifies every model in the Prisma schema', () => {
-      const unclassified = schemaModels().filter((model) => !lifecycleRuleFor(model))
+      const unclassified = schemaModels().filter(
+        (model) => !lifecycleRuleFor(model),
+      )
 
       // A model with no rule has no retention, no erasure behaviour and no
       // audit requirement. Add it to src/audit/classification.ts and document
@@ -72,7 +77,8 @@ describe('lifecycle classification', () => {
       const wrong = lifecycleRules()
         .filter(
           (rule) =>
-            rule.recordClass === RecordClass.ARCHIVABLE && rule.retentionAnchor !== 'archivedAt'
+            rule.recordClass === RecordClass.ARCHIVABLE &&
+            rule.retentionAnchor !== 'archivedAt',
         )
         .map((rule) => rule.model)
 
@@ -90,14 +96,18 @@ describe('lifecycle classification', () => {
 
   describe('policy invariants', () => {
     it('retains money records for the statutory window and never deletes them on erasure', () => {
-      const money = lifecycleRules().filter((rule) => rule.category === DataCategory.MONEY)
+      const money = lifecycleRules().filter(
+        (rule) => rule.category === DataCategory.MONEY,
+      )
 
       expect(money.length).toBeGreaterThan(0)
 
       for (const rule of money) {
         // A ledger a subject can erase is not a ledger. Money rows either
         // survive erasure outright or disappear with their parent.
-        expect([ErasureAction.RETAIN, ErasureAction.CASCADE]).toContain(rule.onErasure)
+        expect([ErasureAction.RETAIN, ErasureAction.CASCADE]).toContain(
+          rule.onErasure,
+        )
 
         if (rule.retentionDays !== null) {
           expect(rule.retentionDays).toBeGreaterThanOrEqual(Retention.ONE_YEAR)
@@ -107,7 +117,7 @@ describe('lifecycle classification', () => {
 
     it('keeps credentials verifiable indefinitely', () => {
       const credentials = lifecycleRules().filter(
-        (rule) => rule.category === DataCategory.CREDENTIAL
+        (rule) => rule.category === DataCategory.CREDENTIAL,
       )
 
       expect(credentials.length).toBeGreaterThan(0)
@@ -119,7 +129,9 @@ describe('lifecycle classification', () => {
     })
 
     it('retains consent proof beyond the account it describes', () => {
-      const consent = lifecycleRules().filter((rule) => rule.category === DataCategory.CONSENT)
+      const consent = lifecycleRules().filter(
+        (rule) => rule.category === DataCategory.CONSENT,
+      )
 
       expect(consent.length).toBeGreaterThan(0)
 
@@ -132,7 +144,7 @@ describe('lifecycle classification', () => {
 
     it('bounds how long security events are kept', () => {
       const security = lifecycleRules().filter(
-        (rule) => rule.category === DataCategory.SECURITY
+        (rule) => rule.category === DataCategory.SECURITY,
       )
 
       expect(security.length).toBeGreaterThan(0)
@@ -155,19 +167,29 @@ describe('lifecycle classification', () => {
       const shortest = Math.min(
         ...lifecycleRules()
           .map((rule) => rule.retentionDays)
-          .filter((days): days is number => days !== null)
+          .filter((days): days is number => days !== null),
       )
 
-      expect(lifecycleRuleFor('DataExportRequest')!.retentionDays).toBe(shortest)
+      expect(lifecycleRuleFor('DataExportRequest')!.retentionDays).toBe(
+        shortest,
+      )
     })
 
     it('audits every money, credential and consent mutation', () => {
-      const sensitive = [DataCategory.MONEY, DataCategory.CREDENTIAL, DataCategory.CONSENT]
+      const sensitive = [
+        DataCategory.MONEY,
+        DataCategory.CREDENTIAL,
+        DataCategory.CONSENT,
+      ]
 
       // Append-only history tables are exempt: a row in one of them *is* the
       // audit record, and auditing it would only produce a second row saying
       // the first was written.
-      const selfAuditing = new Set(['AuditEvent', 'AuditLog', 'PreferenceAuditLog'])
+      const selfAuditing = new Set([
+        'AuditEvent',
+        'AuditLog',
+        'PreferenceAuditLog',
+      ])
 
       const unaudited = lifecycleRules()
         .filter((rule) => sensitive.includes(rule.category) && !rule.audited)
@@ -206,26 +228,39 @@ describe('lifecycle classification', () => {
     })
 
     it('declares archivedAt on every archivable model in the schema', () => {
-      const schema = readFileSync(join(process.cwd(), 'prisma', 'schema.prisma'), 'utf8')
+      const schema = readFileSync(
+        join(process.cwd(), 'prisma', 'schema.prisma'),
+        'utf8',
+      )
 
       for (const model of modelsInClass(RecordClass.ARCHIVABLE)) {
-        const block = schema.match(new RegExp(`model\\s+${model}\\s*\\{([\\s\\S]*?)\\n\\}`))
+        const block = schema.match(
+          new RegExp(`model\\s+${model}\\s*\\{([\\s\\S]*?)\\n\\}`),
+        )
 
         expect(block, `model ${model} not found in schema`).not.toBeNull()
-        expect(block![1], `${model} is ARCHIVABLE but has no archivedAt`).toContain('archivedAt')
+        expect(
+          block![1],
+          `${model} is ARCHIVABLE but has no archivedAt`,
+        ).toContain('archivedAt')
         expect(block![1]).toContain('archivedById')
         expect(block![1]).toContain('archivedReason')
       }
     })
 
     it('does not declare archive columns on models outside the archivable class', () => {
-      const schema = readFileSync(join(process.cwd(), 'prisma', 'schema.prisma'), 'utf8')
+      const schema = readFileSync(
+        join(process.cwd(), 'prisma', 'schema.prisma'),
+        'utf8',
+      )
       const archivable = new Set(modelsInClass(RecordClass.ARCHIVABLE))
 
       const unexpected = lifecycleRules()
         .filter((rule) => !archivable.has(rule.model))
         .filter((rule) => {
-          const block = schema.match(new RegExp(`model\\s+${rule.model}\\s*\\{([\\s\\S]*?)\\n\\}`))
+          const block = schema.match(
+            new RegExp(`model\\s+${rule.model}\\s*\\{([\\s\\S]*?)\\n\\}`),
+          )
 
           return block ? /^\s*archivedAt\s/m.test(block[1]) : false
         })
@@ -255,7 +290,7 @@ describe('lifecycle classification', () => {
 
     it('subtracts the retention window from now', () => {
       expect(retentionCutoff('EmailDelivery', now)?.toISOString()).toBe(
-        '2026-07-25T00:00:00.000Z'
+        '2026-07-25T00:00:00.000Z',
       )
     })
 
@@ -270,7 +305,8 @@ describe('lifecycle classification', () => {
 
     it('puts the audit-event cutoff seven years back', () => {
       const cutoff = retentionCutoff('AuditEvent', now)!
-      const years = (now.getTime() - cutoff.getTime()) / (365.25 * 24 * 60 * 60_000)
+      const years =
+        (now.getTime() - cutoff.getTime()) / (365.25 * 24 * 60 * 60_000)
 
       expect(years).toBeCloseTo(7, 1)
     })

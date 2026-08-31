@@ -28,7 +28,9 @@ class InMemoryAuthorizationRepository implements WalletExportAuthorizationReposi
   custody = 'MANAGED'
   walletStatus = 'ACTIVE'
 
-  async findEligibleWallet(userId: string): Promise<WalletExportCandidate | null> {
+  async findEligibleWallet(
+    userId: string,
+  ): Promise<WalletExportCandidate | null> {
     return this.candidate?.userId === userId &&
       this.custody === 'MANAGED' &&
       this.walletStatus === 'ACTIVE'
@@ -147,9 +149,9 @@ describe('step-up self-custody export', () => {
     ).rejects.toMatchObject({ code: 'ACKNOWLEDGEMENT_REQUIRED' })
 
     stepUp.verifyPassword.mockResolvedValue(false)
-    await expect(
-      authorize(service),
-    ).rejects.toMatchObject({ code: 'STEP_UP_FAILED' })
+    await expect(authorize(service)).rejects.toMatchObject({
+      code: 'STEP_UP_FAILED',
+    })
     expect(repository.authorizations.size).toBe(0)
   })
 
@@ -228,8 +230,12 @@ describe('step-up self-custody export', () => {
       ),
     )
 
-    expect(attempts.filter((attempt) => attempt.status === 'fulfilled')).toHaveLength(1)
-    expect(attempts.filter((attempt) => attempt.status === 'rejected')).toHaveLength(19)
+    expect(
+      attempts.filter((attempt) => attempt.status === 'fulfilled'),
+    ).toHaveLength(1)
+    expect(
+      attempts.filter((attempt) => attempt.status === 'rejected'),
+    ).toHaveLength(19)
   })
 
   it('does not deliver while managed KMS material cannot be deleted', async () => {

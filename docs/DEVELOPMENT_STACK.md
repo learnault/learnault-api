@@ -54,16 +54,16 @@ docker compose up -d --scale scheduler=2
 
 A replica that loses the race logs a skipped tick and moves on; a replica that crashes mid-drain has its lease expire, and the next tick reclaims the queue.
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `SCHEDULER_INTERVAL_MS` | `15000` | Base tick interval for every queue |
-| `SCHEDULER_<QUEUE>_INTERVAL_MS` | — | Per-queue override, e.g. `SCHEDULER_WEBHOOK_INTERVAL_MS` |
-| `SCHEDULER_LEASE_MS` | `60000` | Lease held per tick (floored at 2× the interval) |
-| `SCHEDULER_QUEUES` | all | Comma list restricting which queues this replica runs |
-| `SCHEDULER_DISABLED_QUEUES` | — | Comma list of queues to skip |
-| `SCHEDULER_SHUTDOWN_TIMEOUT_MS` | `30000` | How long `SIGTERM` waits for in-flight ticks |
-| `SCHEDULER_IN_PROCESS` | `false` | Opt-in: run the runner inside the API process for single-process deployments |
-| `LIFECYCLE_SWEEP_INTERVAL_MS` | `0` | When `> 0`, overrides the `account-lifecycle` queue interval |
+| Variable                        | Default | Purpose                                                                      |
+| ------------------------------- | ------- | ---------------------------------------------------------------------------- |
+| `SCHEDULER_INTERVAL_MS`         | `15000` | Base tick interval for every queue                                           |
+| `SCHEDULER_<QUEUE>_INTERVAL_MS` | —       | Per-queue override, e.g. `SCHEDULER_WEBHOOK_INTERVAL_MS`                     |
+| `SCHEDULER_LEASE_MS`            | `60000` | Lease held per tick (floored at 2× the interval)                             |
+| `SCHEDULER_QUEUES`              | all     | Comma list restricting which queues this replica runs                        |
+| `SCHEDULER_DISABLED_QUEUES`     | —       | Comma list of queues to skip                                                 |
+| `SCHEDULER_SHUTDOWN_TIMEOUT_MS` | `30000` | How long `SIGTERM` waits for in-flight ticks                                 |
+| `SCHEDULER_IN_PROCESS`          | `false` | Opt-in: run the runner inside the API process for single-process deployments |
+| `LIFECYCLE_SWEEP_INTERVAL_MS`   | `0`     | When `> 0`, overrides the `account-lifecycle` queue interval                 |
 
 Every tick emits a structured log line carrying per-queue `depth`, `due`, `lagMs` (age of the oldest due row), `durationMs`, and cumulative `attempts` / `failures` / `skipped`.
 
@@ -123,12 +123,12 @@ This validates the compose file, starts the stack, waits for `/health/ready`, pr
 
 ## Troubleshooting
 
-| Symptom                              | Fix                                                                  |
-| ------------------------------------ | -------------------------------------------------------------------- |
-| Port 5432/6379/5000 already in use   | Override in `.env`: `POSTGRES_PORT=5433`, `REDIS_PORT=6380`, `API_PORT=5001` |
-| Prisma client errors (`@prisma/client` export) | Run `pnpm db:generate` (or `docker compose build`), then restart the stack |
-| `JWT_SECRET` required error          | Set a real `JWT_SECRET` in `.env` (defaults are dev-only)             |
-| Containers restarting after reset    | Ensure `.env` exists before `docker compose up`                        |
+| Symptom                                        | Fix                                                                          |
+| ---------------------------------------------- | ---------------------------------------------------------------------------- |
+| Port 5432/6379/5000 already in use             | Override in `.env`: `POSTGRES_PORT=5433`, `REDIS_PORT=6380`, `API_PORT=5001` |
+| Prisma client errors (`@prisma/client` export) | Run `pnpm db:generate` (or `docker compose build`), then restart the stack   |
+| `JWT_SECRET` required error                    | Set a real `JWT_SECRET` in `.env` (defaults are dev-only)                    |
+| Containers restarting after reset              | Ensure `.env` exists before `docker compose up`                              |
 
 ## Related
 

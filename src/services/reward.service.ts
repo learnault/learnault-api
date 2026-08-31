@@ -12,10 +12,7 @@ import {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type ModuleDifficulty =
-  | 'beginner'
-  | 'intermediate'
-  | 'advanced'
-  | 'expert'
+  'beginner' | 'intermediate' | 'advanced' | 'expert'
 
 export interface Module {
   id: string

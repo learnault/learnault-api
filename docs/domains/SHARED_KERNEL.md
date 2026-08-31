@@ -50,23 +50,29 @@ src/shared/
 ## 1. Configuration (`shared/config/`)
 
 ### Purpose
+
 Centralized configuration management for database, environment, logging, and external services.
 
 ### Components
 
 #### `database.ts`
+
 ```typescript
 // Exports configured Prisma client
 import { PrismaClient } from '@prisma/client'
 
 export const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  log:
+    process.env.NODE_ENV === 'development'
+      ? ['query', 'error', 'warn']
+      : ['error'],
 })
 
 export default prisma
 ```
 
 #### `env.ts`
+
 ```typescript
 // Validates and exports environment variables
 import { z } from 'zod'
@@ -85,6 +91,7 @@ export const env = envSchema.parse(process.env)
 ```
 
 #### `logger.ts`
+
 ```typescript
 // Exports configured logger (winston, pino, etc.)
 import winston from 'winston'
@@ -99,6 +106,7 @@ export default logger
 ```
 
 ### Usage Rules
+
 - All domains MUST use shared config, never read `process.env` directly
 - Configuration is read-only; domains cannot modify shared config
 - Domain-specific configuration goes in domain folder, imports from shared
@@ -108,18 +116,20 @@ export default logger
 ## 2. Error Handling (`shared/errors/`)
 
 ### Purpose
+
 Standardized error types and error handling across the application.
 
 ### Components
 
 #### `types.ts`
+
 ```typescript
 export class AppError extends Error {
   constructor(
     public message: string,
     public statusCode: number,
     public code: string,
-    public details?: any
+    public details?: any,
   ) {
     super(message)
     this.name = this.constructor.name
@@ -132,7 +142,7 @@ export class NotFoundError extends AppError {
     super(
       `${resource}${id ? ` with id ${id}` : ''} not found`,
       404,
-      'NOT_FOUND'
+      'NOT_FOUND',
     )
   }
 }
@@ -169,18 +179,19 @@ export class BadRequestError extends AppError {
 ```
 
 #### `codes.ts`
+
 ```typescript
 export const ERROR_CODES = {
   // General
   INTERNAL_ERROR: 'INTERNAL_ERROR',
   NOT_FOUND: 'NOT_FOUND',
   VALIDATION_ERROR: 'VALIDATION_ERROR',
-  
+
   // Auth
   UNAUTHORIZED: 'UNAUTHORIZED',
   INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
   TOKEN_EXPIRED: 'TOKEN_EXPIRED',
-  
+
   // Business logic
   INSUFFICIENT_BALANCE: 'INSUFFICIENT_BALANCE',
   ALREADY_CLAIMED: 'ALREADY_CLAIMED',
@@ -189,6 +200,7 @@ export const ERROR_CODES = {
 ```
 
 ### Usage Rules
+
 - All domains MUST throw shared error types
 - Never throw generic `Error`; always extend `AppError`
 - Domain-specific errors can extend shared error classes
@@ -198,11 +210,13 @@ export const ERROR_CODES = {
 ## 3. Middleware (`shared/middleware/`)
 
 ### Purpose
+
 Reusable Express middleware for authentication, validation, error handling, and rate limiting.
 
 ### Components
 
 #### `auth.middleware.ts`
+
 ```typescript
 import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
@@ -215,7 +229,11 @@ export interface AuthRequest extends Request {
   }
 }
 
-export const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
+export const authenticate = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
   // JWT validation logic
   // Attaches user to req.user
 }
@@ -231,6 +249,7 @@ export const authorize = (...roles: string[]) => {
 ```
 
 #### `validation.middleware.ts`
+
 ```typescript
 import { Request, Response, NextFunction } from 'express'
 import { ZodSchema } from 'zod'
@@ -248,6 +267,7 @@ export const validate = (schema: ZodSchema) => {
 ```
 
 #### `error.middleware.ts`
+
 ```typescript
 import { Request, Response, NextFunction } from 'express'
 import { AppError } from '../errors'
@@ -257,7 +277,7 @@ export const errorHandler = (
   err: Error,
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   logger.error('Error:', { error: err.message, stack: err.stack })
 
@@ -292,6 +312,7 @@ export const asyncHandler = (fn: Function) => {
 ```
 
 #### `rate-limit.middleware.ts`
+
 ```typescript
 import rateLimit from 'express-rate-limit'
 
@@ -309,6 +330,7 @@ export const authLimiter = rateLimit({
 ```
 
 ### Usage Rules
+
 - All routes SHOULD use shared middleware
 - Domain-specific middleware can extend/compose shared middleware
 - Middleware must be stateless and reusable
@@ -318,11 +340,13 @@ export const authLimiter = rateLimit({
 ## 4. Common Types (`shared/types/`)
 
 ### Purpose
+
 Type definitions shared across all domains.
 
 ### Components
 
 #### `api.types.ts`
+
 ```typescript
 export interface ApiResponse<T = any> {
   success: boolean
@@ -351,6 +375,7 @@ export interface ApiError {
 ```
 
 #### `pagination.types.ts`
+
 ```typescript
 export interface PaginationParams {
   page?: number
@@ -370,6 +395,7 @@ export interface PaginationMeta {
 ```
 
 #### `common.types.ts`
+
 ```typescript
 export type Timestamp = string // ISO 8601
 export type UUID = string
@@ -388,6 +414,7 @@ export interface BaseEntity {
 ```
 
 ### Usage Rules
+
 - Use for DTOs that cross domain boundaries
 - Domain-specific types belong in domain folders
 - Keep types minimal and stable
@@ -397,11 +424,13 @@ export interface BaseEntity {
 ## 5. Utilities (`shared/utils/`)
 
 ### Purpose
+
 Pure utility functions without business logic.
 
 ### Components
 
 #### `jwt.ts`
+
 ```typescript
 import jwt from 'jsonwebtoken'
 import { env } from '../config/env'
@@ -418,6 +447,7 @@ export const verifyToken = (token: string): any => {
 ```
 
 #### `password.ts`
+
 ```typescript
 import bcrypt from 'bcryptjs'
 
@@ -428,18 +458,20 @@ export const hashPassword = async (password: string): Promise<string> => {
 
 export const comparePassword = async (
   password: string,
-  hash: string
+  hash: string,
 ): Promise<boolean> => {
   return bcrypt.compare(password, hash)
 }
 ```
 
 #### `date.ts`, `number.ts`, `string.ts`
+
 ```typescript
 // Pure utility functions for formatting, parsing, validation
 ```
 
 ### Usage Rules
+
 - Utilities MUST be pure functions (no side effects)
 - No database access or external API calls
 - No business logic; only technical utilities
@@ -449,11 +481,13 @@ export const comparePassword = async (
 ## 6. Messaging Infrastructure (`shared/messaging/`)
 
 ### Purpose
+
 Outbox pattern implementation for emails, webhooks, and domain events.
 
 ### Components
 
 #### `email.service.ts`
+
 ```typescript
 import prisma from '../config/database'
 import logger from '../config/logger'
@@ -464,14 +498,14 @@ export class EmailService {
     to: string,
     subject: string,
     body: string,
-    type: string = 'GENERAL'
+    type: string = 'GENERAL',
   ): Promise<void> {
     await prisma.emailDelivery.create({
       data: { userId, to, subject, body, type, status: 'pending' },
     })
-    
+
     // Trigger async processing
-    this.processQueue().catch(err => logger.error('Email queue error:', err))
+    this.processQueue().catch((err) => logger.error('Email queue error:', err))
   }
 
   async processQueue(): Promise<void> {
@@ -483,11 +517,13 @@ export const emailService = new EmailService()
 ```
 
 #### `webhook.service.ts`
+
 ```typescript
 // Similar outbox pattern for webhook delivery
 ```
 
 #### `events.types.ts`
+
 ```typescript
 export interface DomainEvent {
   eventType: string
@@ -513,6 +549,7 @@ export interface UserRegisteredEvent extends DomainEvent {
 ```
 
 ### Usage Rules
+
 - Domains MUST use messaging infrastructure for async communication
 - No direct service-to-service calls for cross-domain operations
 - Events are write-only (fire and forget)

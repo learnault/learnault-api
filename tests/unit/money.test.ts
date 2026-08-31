@@ -98,9 +98,7 @@ describe('stroopsToXlmString', () => {
 
   it('formats large amounts correctly', () => {
     // 100_000_000 XLM = 1_000_000_000_000_000 stroops
-    expect(stroopsToXlmString(1_000_000_000_000_000n)).toBe(
-      '100000000.0000000',
-    )
+    expect(stroopsToXlmString(1_000_000_000_000_000n)).toBe('100000000.0000000')
   })
 
   it('throws MoneyError for negative stroops', () => {
@@ -401,11 +399,12 @@ describe('reward arithmetic integration', () => {
   const BASE = 50_000_000n // 5 XLM for beginner
 
   it.each([
-    ['beginner',     [1n, 1n] as [bigint, bigint], 50_000_000n],   // 5 XLM
-    ['intermediate', [3n, 2n] as [bigint, bigint], 75_000_000n],   // 7.5 XLM
-    ['advanced',     [2n, 1n] as [bigint, bigint], 100_000_000n],  // 10 XLM
-    ['expert',       [3n, 1n] as [bigint, bigint], 150_000_000n],  // 15 XLM
-  ])('%s: multiplyStroops(%s, [%s]) === %s stroops',
+    ['beginner', [1n, 1n] as [bigint, bigint], 50_000_000n], // 5 XLM
+    ['intermediate', [3n, 2n] as [bigint, bigint], 75_000_000n], // 7.5 XLM
+    ['advanced', [2n, 1n] as [bigint, bigint], 100_000_000n], // 10 XLM
+    ['expert', [3n, 1n] as [bigint, bigint], 150_000_000n], // 15 XLM
+  ])(
+    '%s: multiplyStroops(%s, [%s]) === %s stroops',
     (_diff, [num, den], expected) => {
       expect(multiplyStroops(BASE, num, den)).toBe(expected)
     },

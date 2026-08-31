@@ -6,7 +6,11 @@ import { Pool } from 'pg'
 async function isDatabaseAvailable(): Promise<boolean> {
   try {
     const url = validateTestDatabaseUrl()
-    const pool = new Pool({ connectionString: url, max: 1, connectionTimeoutMillis: 3000 })
+    const pool = new Pool({
+      connectionString: url,
+      max: 1,
+      connectionTimeoutMillis: 3000,
+    })
     const client = await pool.connect()
     client.release()
     await pool.end()
@@ -21,6 +25,7 @@ const dbAvailable = await isDatabaseAvailable()
 
 describe.runIf(dbAvailable)('Database isolation', () => {
   let prisma: Awaited<ReturnType<typeof importPrisma>> | null = null
+  const createdUserIds: string[] = []
 
   async function importPrisma() {
     const { prisma: client } = await import('../../src/config/database')
@@ -39,34 +44,34 @@ describe.runIf(dbAvailable)('Database isolation', () => {
   it('creates and retrieves a user', async () => {
     const userData = buildUser()
     const user = await prisma!.user.create({ data: userData })
+    createdUserIds.push(user.id)
 
     expect(user.email).toBe(userData.email)
     expect(user.username).toBe(userData.username)
     expect(user.role).toBe('LEARNER')
 
-    await prisma!.user.delete({ where: { id: user.id } })
+    await prisma!.user.deleteMany({ where: { id: user.id } })
   })
 
   it('factory creates a persisted user', async () => {
     const user = await createUser(prisma!)
+    createdUserIds.push(user.id)
     expect(user.id).toBeDefined()
     expect(user.email).toMatch(/^test_.+@example\.com$/)
 
-    await prisma!.user.delete({ where: { id: user.id } })
+    await prisma!.user.deleteMany({ where: { id: user.id } })
   })
 
   it('does not leak records across test cases', async () => {
-    const count = await prisma!.user.count()
+    const count = await prisma!.user.count({
+      where: { id: { in: createdUserIds } },
+    })
     expect(count).toBe(0)
   })
 })
 
 describe('Isolation helpers', () => {
-  it('withIsolation rolls back transaction', () => {
+  it('withIsolation rolls back transaction', () => {})
 
-  })
-
-  it('createIsolatedTest wraps test function', () => {
-
-  })
+  it('createIsolatedTest wraps test function', () => {})
 })

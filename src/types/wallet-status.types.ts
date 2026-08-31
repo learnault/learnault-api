@@ -1,4 +1,5 @@
-export type WalletStatusValue = 'NOT_PROVISIONED' | 'PENDING' | 'ACTIVE' | 'UNAVAILABLE'
+export type WalletStatusValue =
+  'NOT_PROVISIONED' | 'PENDING' | 'ACTIVE' | 'UNAVAILABLE'
 
 export interface WalletStatusView {
   status: WalletStatusValue
@@ -50,10 +51,14 @@ export interface WalletHistoryPageView {
   nextCursor: string | null
 }
 
-export type WalletStatusErrorCode = 'WALLET_NOT_FOUND' | 'HORIZON_TIMEOUT' | 'HORIZON_UNAVAILABLE'
+export type WalletStatusErrorCode =
+  'WALLET_NOT_FOUND' | 'HORIZON_TIMEOUT' | 'HORIZON_UNAVAILABLE'
 
 export class WalletStatusError extends Error {
-  constructor(readonly code: WalletStatusErrorCode, message?: string) {
+  constructor(
+    readonly code: WalletStatusErrorCode,
+    message?: string,
+  ) {
     super(message ?? code)
     this.name = 'WalletStatusError'
   }

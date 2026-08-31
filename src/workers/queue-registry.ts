@@ -33,7 +33,7 @@ interface CountableDelegate {
 
 function delegateDepth(
   delegate: CountableDelegate,
-  options: DelegateDepthOptions
+  options: DelegateDepthOptions,
 ): () => Promise<QueueDepthSnapshot> {
   const dueField = options.dueField ?? 'nextAttemptAt'
 
@@ -54,7 +54,11 @@ function delegateDepth(
       }),
     ])
 
-    return { depth, due, oldestDueAt: (oldest?.[dueField] as Date | null) ?? null }
+    return {
+      depth,
+      due,
+      oldestDueAt: (oldest?.[dueField] as Date | null) ?? null,
+    }
   }
 }
 
@@ -65,14 +69,19 @@ export interface QueueRegistryDeps {
   outboxRelay?: OutboxRelay
 }
 
-export function createDefaultQueues(deps: QueueRegistryDeps = {}): ScheduledQueue[] {
+export function createDefaultQueues(
+  deps: QueueRegistryDeps = {},
+): ScheduledQueue[] {
   const prisma = deps.prisma ?? defaultPrisma
-  const notificationService = deps.notificationService ?? new NotificationService()
+  const notificationService =
+    deps.notificationService ?? new NotificationService()
   const webhookService = deps.webhookService ?? new WebhookService()
-  const outboxRelay = deps.outboxRelay ?? createOutboxRelay({
-    prisma,
-    handlers: registerOutboxHandlers({ prisma }),
-  })
+  const outboxRelay =
+    deps.outboxRelay ??
+    createOutboxRelay({
+      prisma,
+      handlers: registerOutboxHandlers({ prisma }),
+    })
 
   const db = prisma as unknown as Record<string, CountableDelegate>
 
@@ -80,17 +89,23 @@ export function createDefaultQueues(deps: QueueRegistryDeps = {}): ScheduledQueu
     {
       name: 'email',
       drain: () => emailService.processQueue(),
-      inspect: delegateDepth(db.emailDelivery, { pending: { status: 'pending' } }),
+      inspect: delegateDepth(db.emailDelivery, {
+        pending: { status: 'pending' },
+      }),
     },
     {
       name: 'notification',
       drain: () => notificationService.processQueue(),
-      inspect: delegateDepth(db.notificationLog, { pending: { status: 'pending' } }),
+      inspect: delegateDepth(db.notificationLog, {
+        pending: { status: 'pending' },
+      }),
     },
     {
       name: 'webhook',
       drain: () => webhookService.processQueue(),
-      inspect: delegateDepth(db.webhookDelivery, { pending: { status: 'pending' } }),
+      inspect: delegateDepth(db.webhookDelivery, {
+        pending: { status: 'pending' },
+      }),
     },
     {
       name: 'stellar-funding',
@@ -116,10 +131,14 @@ export function createDefaultQueues(deps: QueueRegistryDeps = {}): ScheduledQueu
       },
       inspect: async () => {
         const [depth, oldest] = await Promise.all([
-          (prisma as unknown as { outboxEvent: CountableDelegate }).outboxEvent.count({
+          (
+            prisma as unknown as { outboxEvent: CountableDelegate }
+          ).outboxEvent.count({
             where: { status: 'PENDING' },
           }),
-          (prisma as unknown as { outboxEvent: CountableDelegate }).outboxEvent.findFirst({
+          (
+            prisma as unknown as { outboxEvent: CountableDelegate }
+          ).outboxEvent.findFirst({
             where: { status: 'PENDING' },
             orderBy: { createdAt: 'asc' },
             select: { createdAt: true },

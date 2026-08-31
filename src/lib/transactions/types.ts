@@ -183,7 +183,9 @@ export interface OutboxEventHandler {
   maxAttempts?: number
   backoffBaseMs?: number
   backoffMultiplier?: number
-  handle(context: OutboxEventHandlerContext): Promise<OutboxEventHandlerResult | void>
+  handle(
+    context: OutboxEventHandlerContext,
+  ): Promise<OutboxEventHandlerResult | void>
 }
 
 export interface AcquireQueueLeaseOptions {

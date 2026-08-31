@@ -14,8 +14,8 @@ const formatZodMessages = (issues: any[] = []) => {
     if (msg === 'Required') {
       if (path === 'currentPassword') return 'Current password is required'
       if (path === 'newPassword') return 'New password is required'
-      
-return 'Required'
+
+      return 'Required'
     }
 
     return msg
@@ -35,7 +35,7 @@ export const commonSchemas = {
     .regex(/(?=.*\d)/, 'Password must contain at least one number')
     .regex(
       /(?=.*[@$!%*?&])/,
-      'Password must contain at least one special character'
+      'Password must contain at least one special character',
     ),
   id: z.string().uuid('Invalid ID format'),
   username: z
@@ -44,7 +44,7 @@ export const commonSchemas = {
     .max(30, 'Username must be less than 30 characters')
     .regex(
       /^[a-zA-Z0-9_]+$/,
-      'Username can only contain letters, numbers, and underscores'
+      'Username can only contain letters, numbers, and underscores',
     ),
   walletAddress: z
     .string()
@@ -150,10 +150,7 @@ export const validateProfileUpdate = validate({
       .string()
       .max(50, 'Last name must be less than 50 characters')
       .optional(),
-    bio: z
-      .string()
-      .max(500, 'Bio must be less than 500 characters')
-      .optional(),
+    bio: z.string().max(500, 'Bio must be less than 500 characters').optional(),
     avatar: commonSchemas.url.optional(),
   }),
 })
@@ -170,7 +167,7 @@ export const validatePasswordChange = validate({
       {
         message: 'New password must be different from current password',
         path: ['newPassword'],
-      }
+      },
     ),
 })
 

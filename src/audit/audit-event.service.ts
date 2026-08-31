@@ -11,7 +11,11 @@ import prisma from '../config/database'
 import logger from '../utils/logger'
 import { env } from '../config/env'
 import { recordClassFor, retentionCutoff } from './classification.js'
-import { hashIpAddress, serializeMetadata, userAgentFamily } from './redaction.js'
+import {
+  hashIpAddress,
+  serializeMetadata,
+  userAgentFamily,
+} from './redaction.js'
 import {
   AuditEventInput,
   AuditEventQuery,
@@ -101,7 +105,10 @@ export class AuditEventService {
    * rejected audit write must roll the mutation back rather than let an
    * unaudited change through.
    */
-  async recordWithin(tx: AuditEventWriter, input: AuditEventInput): Promise<void> {
+  async recordWithin(
+    tx: AuditEventWriter,
+    input: AuditEventInput,
+  ): Promise<void> {
     await tx.auditEvent.create({ data: this.toRow(input) })
   }
 
@@ -111,11 +118,17 @@ export class AuditEventService {
    * on the way out.
    */
   async list(query: AuditEventQuery = {}): Promise<AuditEventRecord[]> {
-    const take = Math.min(Math.max(query.take ?? DEFAULT_PAGE_SIZE, 1), MAX_PAGE_SIZE)
+    const take = Math.min(
+      Math.max(query.take ?? DEFAULT_PAGE_SIZE, 1),
+      MAX_PAGE_SIZE,
+    )
 
     const occurredAt =
       query.from || query.to
-        ? { ...(query.from ? { gte: query.from } : {}), ...(query.to ? { lte: query.to } : {}) }
+        ? {
+            ...(query.from ? { gte: query.from } : {}),
+            ...(query.to ? { lte: query.to } : {}),
+          }
         : undefined
 
     const rows = await prisma.auditEvent.findMany({
@@ -140,7 +153,7 @@ export class AuditEventService {
   async historyFor(
     targetType: string,
     targetId: string,
-    take = DEFAULT_PAGE_SIZE
+    take = DEFAULT_PAGE_SIZE,
   ): Promise<AuditEventRecord[]> {
     const rows = await prisma.auditEvent.findMany({
       where: { targetType, targetId },
@@ -216,7 +229,9 @@ export class AuditEventService {
       correlationId: input.correlationId ?? null,
       source: input.source ?? null,
       metadata: serializeMetadata(input.metadata),
-      actorIpHash: ipHashSecret ? hashIpAddress(input.ipAddress, ipHashSecret) : null,
+      actorIpHash: ipHashSecret
+        ? hashIpAddress(input.ipAddress, ipHashSecret)
+        : null,
       userAgentFamily: userAgentFamily(input.userAgent),
     }
   }
@@ -238,7 +253,7 @@ export class AuditEventService {
       if (!this.warnedAboutSecret) {
         this.warnedAboutSecret = true
         logger.warn(
-          '[AuditEventService] AUDIT_IP_HASH_SECRET is not set; audit events will omit the source IP hash.'
+          '[AuditEventService] AUDIT_IP_HASH_SECRET is not set; audit events will omit the source IP hash.',
         )
       }
 

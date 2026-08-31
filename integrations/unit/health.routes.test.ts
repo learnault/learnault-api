@@ -63,7 +63,9 @@ describe('Health Routes', () => {
 
     it('should return 503 when database is unavailable', async () => {
       // Mock database failure
-      vi.mocked(prisma.$queryRaw).mockRejectedValue(new Error('Connection refused'))
+      vi.mocked(prisma.$queryRaw).mockRejectedValue(
+        new Error('Connection refused'),
+      )
 
       const response = await request(app).get('/health/ready')
 

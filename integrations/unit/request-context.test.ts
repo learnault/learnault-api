@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import request from 'supertest'
 import express, { Request, Response, NextFunction } from 'express'
-import { requestContext, getRequestId, getActor } from '../../src/middleware/request-context'
+import {
+  requestContext,
+  getRequestId,
+  getActor,
+} from '../../src/middleware/request-context'
 
 describe('Request Context Middleware', () => {
   let app: express.Application
@@ -178,7 +182,7 @@ describe('Request Context Middleware', () => {
         request(app).get('/test'),
       ])
 
-      const requestIds = responses.map(r => r.body.requestId)
+      const requestIds = responses.map((r) => r.body.requestId)
 
       // All request IDs should be unique
       const uniqueIds = new Set(requestIds)

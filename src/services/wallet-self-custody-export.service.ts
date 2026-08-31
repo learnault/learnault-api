@@ -42,7 +42,10 @@ export class WalletSelfCustodyExportService {
       throw new WalletExportError('ACKNOWLEDGEMENT_REQUIRED')
     }
 
-    const verified = await this.stepUp.verifyPassword(input.userId, input.password)
+    const verified = await this.stepUp.verifyPassword(
+      input.userId,
+      input.password,
+    )
     if (!verified) {
       await this.audit.record({
         userId: input.userId,
@@ -113,14 +116,22 @@ export class WalletSelfCustodyExportService {
     )
     if (!completed) {
       await this.repository.releaseClaim(claim.authorizationId)
-      await this.recordFailure(input.userId, claim.walletId, 'transition_failed')
+      await this.recordFailure(
+        input.userId,
+        claim.walletId,
+        'transition_failed',
+      )
       throw new WalletExportError('CUSTODY_TRANSITION_FAILED')
     }
 
     try {
       await this.kms.deleteStellarSecret(claim.opaqueReference)
     } catch {
-      await this.recordFailure(input.userId, claim.walletId, 'kms_delete_failed')
+      await this.recordFailure(
+        input.userId,
+        claim.walletId,
+        'kms_delete_failed',
+      )
       // The secret is deliberately not returned while the managed copy exists.
       throw new WalletExportError('KMS_DELETE_FAILED')
     }

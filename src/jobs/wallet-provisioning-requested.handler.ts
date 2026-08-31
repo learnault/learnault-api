@@ -19,13 +19,15 @@ export class WalletProvisioningRequestedHandler implements OutboxEventHandler {
 
   constructor(private readonly handler: WalletProvisioningOutboxHandler) {}
 
-  async handle(context: OutboxEventHandlerContext): Promise<OutboxEventHandlerResult> {
+  async handle(
+    context: OutboxEventHandlerContext,
+  ): Promise<OutboxEventHandlerResult> {
     const payload = context.payload as WalletProvisioningRequestedPayload
     const result = await this.handler.handleWallet(payload.walletId)
 
     if (result.kind === 'retry-scheduled') {
       throw new Error(
-        `Wallet ${payload.walletId} provisioning failed with ${result.failureCode}`
+        `Wallet ${payload.walletId} provisioning failed with ${result.failureCode}`,
       )
     }
 

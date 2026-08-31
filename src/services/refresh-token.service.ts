@@ -79,7 +79,10 @@ export class RefreshTokenService {
     userAgent?: string
     ipAddress?: string
   }): Promise<IssueSessionResult> {
-    const accessToken = issueAccessToken({ id: params.userId, role: params.role })
+    const accessToken = issueAccessToken({
+      id: params.userId,
+      role: params.role,
+    })
     const refreshToken = generateOpaqueToken()
     const tokenHash = hashToken(refreshToken)
     const now = new Date()
@@ -137,7 +140,10 @@ export class RefreshTokenService {
    * concurrent refreshes of the same token cannot both win — the loser is
    * treated exactly like a replay.
    */
-  async rotate(rawToken: string, ctx: RefreshContext = {}): Promise<RotateResult> {
+  async rotate(
+    rawToken: string,
+    ctx: RefreshContext = {},
+  ): Promise<RotateResult> {
     const tokenHash = hashToken(rawToken)
     const found = (await prisma.refreshToken.findUnique({
       where: { tokenHash },
@@ -162,7 +168,12 @@ export class RefreshTokenService {
 
     // Replay signal: this token was already consumed by a previous rotation.
     if (found.status === 'ROTATED') {
-      await this.revokeFamily(found.familyId, found.sessionId, found.session.userId, ctx)
+      await this.revokeFamily(
+        found.familyId,
+        found.sessionId,
+        found.session.userId,
+        ctx,
+      )
 
       return { kind: 'reuse' }
     }
@@ -191,12 +202,20 @@ export class RefreshTokenService {
 
     if (claimed.count === 0) {
       // We lost the race: someone else rotated this token first → replay.
-      await this.revokeFamily(found.familyId, found.sessionId, found.session.userId, ctx)
+      await this.revokeFamily(
+        found.familyId,
+        found.sessionId,
+        found.session.userId,
+        ctx,
+      )
 
       return { kind: 'reuse' }
     }
 
-    const accessToken = issueAccessToken({ id: found.session.userId, role: found.session.user.role })
+    const accessToken = issueAccessToken({
+      id: found.session.userId,
+      role: found.session.user.role,
+    })
     const refreshToken = generateOpaqueToken()
     const newTokenHash = hashToken(refreshToken)
     const newRefreshTokenId = crypto.randomUUID()
@@ -232,7 +251,10 @@ export class RefreshTokenService {
    * (logout-current). Idempotent: unknown or already-revoked tokens are a
    * no-op rather than an error, so the endpoint does not leak token validity.
    */
-  async revokeByRefreshToken(rawToken: string, ctx: RefreshContext = {}): Promise<RevokeResult> {
+  async revokeByRefreshToken(
+    rawToken: string,
+    ctx: RefreshContext = {},
+  ): Promise<RevokeResult> {
     const tokenHash = hashToken(rawToken)
     const found = await prisma.refreshToken.findUnique({
       where: { tokenHash },
@@ -247,7 +269,13 @@ export class RefreshTokenService {
       return { revokedCount: 0 }
     }
 
-    await this.revokeFamily(found.familyId, found.sessionId, found.session.userId, ctx, SessionAuditAction.SESSION_LOGGED_OUT)
+    await this.revokeFamily(
+      found.familyId,
+      found.sessionId,
+      found.session.userId,
+      ctx,
+      SessionAuditAction.SESSION_LOGGED_OUT,
+    )
 
     return { revokedCount: 1 }
   }
@@ -256,7 +284,10 @@ export class RefreshTokenService {
    * Revoke every session belonging to the user identified by the given
    * refresh token (logout-all). Idempotent and neutral on unknown tokens.
    */
-  async revokeAllByRefreshToken(rawToken: string, ctx: RefreshContext = {}): Promise<RevokeResult> {
+  async revokeAllByRefreshToken(
+    rawToken: string,
+    ctx: RefreshContext = {},
+  ): Promise<RevokeResult> {
     const tokenHash = hashToken(rawToken)
     const found = await prisma.refreshToken.findUnique({
       where: { tokenHash },
@@ -271,14 +302,17 @@ export class RefreshTokenService {
   }
 
   /** Revoke all sessions (and their refresh-token families) for a user. */
-  async revokeAllForUser(userId: string, ctx: RefreshContext = {}): Promise<RevokeResult> {
+  async revokeAllForUser(
+    userId: string,
+    ctx: RefreshContext = {},
+  ): Promise<RevokeResult> {
     const now = new Date()
 
     const sessions = await prisma.session.findMany({
       where: { userId, isRevoked: false },
       select: { id: true },
     })
-    const sessionIds = sessions.map(s => s.id)
+    const sessionIds = sessions.map((s) => s.id)
 
     if (sessionIds.length === 0) {
       return { revokedCount: 0 }
@@ -313,7 +347,7 @@ export class RefreshTokenService {
     sessionId: string,
     userId: string,
     ctx: RefreshContext,
-    action: string = SessionAuditAction.REFRESH_REUSE_DETECTED
+    action: string = SessionAuditAction.REFRESH_REUSE_DETECTED,
   ): Promise<void> {
     await prisma.$transaction([
       prisma.refreshToken.updateMany({

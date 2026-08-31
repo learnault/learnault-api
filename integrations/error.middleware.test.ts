@@ -234,7 +234,7 @@ describe('Error Handling Middleware', () => {
           message: 'Test error',
           path: '/api/test',
           method: 'GET',
-        })
+        }),
       )
     })
 
@@ -287,7 +287,7 @@ describe('Error Handling Middleware', () => {
           message: 'Not Found',
           path: '/api/test',
           method: 'GET',
-        })
+        }),
       )
     })
 
@@ -358,7 +358,7 @@ describe('Error Handling Middleware', () => {
         expect.objectContaining({
           message: 'Async error caught',
           error: 'Database error',
-        })
+        }),
       )
     })
 

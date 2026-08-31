@@ -24,22 +24,24 @@ All Learnault API endpoints must adhere to consistent, deterministic response fo
 Returned for single-resource operations, action completions, and non-paginated queries.
 
 #### TypeScript Definition
+
 ```typescript
 export interface RequestMetadata {
-  requestId: string;
-  timestamp: string;
-  version: string;
+  requestId: string
+  timestamp: string
+  version: string
 }
 
 export interface ApiResponse<T> {
-  success: true;
-  data: T;
-  message?: string;
-  meta: RequestMetadata;
+  success: true
+  data: T
+  message?: string
+  meta: RequestMetadata
 }
 ```
 
 #### Runtime Example (JSON)
+
 ```json
 {
   "success": true,
@@ -65,25 +67,27 @@ export interface ApiResponse<T> {
 Used for catalog browsing, administrative tables, search results, and resource listings where total count and page navigation are required.
 
 #### TypeScript Definition
+
 ```typescript
 export interface PaginationMeta extends RequestMetadata {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
+  page: number
+  limit: number
+  total: number
+  totalPages: number
+  hasNextPage: boolean
+  hasPrevPage: boolean
 }
 
 export interface PaginatedResponse<T> {
-  success: true;
-  data: T[];
-  meta: PaginationMeta;
-  message?: string;
+  success: true
+  data: T[]
+  meta: PaginationMeta
+  message?: string
 }
 ```
 
 #### Runtime Example (JSON)
+
 ```json
 {
   "success": true,
@@ -116,23 +120,25 @@ export interface PaginatedResponse<T> {
 Used for high-frequency time-series data, append-only logs, activity streams, ledger transactions, and real-time feeds to guarantee zero skipped items during live updates.
 
 #### TypeScript Definition
+
 ```typescript
 export interface CursorPaginationMeta extends RequestMetadata {
-  cursor?: string;
-  nextCursor: string | null;
-  hasMore: boolean;
-  limit: number;
+  cursor?: string
+  nextCursor: string | null
+  hasMore: boolean
+  limit: number
 }
 
 export interface CursorPaginatedResponse<T> {
-  success: true;
-  data: T[];
-  meta: CursorPaginationMeta;
-  message?: string;
+  success: true
+  data: T[]
+  meta: CursorPaginationMeta
+  message?: string
 }
 ```
 
 #### Runtime Example (JSON)
+
 ```json
 {
   "success": true,
@@ -162,6 +168,7 @@ export interface CursorPaginatedResponse<T> {
 Returned when an operational error occurs (e.g. resource not found, unauthorized, forbidden action, rate limit exceeded, conflict).
 
 #### TypeScript Definition
+
 ```typescript
 export enum ErrorCode {
   BAD_REQUEST = 'BAD_REQUEST',
@@ -176,26 +183,27 @@ export enum ErrorCode {
 }
 
 export interface ApiErrorDetail {
-  message: string;
-  code?: string;
-  details?: Record<string, string[] | string>;
-  stack?: string[];
+  message: string
+  code?: string
+  details?: Record<string, string[] | string>
+  stack?: string[]
   request?: {
-    method: string;
-    path: string;
-    headers?: Record<string, string | string[] | undefined>;
-  };
+    method: string
+    path: string
+    headers?: Record<string, string | string[] | undefined>
+  }
 }
 
 export interface ApiErrorResponse {
-  success: false;
-  error: ApiErrorDetail;
-  requestId: string;
-  timestamp: string;
+  success: false
+  error: ApiErrorDetail
+  requestId: string
+  timestamp: string
 }
 ```
 
 #### Runtime Example (JSON)
+
 ```json
 {
   "success": false,
@@ -215,20 +223,22 @@ export interface ApiErrorResponse {
 Returned when input parameters, query parameters, or request body fail schema validation.
 
 #### TypeScript Definition
+
 ```typescript
 export interface ApiValidationErrorResponse {
-  success: false;
+  success: false
   error: {
-    code: ErrorCode.VALIDATION_ERROR;
-    message: string;
-    details: Record<string, string[]>;
-  };
-  requestId: string;
-  timestamp: string;
+    code: ErrorCode.VALIDATION_ERROR
+    message: string
+    details: Record<string, string[]>
+  }
+  requestId: string
+  timestamp: string
 }
 ```
 
 #### Runtime Example (JSON)
+
 ```json
 {
   "success": false,
@@ -251,13 +261,13 @@ export interface ApiValidationErrorResponse {
 
 ### 3.1 Choosing Pagination Strategy
 
-| Feature / Criteria | Page-Based (`page`, `limit`) | Cursor-Based (`cursor`, `limit`) |
-| :--- | :--- | :--- |
-| **Use Cases** | Admin tables, Catalog listing, User search | Audit logs, Activity feeds, Ledger transactions |
-| **Random Page Access** | Supported (`page=5`) | Not supported (sequential traversal) |
-| **Total Count** | Provided (`meta.total`, `meta.totalPages`) | Omitted for high-throughput scalability |
-| **Mutation Resilience** | Sensitive to insertions/deletions during paging | Immune to insertions/deletions during paging |
-| **Default Boundaries** | `page=1`, `limit=20` (max: 100) | `limit=20` (max: 100) |
+| Feature / Criteria      | Page-Based (`page`, `limit`)                    | Cursor-Based (`cursor`, `limit`)                |
+| :---------------------- | :---------------------------------------------- | :---------------------------------------------- |
+| **Use Cases**           | Admin tables, Catalog listing, User search      | Audit logs, Activity feeds, Ledger transactions |
+| **Random Page Access**  | Supported (`page=5`)                            | Not supported (sequential traversal)            |
+| **Total Count**         | Provided (`meta.total`, `meta.totalPages`)      | Omitted for high-throughput scalability         |
+| **Mutation Resilience** | Sensitive to insertions/deletions during paging | Immune to insertions/deletions during paging    |
+| **Default Boundaries**  | `page=1`, `limit=20` (max: 100)                 | `limit=20` (max: 100)                           |
 
 ### 3.2 Stable Ordering Requirements (Tiebreakers)
 
@@ -267,10 +277,7 @@ To avoid non-deterministic pagination where database records with matching sort 
 2. **Secondary tiebreaker is mandatory**: The database query MUST append `id` ASC or `id` DESC as the final ordering criteria.
 3. Example Prisma ordering:
    ```typescript
-   orderBy: [
-     { createdAt: sortOrder },
-     { id: sortOrder }
-   ]
+   orderBy: [{ createdAt: sortOrder }, { id: sortOrder }]
    ```
 
 ---
@@ -278,29 +285,34 @@ To avoid non-deterministic pagination where database records with matching sort 
 ## 4. Data Serialization Rules
 
 ### 4.1 ISO 8601 UTC Dates
+
 - All date and time fields must be serialized as UTC strings in ISO-8601 format ending with `Z`.
 - Example: `"2026-07-25T14:00:00.000Z"`
 - Zod schema helper: `z.string().datetime()`
 
 ### 4.2 Financial, Token, & Asset Amounts
+
 - Monetary and token values must never be serialized using native floating-point numbers.
 - Exact amounts are serialized as string representations alongside asset code and issuer.
 
 #### TypeScript Definition
+
 ```typescript
 export interface AssetAmount {
-  amount: string; // e.g. "100.5000000" or stroop integer string "1005000000"
-  assetCode: string; // e.g. "XLM", "LEARN"
-  issuer?: string | null; // Stellar issuer public key or null for native asset
+  amount: string // e.g. "100.5000000" or stroop integer string "1005000000"
+  assetCode: string // e.g. "XLM", "LEARN"
+  issuer?: string | null // Stellar issuer public key or null for native asset
 }
 ```
 
 ### 4.3 Identifiers
+
 - Resource primary keys must be standard lowercase UUID v4 strings.
 - Example: `"9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"`
 - Zod schema helper: `z.string().uuid()`
 
 ### 4.4 Nulls & Optional Fields
+
 - In PUT/PATCH requests:
   - Missing field (`undefined`) means field is untouched.
   - Explicit `null` means field value should be cleared/reset.
@@ -308,6 +320,7 @@ export interface AssetAmount {
   - Absent values are returned as `null` rather than omitted or set to `undefined`.
 
 ### 4.5 Enum Values
+
 - All enums in contracts are represented as `UPPERCASE_SNAKE_CASE` string literals.
 - Examples: `USER_ROLE_LEARNER`, `ACCOUNT_STATUS_ACTIVE`, `SORT_ORDER_ASC`.
 
@@ -326,15 +339,19 @@ export interface AssetAmount {
 ## 6. API Versioning & Deprecation Policy
 
 ### 6.1 Versioning Strategy
+
 - Primary API routes are prefixed under `/api/v1/`.
 - Non-breaking additions (e.g. adding new optional fields to responses) are introduced within `/api/v1/`.
 - Breaking changes require a new version route prefix (`/api/v2/`).
 
 ### 6.2 Version Header
+
 Every API response includes the `X-API-Version` response header set to `v1`.
 
 ### 6.3 Deprecation Policy & Headers
+
 When an endpoint or version path is deprecated:
+
 1. It continues functioning for at least **6 months** prior to sunsetting.
 2. Response headers MUST include standard RFC 8594 deprecation headers:
    - `Deprecation: true`

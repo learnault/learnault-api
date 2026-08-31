@@ -1,7 +1,7 @@
 import jwt, { SignOptions, VerifyOptions } from 'jsonwebtoken'
 
 export interface JWTPayload {
-  [key: string]: any;
+  [key: string]: any
 }
 
 /**
@@ -10,7 +10,7 @@ export interface JWTPayload {
 export function signToken(
   payload: JWTPayload,
   secret: string,
-  options: SignOptions = {}
+  options: SignOptions = {},
 ): string {
   return jwt.sign(payload, secret, options)
 }
@@ -21,7 +21,7 @@ export function signToken(
 export function verifyToken(
   token: string,
   secret: string,
-  options: VerifyOptions = {}
+  options: VerifyOptions = {},
 ): JWTPayload {
   return jwt.verify(token, secret, options) as JWTPayload
 }
@@ -30,5 +30,5 @@ export function verifyToken(
  * Decode a JWT without verifying signature. Returns null if invalid.
  */
 export function decodeToken(token: string): JWTPayload | null {
-  return (jwt.decode(token) as JWTPayload | null)
+  return jwt.decode(token) as JWTPayload | null
 }

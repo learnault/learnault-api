@@ -42,11 +42,18 @@ export class DataExportService {
     let request: ExportRequestRecord
     try {
       request = (await prisma.dataExportRequest.create({
-        data: { userId, status: ExportStatus.PENDING, nextAttemptAt: new Date() },
+        data: {
+          userId,
+          status: ExportStatus.PENDING,
+          nextAttemptAt: new Date(),
+        },
       })) as ExportRequestRecord
     } catch (error: any) {
       // Partial unique index uq_active_export_per_user: a concurrent request won the race
-      if (error?.code === 'P2002' || /uq_active_export_per_user/.test(error?.message ?? '')) {
+      if (
+        error?.code === 'P2002' ||
+        /uq_active_export_per_user/.test(error?.message ?? '')
+      ) {
         const winner = await prisma.dataExportRequest.findFirst({
           where: { userId, status: { in: ACTIVE_EXPORT_STATUSES } },
         })
@@ -57,12 +64,19 @@ export class DataExportService {
       throw error
     }
 
-    await auditService.record({ userId, action: AuditAction.EXPORT_REQUESTED, metadata: { requestId: request.id } })
+    await auditService.record({
+      userId,
+      action: AuditAction.EXPORT_REQUESTED,
+      metadata: { requestId: request.id },
+    })
 
     return { kind: 'created', request }
   }
 
-  async getExportStatus(userId: string, id: string): Promise<ExportRequestRecord | null> {
+  async getExportStatus(
+    userId: string,
+    id: string,
+  ): Promise<ExportRequestRecord | null> {
     // Scoped to the requesting user: other users' export ids behave as not found
     return (await prisma.dataExportRequest.findFirst({
       where: { id, userId },
@@ -98,12 +112,18 @@ export class DataExportService {
       try {
         await this.generateExport(request.id, request.userId)
       } catch (error: any) {
-        await this.handleFailure(request as ExportRequestRecord, error?.message ?? 'Export generation error')
+        await this.handleFailure(
+          request as ExportRequestRecord,
+          error?.message ?? 'Export generation error',
+        )
       }
     }
   }
 
-  private async generateExport(requestId: string, userId: string): Promise<void> {
+  private async generateExport(
+    requestId: string,
+    userId: string,
+  ): Promise<void> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -145,10 +165,18 @@ export class DataExportService {
         include: { module: { select: { title: true } } },
       }),
       prisma.transaction.findMany({ where: { userId } }),
-      prisma.referralCode.findFirst({ where: { userId }, select: { code: true, createdAt: true } }),
+      prisma.referralCode.findFirst({
+        where: { userId },
+        select: { code: true, createdAt: true },
+      }),
       prisma.referral.findMany({
         where: { referrerId: userId },
-        select: { referreeId: true, bonusPaid: true, bonusAmount: true, createdAt: true },
+        select: {
+          referreeId: true,
+          bonusPaid: true,
+          bonusAmountStroops: true,
+          createdAt: true,
+        },
       }),
       prisma.referral.findFirst({
         where: { referreeId: userId },
@@ -169,7 +197,11 @@ export class DataExportService {
       }),
       prisma.notificationPreference.findFirst({
         where: { userId },
-        select: { rewardReceipt: true, quizPassFail: true, streakReminders: true },
+        select: {
+          rewardReceipt: true,
+          quizPassFail: true,
+          streakReminders: true,
+        },
       }),
       prisma.notificationLog.findMany({
         where: { userId },
@@ -178,7 +210,13 @@ export class DataExportService {
       // Session metadata only — never token/refreshToken
       prisma.session.findMany({
         where: { userId },
-        select: { userAgent: true, ipAddress: true, createdAt: true, expiresAt: true, isRevoked: true },
+        select: {
+          userAgent: true,
+          ipAddress: true,
+          createdAt: true,
+          expiresAt: true,
+          isRevoked: true,
+        },
       }),
       prisma.auditLog.findMany({
         where: { userId },
@@ -205,7 +243,7 @@ export class DataExportService {
         })),
         transactions: transactions.map((t: any) => ({
           id: t.id,
-          amount: t.amount,
+          amountStroops: t.amountStroops.toString(),
           type: t.type,
           status: t.status,
           createdAt: t.createdAt,
@@ -221,7 +259,9 @@ export class DataExportService {
       },
     })
 
-    const expiresAt = new Date(Date.now() + env.EXPORT_TTL_DAYS * 24 * 60 * 60_000)
+    const expiresAt = new Date(
+      Date.now() + env.EXPORT_TTL_DAYS * 24 * 60 * 60_000,
+    )
 
     await prisma.dataExportRequest.update({
       where: { id: requestId },
@@ -235,18 +275,25 @@ export class DataExportService {
       },
     })
 
-    await auditService.record({ userId, action: AuditAction.EXPORT_READY, metadata: { requestId } })
+    await auditService.record({
+      userId,
+      action: AuditAction.EXPORT_READY,
+      metadata: { requestId },
+    })
 
     await emailService.queueEmail(
       userId,
       user.email,
       'Your Learnault data export is ready',
       this.buildExportReadyEmail(user.username, expiresAt),
-      'DATA_EXPORT'
+      'DATA_EXPORT',
     )
   }
 
-  private async handleFailure(request: ExportRequestRecord, error: string): Promise<void> {
+  private async handleFailure(
+    request: ExportRequestRecord,
+    error: string,
+  ): Promise<void> {
     const nextAttemptCount = request.attemptCount + 1
 
     if (nextAttemptCount >= request.maxAttempts) {
@@ -254,7 +301,9 @@ export class DataExportService {
         where: { id: request.id },
         data: { status: ExportStatus.FAILED, error },
       })
-      logger.error(`[DataExportService] Export ${request.id} dead-lettered after ${nextAttemptCount} attempts: ${error}`)
+      logger.error(
+        `[DataExportService] Export ${request.id} dead-lettered after ${nextAttemptCount} attempts: ${error}`,
+      )
     } else {
       const backoffMinutes = Math.pow(5, nextAttemptCount - 1)
       const nextAttemptAt = new Date(Date.now() + backoffMinutes * 60_000)
@@ -273,7 +322,9 @@ export class DataExportService {
     })
 
     if (result.count > 0) {
-      logger.info(`[DataExportService] Purged ${result.count} expired export artifact(s)`)
+      logger.info(
+        `[DataExportService] Purged ${result.count} expired export artifact(s)`,
+      )
     }
 
     return result.count
@@ -284,7 +335,11 @@ export class DataExportService {
       where: { id, userId, downloadedAt: null },
       data: { downloadedAt: new Date() },
     })
-    await auditService.record({ userId, action: AuditAction.EXPORT_DOWNLOADED, metadata: { requestId: id } })
+    await auditService.record({
+      userId,
+      action: AuditAction.EXPORT_DOWNLOADED,
+      metadata: { requestId: id },
+    })
   }
 
   private buildExportReadyEmail(username: string, expiresAt: Date): string {

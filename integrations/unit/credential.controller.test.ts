@@ -71,16 +71,18 @@ describe('CredentialController', () => {
 
       mockRequest.user = { id: 'user-1', email: 'john@example.com' }
       vi.mocked(prisma.credential.count).mockResolvedValue(1)
-      vi.mocked(prisma.credential.findMany).mockResolvedValue(mockCredentials as any)
+      vi.mocked(prisma.credential.findMany).mockResolvedValue(
+        mockCredentials as any,
+      )
 
       await credentialController.getUserCredentials(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       )
 
       // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 10))
+      await new Promise((resolve) => setTimeout(resolve, 10))
 
       expect(prisma.credential.count).toHaveBeenCalledWith({
         where: { userId: 'user-1' },
@@ -113,7 +115,7 @@ describe('CredentialController', () => {
       await credentialController.getUserCredentials(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       )
 
       expect(prisma.credential.count).toHaveBeenCalledWith({
@@ -134,7 +136,7 @@ describe('CredentialController', () => {
       await credentialController.getUserCredentials(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       )
 
       expect(prisma.credential.count).toHaveBeenCalledWith({
@@ -155,11 +157,11 @@ describe('CredentialController', () => {
       await credentialController.getUserCredentials(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       )
 
       expect(mockNext).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'Invalid fromDate format' })
+        expect.objectContaining({ message: 'Invalid fromDate format' }),
       )
     })
 
@@ -169,11 +171,11 @@ describe('CredentialController', () => {
       await credentialController.getUserCredentials(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       )
 
       expect(mockNext).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'User ID not found' })
+        expect.objectContaining({ message: 'User ID not found' }),
       )
     })
 
@@ -187,17 +189,17 @@ describe('CredentialController', () => {
       await credentialController.getUserCredentials(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       )
 
       // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 10))
+      await new Promise((resolve) => setTimeout(resolve, 10))
 
       expect(prisma.credential.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           skip: 5,
           take: 5,
-        })
+        }),
       )
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -209,7 +211,7 @@ describe('CredentialController', () => {
             hasNextPage: true,
             hasPrevPage: true,
           }),
-        })
+        }),
       )
     })
   })
@@ -239,12 +241,14 @@ describe('CredentialController', () => {
 
       mockRequest.user = { id: 'user-1', email: 'john@example.com' }
       mockRequest.params = { id: 'cred-1' }
-      vi.mocked(prisma.credential.findUnique).mockResolvedValue(mockCredential as any)
+      vi.mocked(prisma.credential.findUnique).mockResolvedValue(
+        mockCredential as any,
+      )
 
       await credentialController.getCredentialById(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       )
 
       expect(prisma.credential.findUnique).toHaveBeenCalledWith({
@@ -270,14 +274,14 @@ describe('CredentialController', () => {
       await credentialController.getCredentialById(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       )
 
       // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 10))
+      await new Promise((resolve) => setTimeout(resolve, 10))
 
       expect(mockNext).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'Credential not found' })
+        expect.objectContaining({ message: 'Credential not found' }),
       )
     })
 
@@ -301,19 +305,23 @@ describe('CredentialController', () => {
 
       mockRequest.user = { id: 'user-1', email: 'john@example.com' }
       mockRequest.params = { id: 'cred-1' }
-      vi.mocked(prisma.credential.findUnique).mockResolvedValue(mockCredential as any)
+      vi.mocked(prisma.credential.findUnique).mockResolvedValue(
+        mockCredential as any,
+      )
 
       await credentialController.getCredentialById(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       )
 
       // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 10))
+      await new Promise((resolve) => setTimeout(resolve, 10))
 
       expect(mockNext).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'You do not have access to this credential' })
+        expect.objectContaining({
+          message: 'You do not have access to this credential',
+        }),
       )
     })
 
@@ -324,11 +332,11 @@ describe('CredentialController', () => {
       await credentialController.getCredentialById(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       )
 
       expect(mockNext).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'User ID not found' })
+        expect.objectContaining({ message: 'User ID not found' }),
       )
     })
   })
@@ -354,12 +362,14 @@ describe('CredentialController', () => {
       }
 
       mockRequest.params = { onChainId: 'chain-1' }
-      vi.mocked(prisma.credential.findFirst).mockResolvedValue(mockCredential as any)
+      vi.mocked(prisma.credential.findFirst).mockResolvedValue(
+        mockCredential as any,
+      )
 
       await credentialController.verifyCredential(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       )
 
       expect(prisma.credential.findFirst).toHaveBeenCalledWith({
@@ -402,16 +412,18 @@ describe('CredentialController', () => {
 
       mockRequest.params = { onChainId: 'cred-1' }
       vi.mocked(prisma.credential.findFirst).mockResolvedValue(null)
-      vi.mocked(prisma.credential.findUnique).mockResolvedValue(mockCredential as any)
+      vi.mocked(prisma.credential.findUnique).mockResolvedValue(
+        mockCredential as any,
+      )
 
       await credentialController.verifyCredential(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       )
 
       // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 10))
+      await new Promise((resolve) => setTimeout(resolve, 10))
 
       expect(prisma.credential.findFirst).toHaveBeenCalled()
       expect(prisma.credential.findUnique).toHaveBeenCalledWith({
@@ -422,7 +434,7 @@ describe('CredentialController', () => {
         expect.objectContaining({
           success: true,
           data: expect.objectContaining({ valid: true }),
-        })
+        }),
       )
     })
 
@@ -434,14 +446,14 @@ describe('CredentialController', () => {
       await credentialController.verifyCredential(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       )
 
       // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 10))
+      await new Promise((resolve) => setTimeout(resolve, 10))
 
       expect(mockNext).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'Credential not found or invalid' })
+        expect.objectContaining({ message: 'Credential not found or invalid' }),
       )
     })
 
@@ -463,12 +475,14 @@ describe('CredentialController', () => {
 
       mockRequest.user = undefined
       mockRequest.params = { onChainId: 'chain-1' }
-      vi.mocked(prisma.credential.findFirst).mockResolvedValue(mockCredential as any)
+      vi.mocked(prisma.credential.findFirst).mockResolvedValue(
+        mockCredential as any,
+      )
 
       await credentialController.verifyCredential(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       )
 
       expect(mockResponse.json).toHaveBeenCalled()

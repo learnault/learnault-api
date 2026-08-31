@@ -11,7 +11,10 @@ import {
   RequestContext,
 } from '../types/account.types'
 
-const ACTIVE_DELETION_STATUSES = [DeletionStatus.PENDING, DeletionStatus.PROCESSING]
+const ACTIVE_DELETION_STATUSES = [
+  DeletionStatus.PENDING,
+  DeletionStatus.PROCESSING,
+]
 
 export interface DeletionRequestRecord {
   id: string
@@ -27,8 +30,7 @@ export interface DeletionRequestRecord {
 }
 
 export type DeactivateResult =
-  | { kind: 'deactivated' }
-  | { kind: 'conflict'; status: string }
+  { kind: 'deactivated' } | { kind: 'conflict'; status: string }
 
 export type RequestDeletionResult =
   | { kind: 'created'; request: DeletionRequestRecord }
@@ -40,7 +42,11 @@ export type CancelDeletionResult =
   | { kind: 'none' }
 
 export class AccountLifecycleService {
-  async deactivate(userId: string, currentStatus: string, ctx: RequestContext): Promise<DeactivateResult> {
+  async deactivate(
+    userId: string,
+    currentStatus: string,
+    ctx: RequestContext,
+  ): Promise<DeactivateResult> {
     if (currentStatus !== AccountStatus.ACTIVE) {
       return { kind: 'conflict', status: currentStatus }
     }
@@ -48,13 +54,20 @@ export class AccountLifecycleService {
     await prisma.$transaction([
       prisma.user.update({
         where: { id: userId },
-        data: { status: AccountStatus.DEACTIVATED, statusChangedAt: new Date() },
+        data: {
+          status: AccountStatus.DEACTIVATED,
+          statusChangedAt: new Date(),
+        },
       }),
       prisma.session.updateMany({
         where: { userId, isRevoked: false },
         data: { isRevoked: true, revokedAt: new Date() },
       }),
-      auditService.op({ userId, action: AuditAction.ACCOUNT_DEACTIVATED, ...ctx }),
+      auditService.op({
+        userId,
+        action: AuditAction.ACCOUNT_DEACTIVATED,
+        ...ctx,
+      }),
     ])
 
     return { kind: 'deactivated' }
@@ -66,14 +79,18 @@ export class AccountLifecycleService {
         where: { id: userId },
         data: { status: AccountStatus.ACTIVE, statusChangedAt: new Date() },
       }),
-      auditService.op({ userId, action: AuditAction.ACCOUNT_REACTIVATED, ...ctx }),
+      auditService.op({
+        userId,
+        action: AuditAction.ACCOUNT_REACTIVATED,
+        ...ctx,
+      }),
     ])
   }
 
   async requestDeletion(
     userId: string,
     reason: string | undefined,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<RequestDeletionResult> {
     const existing = await prisma.accountDeletionRequest.findFirst({
       where: { userId, status: { in: ACTIVE_DELETION_STATUSES } },
@@ -83,16 +100,26 @@ export class AccountLifecycleService {
       return { kind: 'duplicate', request: existing as DeletionRequestRecord }
     }
 
-    const scheduledFor = new Date(Date.now() + env.DELETION_COOLING_OFF_DAYS * 24 * 60 * 60_000)
+    const scheduledFor = new Date(
+      Date.now() + env.DELETION_COOLING_OFF_DAYS * 24 * 60 * 60_000,
+    )
 
     try {
       const [request] = await prisma.$transaction([
         prisma.accountDeletionRequest.create({
-          data: { userId, status: DeletionStatus.PENDING, reason: reason ?? null, scheduledFor },
+          data: {
+            userId,
+            status: DeletionStatus.PENDING,
+            reason: reason ?? null,
+            scheduledFor,
+          },
         }),
         prisma.user.update({
           where: { id: userId },
-          data: { status: AccountStatus.PENDING_DELETION, statusChangedAt: new Date() },
+          data: {
+            status: AccountStatus.PENDING_DELETION,
+            statusChangedAt: new Date(),
+          },
         }),
         prisma.session.updateMany({
           where: { userId, isRevoked: false },
@@ -109,7 +136,10 @@ export class AccountLifecycleService {
       return { kind: 'created', request: request as DeletionRequestRecord }
     } catch (error: any) {
       // Partial unique index uq_active_deletion_per_user: concurrent request won the race
-      if (error?.code === 'P2002' || /uq_active_deletion_per_user/.test(error?.message ?? '')) {
+      if (
+        error?.code === 'P2002' ||
+        /uq_active_deletion_per_user/.test(error?.message ?? '')
+      ) {
         const winner = await prisma.accountDeletionRequest.findFirst({
           where: { userId, status: { in: ACTIVE_DELETION_STATUSES } },
         })
@@ -121,14 +151,19 @@ export class AccountLifecycleService {
     }
   }
 
-  async getLatestDeletionRequest(userId: string): Promise<DeletionRequestRecord | null> {
+  async getLatestDeletionRequest(
+    userId: string,
+  ): Promise<DeletionRequestRecord | null> {
     return (await prisma.accountDeletionRequest.findFirst({
       where: { userId },
       orderBy: { createdAt: 'desc' },
     })) as DeletionRequestRecord | null
   }
 
-  async cancelDeletion(userId: string, ctx: RequestContext): Promise<CancelDeletionResult> {
+  async cancelDeletion(
+    userId: string,
+    ctx: RequestContext,
+  ): Promise<CancelDeletionResult> {
     // Status-guarded update is the race protection: if finalization already
     // claimed the request (processing/completed), count is 0 and we lose.
     const cancelled = await prisma.accountDeletionRequest.updateMany({
@@ -140,7 +175,8 @@ export class AccountLifecycleService {
       const latest = await this.getLatestDeletionRequest(userId)
       if (
         latest &&
-        (latest.status === DeletionStatus.PROCESSING || latest.status === DeletionStatus.COMPLETED)
+        (latest.status === DeletionStatus.PROCESSING ||
+          latest.status === DeletionStatus.COMPLETED)
       ) {
         return { kind: 'finalized' }
       }
@@ -153,7 +189,11 @@ export class AccountLifecycleService {
         where: { id: userId },
         data: { status: AccountStatus.ACTIVE, statusChangedAt: new Date() },
       }),
-      auditService.op({ userId, action: AuditAction.DELETION_CANCELLED, ...ctx }),
+      auditService.op({
+        userId,
+        action: AuditAction.DELETION_CANCELLED,
+        ...ctx,
+      }),
     ])
 
     const request = await this.getLatestDeletionRequest(userId)
@@ -196,7 +236,7 @@ export class AccountLifecycleService {
       } catch (error: any) {
         await this.handleFinalizationFailure(
           request as DeletionRequestRecord,
-          error?.message ?? 'Deletion finalization error'
+          error?.message ?? 'Deletion finalization error',
         )
       }
     }
@@ -213,7 +253,10 @@ export class AccountLifecycleService {
    * - Retain + scrub: audit logs (keep action/createdAt, drop ip/UA/metadata).
    * - User row: anonymized in place (tombstone) so retained FKs stay valid.
    */
-  private async finalizeDeletion(requestId: string, userId: string): Promise<void> {
+  private async finalizeDeletion(
+    requestId: string,
+    userId: string,
+  ): Promise<void> {
     const tombstoneSuffix = userId.replace(/-/g, '').slice(0, 12)
 
     await prisma.$transaction([
@@ -250,7 +293,11 @@ export class AccountLifecycleService {
       }),
       prisma.accountDeletionRequest.update({
         where: { id: requestId },
-        data: { status: DeletionStatus.COMPLETED, completedAt: new Date(), error: null },
+        data: {
+          status: DeletionStatus.COMPLETED,
+          completedAt: new Date(),
+          error: null,
+        },
       }),
       auditService.op({
         userId,
@@ -259,10 +306,15 @@ export class AccountLifecycleService {
       }),
     ])
 
-    logger.info(`[AccountLifecycleService] Deletion request ${requestId} finalized`)
+    logger.info(
+      `[AccountLifecycleService] Deletion request ${requestId} finalized`,
+    )
   }
 
-  private async handleFinalizationFailure(request: DeletionRequestRecord, error: string): Promise<void> {
+  private async handleFinalizationFailure(
+    request: DeletionRequestRecord,
+    error: string,
+  ): Promise<void> {
     const nextAttemptCount = request.attemptCount + 1
 
     if (nextAttemptCount >= request.maxAttempts) {
@@ -271,7 +323,7 @@ export class AccountLifecycleService {
         data: { status: DeletionStatus.FAILED, error },
       })
       logger.error(
-        `[AccountLifecycleService] Deletion ${request.id} dead-lettered after ${nextAttemptCount} attempts: ${error}`
+        `[AccountLifecycleService] Deletion ${request.id} dead-lettered after ${nextAttemptCount} attempts: ${error}`,
       )
     } else {
       const backoffMinutes = Math.pow(5, nextAttemptCount - 1)
@@ -293,7 +345,10 @@ export class AccountLifecycleService {
 
     for (const result of results) {
       if (result.status === 'rejected') {
-        logger.error('[AccountLifecycleService] Sweep task failed:', result.reason)
+        logger.error(
+          '[AccountLifecycleService] Sweep task failed:',
+          result.reason,
+        )
       }
     }
   }

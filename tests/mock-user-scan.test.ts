@@ -35,7 +35,7 @@ function source(file: string): string {
 }
 
 describe('mock user helper scan', () => {
-  it.each(USER_ROUTE_SOURCES)('%s declares no mock user literal', file => {
+  it.each(USER_ROUTE_SOURCES)('%s declares no mock user literal', (file) => {
     // `mockUser`, `const mock…= {`, and the sentinel values the old helpers
     // returned. Comments naming the removed mocks are fine; a literal is not.
     expect(source(file)).not.toMatch(/\bmockUser\b/)
@@ -44,16 +44,19 @@ describe('mock user helper scan', () => {
     expect(source(file)).not.toMatch(/GABC123456789/)
   })
 
-  it.each(USER_ROUTE_SOURCES)('%s contains no not-implemented stub', file => {
+  it.each(USER_ROUTE_SOURCES)('%s contains no not-implemented stub', (file) => {
     expect(source(file)).not.toMatch(/Not implemented/i)
     expect(source(file)).not.toMatch(/throw new Error\(\s*['"`]TODO/i)
   })
 
-  it.each(REMOVED_MOCK_HELPERS)('the %s helper is gone from the user controller', helper => {
-    expect(source('src/controllers/user.controller.ts')).not.toMatch(
-      new RegExp(`(private|async)\\s+${helper}\\s*\\(`)
-    )
-  })
+  it.each(REMOVED_MOCK_HELPERS)(
+    'the %s helper is gone from the user controller',
+    (helper) => {
+      expect(source('src/controllers/user.controller.ts')).not.toMatch(
+        new RegExp(`(private|async)\\s+${helper}\\s*\\(`),
+      )
+    },
+  )
 
   it('reads users through Prisma-backed services rather than in-controller literals', () => {
     const controller = source('src/controllers/user.controller.ts')
@@ -78,19 +81,25 @@ describe('mock user helper scan', () => {
     // which is a persisted column. It stays exported for its existing tests but
     // must not be mounted — so the check is on the import, not on a prose
     // mention of the name in a comment explaining why it is absent.
-    const routeFiles = ['src/routes/v1/users.routes.ts', 'src/routes/v1/avatar.routes.ts']
+    const routeFiles = [
+      'src/routes/v1/users.routes.ts',
+      'src/routes/v1/avatar.routes.ts',
+    ]
 
     for (const file of routeFiles) {
       const codeLines = source(file)
         .split('\n')
-        .filter(line => !line.trim().startsWith('//'))
+        .filter((line) => !line.trim().startsWith('//'))
 
       expect(codeLines.join('\n')).not.toMatch(/validateProfileUpdate/)
     }
   })
 
   it('never selects the password column into a profile or account read', () => {
-    const services = ['src/services/profile.service.ts', 'src/services/profile-serializer.ts']
+    const services = [
+      'src/services/profile.service.ts',
+      'src/services/profile-serializer.ts',
+    ]
 
     for (const file of services) {
       expect(source(file)).not.toMatch(/password:\s*true/)

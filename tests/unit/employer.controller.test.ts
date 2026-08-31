@@ -1,6 +1,10 @@
 import { Request, Response } from 'express'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { contactCandidate, getCandidateProfile, searchTalent } from '../../src/controllers/employer.controller'
+import {
+  contactCandidate,
+  getCandidateProfile,
+  searchTalent,
+} from '../../src/controllers/employer.controller'
 import prisma from '../../src/config/database'
 
 vi.mock('../../src/config/database', () => ({
@@ -125,7 +129,12 @@ describe('EmployerController', () => {
         {
           score: 91,
           completedAt: new Date('2026-02-01T00:00:00Z'),
-          module: { id: 'm1', title: 'Stellar Fundamentals', category: 'blockchain', difficulty: 'beginner' },
+          module: {
+            id: 'm1',
+            title: 'Stellar Fundamentals',
+            category: 'blockchain',
+            difficulty: 'beginner',
+          },
         },
       ],
       credentials: [
@@ -133,7 +142,12 @@ describe('EmployerController', () => {
           id: 'cred-1',
           onChainId: 'onchain-abc',
           issuedAt: new Date('2026-02-03T00:00:00Z'),
-          module: { id: 'm1', title: 'Stellar Fundamentals', category: 'blockchain', difficulty: 'beginner' },
+          module: {
+            id: 'm1',
+            title: 'Stellar Fundamentals',
+            category: 'blockchain',
+            difficulty: 'beginner',
+          },
         },
       ],
     })
@@ -166,7 +180,9 @@ describe('EmployerController', () => {
     await getCandidateProfile(req, res)
 
     expect(res.status).toHaveBeenCalledWith(403)
-    expect(res.json).toHaveBeenCalledWith({ message: 'Candidate profile is private' })
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'Candidate profile is private',
+    })
   })
 
   it('contactCandidate requires pro plan', async () => {
@@ -198,7 +214,9 @@ describe('EmployerController', () => {
       email: 'alice.learner+seed@learnault.dev',
       username: 'Alice Learner',
     })
-    ;(prisma.webhookEndpoint.upsert as any).mockResolvedValue({ id: 'system-employer-outreach-log' })
+    ;(prisma.webhookEndpoint.upsert as any).mockResolvedValue({
+      id: 'system-employer-outreach-log',
+    })
     ;(prisma.webhookDelivery.create as any).mockResolvedValue({
       id: 'attempt-1',
       createdAt: new Date('2026-03-01T10:00:00Z'),
@@ -230,7 +248,10 @@ describe('EmployerController', () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
         message: 'Candidate outreach recorded',
-        outreach: expect.objectContaining({ id: 'attempt-1', candidateId: 'cand-1' }),
+        outreach: expect.objectContaining({
+          id: 'attempt-1',
+          candidateId: 'cand-1',
+        }),
       }),
     )
   })

@@ -21,6 +21,7 @@ This document maps the key request flows and domain event propagation patterns a
 ## User Registration Flow
 
 ### Trigger
+
 `POST /api/v1/auth/register`
 
 ### Request Flow
@@ -60,19 +61,20 @@ Identity Domain
 
 ### Responsibilities
 
-| Domain | Responsibility |
-|--------|---------------|
-| Identity | User creation, token generation, email queueing, event publication |
-| Messaging Infrastructure | Email delivery (outbox pattern) |
-| Users | Profile initialization (reacts to event) |
-| Referrals | Referral application (reacts to event) |
-| Notifications | Preference initialization (reacts to event) |
+| Domain                   | Responsibility                                                     |
+| ------------------------ | ------------------------------------------------------------------ |
+| Identity                 | User creation, token generation, email queueing, event publication |
+| Messaging Infrastructure | Email delivery (outbox pattern)                                    |
+| Users                    | Profile initialization (reacts to event)                           |
+| Referrals                | Referral application (reacts to event)                             |
+| Notifications            | Preference initialization (reacts to event)                        |
 
 ---
 
 ## User Login Flow
 
 ### Trigger
+
 `POST /api/v1/auth/login`
 
 ### Request Flow
@@ -103,16 +105,17 @@ Identity Domain
 
 ### Responsibilities
 
-| Domain | Responsibility |
-|--------|---------------|
-| Identity | Authentication, JWT generation |
-| Users | User data retrieval (via database query) |
+| Domain   | Responsibility                           |
+| -------- | ---------------------------------------- |
+| Identity | Authentication, JWT generation           |
+| Users    | User data retrieval (via database query) |
 
 ---
 
 ## Module Completion Flow
 
 ### Trigger
+
 `POST /api/v1/modules/:id/complete`
 
 ### Request Flow
@@ -168,6 +171,7 @@ Learning Domain
 **Owner:** Learning Domain
 
 The Learning domain ONLY records the completion and publishes the event. It does NOT:
+
 - Calculate or distribute rewards
 - Issue credentials
 - Send notifications
@@ -176,20 +180,21 @@ All downstream actions are decoupled via event handlers.
 
 ### Responsibilities
 
-| Domain | Responsibility |
-|--------|---------------|
-| Learning | Completion recording, event publication |
-| Rewards | Reward calculation and distribution (event handler) |
-| Credentials | Credential issuance (event handler) |
-| Referrals | Referral bonus eligibility (event handler) |
-| Notifications | User notifications (event handler) |
-| Blockchain Infrastructure | Payment processing, on-chain credential storage |
+| Domain                    | Responsibility                                      |
+| ------------------------- | --------------------------------------------------- |
+| Learning                  | Completion recording, event publication             |
+| Rewards                   | Reward calculation and distribution (event handler) |
+| Credentials               | Credential issuance (event handler)                 |
+| Referrals                 | Referral bonus eligibility (event handler)          |
+| Notifications             | User notifications (event handler)                  |
+| Blockchain Infrastructure | Payment processing, on-chain credential storage     |
 
 ---
 
 ## Reward Claim Flow
 
 ### Trigger
+
 `POST /api/v1/rewards/claim` or `ModuleCompleted` event
 
 ### Request Flow (Direct API Call)
@@ -228,18 +233,19 @@ Rewards Domain
 
 ### Responsibilities
 
-| Domain | Responsibility |
-|--------|---------------|
-| Rewards | Reward calculation, payment processing, transaction recording |
-| Blockchain Infrastructure | Payment execution |
-| Notifications | User notification (event handler) |
-| Referrals | Bonus tracking (event handler) |
+| Domain                    | Responsibility                                                |
+| ------------------------- | ------------------------------------------------------------- |
+| Rewards                   | Reward calculation, payment processing, transaction recording |
+| Blockchain Infrastructure | Payment execution                                             |
+| Notifications             | User notification (event handler)                             |
+| Referrals                 | Bonus tracking (event handler)                                |
 
 ---
 
 ## Credential Issuance Flow
 
 ### Trigger
+
 `POST /api/v1/credentials/issue` or `ModuleCompleted` event
 
 ### Request Flow (Direct API Call)
@@ -272,17 +278,18 @@ Credentials Domain
 
 ### Responsibilities
 
-| Domain | Responsibility |
-|--------|---------------|
-| Credentials | Credential issuance, on-chain storage, event publication |
-| Blockchain Infrastructure | On-chain credential creation |
-| Notifications | User notification (event handler) |
+| Domain                    | Responsibility                                           |
+| ------------------------- | -------------------------------------------------------- |
+| Credentials               | Credential issuance, on-chain storage, event publication |
+| Blockchain Infrastructure | On-chain credential creation                             |
+| Notifications             | User notification (event handler)                        |
 
 ---
 
 ## Referral Application Flow
 
 ### Trigger
+
 `POST /api/v1/referrals/apply`
 
 ### Request Flow
@@ -331,16 +338,17 @@ Rewards Domain (event handler)
 
 ### Responsibilities
 
-| Domain | Responsibility |
-|--------|---------------|
+| Domain    | Responsibility                                     |
+| --------- | -------------------------------------------------- |
 | Referrals | Referral tracking, bonus eligibility determination |
-| Rewards | Bonus payment processing (event handler) |
+| Rewards   | Bonus payment processing (event handler)           |
 
 ---
 
 ## Withdrawal Flow
 
 ### Trigger
+
 `POST /api/v1/rewards/withdraw`
 
 ### Request Flow
@@ -373,23 +381,25 @@ Rewards Domain
 ### Error Handling
 
 If blockchain payment fails:
+
 - Transaction marked as `failed`
 - Balance remains unchanged
 - User can retry
 
 ### Responsibilities
 
-| Domain | Responsibility |
-|--------|---------------|
-| Rewards | Balance validation, transaction management |
-| Blockchain Infrastructure | Payment execution |
-| Notifications | User notification (event handler) |
+| Domain                    | Responsibility                             |
+| ------------------------- | ------------------------------------------ |
+| Rewards                   | Balance validation, transaction management |
+| Blockchain Infrastructure | Payment execution                          |
+| Notifications             | User notification (event handler)          |
 
 ---
 
 ## Notification Delivery Flow
 
 ### Trigger
+
 Domain events or direct API calls
 
 ### Event-Driven Flow
@@ -429,10 +439,10 @@ Client
 
 ### Responsibilities
 
-| Domain | Responsibility |
-|--------|---------------|
+| Domain        | Responsibility                                           |
+| ------------- | -------------------------------------------------------- |
 | Notifications | Delivery management, preference enforcement, retry logic |
-| Firebase | Push notification infrastructure |
+| Firebase      | Push notification infrastructure                         |
 
 ---
 
@@ -464,17 +474,17 @@ All domain events will follow this schema:
 
 ```typescript
 interface DomainEvent {
-  eventId: string          // UUID
-  eventType: string        // e.g., "UserRegistered"
-  aggregateId: string      // e.g., userId
-  aggregateType: string    // e.g., "User"
-  payload: object          // Event-specific data
+  eventId: string // UUID
+  eventType: string // e.g., "UserRegistered"
+  aggregateId: string // e.g., userId
+  aggregateType: string // e.g., "User"
+  payload: object // Event-specific data
   timestamp: Date
-  version: number          // For event versioning
+  version: number // For event versioning
   metadata?: {
     correlationId?: string // For tracing
-    causationId?: string   // Event that caused this event
-    userId?: string        // Actor who triggered
+    causationId?: string // Event that caused this event
+    userId?: string // Actor who triggered
   }
 }
 ```
@@ -490,25 +500,25 @@ Target state: Event-driven communication via domain events
 **Phase 1:** Document flows (this document)  
 **Phase 2:** Implement event infrastructure  
 **Phase 3:** Refactor to event-driven architecture  
-**Phase 4:** Remove direct cross-domain service calls  
+**Phase 4:** Remove direct cross-domain service calls
 
 ---
 
 ## Summary Table: Domain Interactions
 
-| Source Domain | Target Domain | Interaction Type | Purpose |
-|--------------|---------------|------------------|---------|
-| Identity | Messaging Infra | Service Call | Email delivery |
-| Identity | Users | Domain Event | Profile initialization |
-| Identity | Referrals | Domain Event | Referral application |
-| Learning | Rewards | Domain Event | Reward distribution |
-| Learning | Credentials | Domain Event | Credential issuance |
-| Learning | Referrals | Domain Event | Referral bonus check |
-| Rewards | Blockchain Infra | Service Call | Payment processing |
-| Rewards | Notifications | Domain Event | Reward notification |
-| Credentials | Blockchain Infra | Service Call | On-chain storage |
-| Credentials | Notifications | Domain Event | Credential notification |
-| All Domains | Shared Kernel | Direct Import | Config, errors, middleware, utils |
+| Source Domain | Target Domain    | Interaction Type | Purpose                           |
+| ------------- | ---------------- | ---------------- | --------------------------------- |
+| Identity      | Messaging Infra  | Service Call     | Email delivery                    |
+| Identity      | Users            | Domain Event     | Profile initialization            |
+| Identity      | Referrals        | Domain Event     | Referral application              |
+| Learning      | Rewards          | Domain Event     | Reward distribution               |
+| Learning      | Credentials      | Domain Event     | Credential issuance               |
+| Learning      | Referrals        | Domain Event     | Referral bonus check              |
+| Rewards       | Blockchain Infra | Service Call     | Payment processing                |
+| Rewards       | Notifications    | Domain Event     | Reward notification               |
+| Credentials   | Blockchain Infra | Service Call     | On-chain storage                  |
+| Credentials   | Notifications    | Domain Event     | Credential notification           |
+| All Domains   | Shared Kernel    | Direct Import    | Config, errors, middleware, utils |
 
 ---
 
@@ -528,10 +538,12 @@ registry.register({
   version: 1,
   eventType: 'ModuleCompleted',
   validate: async (payload) => {
-    await z.object({
-      completionId: z.string().uuid(),
-      userId: z.string().uuid(),
-    }).parseAsync(payload)
+    await z
+      .object({
+        completionId: z.string().uuid(),
+        userId: z.string().uuid(),
+      })
+      .parseAsync(payload)
   },
 })
 ```

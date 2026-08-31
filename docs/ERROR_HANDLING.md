@@ -142,9 +142,7 @@ app.use(errorHandler)
 ```json
 {
   "success": true,
-  "data": {
-    /* response data */
-  }
+  "data": {/* response data */}
 }
 ```
 
@@ -176,9 +174,7 @@ app.use(errorHandler)
     "request": {
       "method": "GET",
       "path": "/api/users/123",
-      "headers": {
-        /* request headers */
-      }
+      "headers": {/* request headers */}
     }
   }
 }

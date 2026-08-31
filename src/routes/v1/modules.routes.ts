@@ -1,6 +1,14 @@
 import { Router } from 'express'
-import { authenticate, optionalAuthenticate } from '../../middleware/auth.middleware'
-import { listModules, getModuleById, startModule, completeModule } from '../../controllers/module.controller'
+import {
+  authenticate,
+  optionalAuthenticate,
+} from '../../middleware/auth.middleware'
+import {
+  listModules,
+  getModuleById,
+  startModule,
+  completeModule,
+} from '../../controllers/module.controller'
 
 const router: Router = Router()
 

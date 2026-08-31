@@ -13,7 +13,10 @@ export const CUSTODIAL_WALLET_CONSENT_PURPOSE = 'custodial_wallet'
 export interface WalletProvisioningRepository {
   reserveEligibleWallet(userId: string, network: string): Promise<WalletRecord>
   getByUserId(userId: string): Promise<WalletRecord | null>
-  claimNext(now: Date, leaseMs: number): Promise<ClaimedWalletProvisioningJob | null>
+  claimNext(
+    now: Date,
+    leaseMs: number,
+  ): Promise<ClaimedWalletProvisioningJob | null>
   claimByWalletId(
     walletId: string,
     now: Date,
@@ -23,14 +26,14 @@ export interface WalletProvisioningRepository {
     walletId: string,
     leaseToken: string,
     material: StoredStellarKey,
-    now: Date
+    now: Date,
   ): Promise<WalletRecord>
   recordFailure(
     walletId: string,
     leaseToken: string,
     code: WalletProvisioningFailureCode,
     retryAt: Date | null,
-    now: Date
+    now: Date,
   ): Promise<void>
 }
 
@@ -39,7 +42,10 @@ type DbClient = PrismaClient | Prisma.TransactionClient
 export class PrismaWalletProvisioningRepository implements WalletProvisioningRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async reserveEligibleWallet(userId: string, network: string): Promise<WalletRecord> {
+  async reserveEligibleWallet(
+    userId: string,
+    network: string,
+  ): Promise<WalletRecord> {
     return this.prisma.$transaction(async (tx) => {
       await this.assertEligible(tx, userId)
 
@@ -80,7 +86,9 @@ export class PrismaWalletProvisioningRepository implements WalletProvisioningRep
         await tx.auditLog.create({
           data: {
             userId,
-            action: before ? 'WALLET_PROVISIONING_REQUEUED' : 'WALLET_PROVISIONING_RESERVED',
+            action: before
+              ? 'WALLET_PROVISIONING_REQUEUED'
+              : 'WALLET_PROVISIONING_RESERVED',
             metadata: JSON.stringify({ walletId: wallet.id, network }),
           },
         })
@@ -91,10 +99,15 @@ export class PrismaWalletProvisioningRepository implements WalletProvisioningRep
   }
 
   async getByUserId(userId: string): Promise<WalletRecord | null> {
-    return this.prisma.wallet.findUnique({ where: { userId } }) as unknown as Promise<WalletRecord | null>
+    return this.prisma.wallet.findUnique({
+      where: { userId },
+    }) as unknown as Promise<WalletRecord | null>
   }
 
-  async claimNext(now: Date, leaseMs: number): Promise<ClaimedWalletProvisioningJob | null> {
+  async claimNext(
+    now: Date,
+    leaseMs: number,
+  ): Promise<ClaimedWalletProvisioningJob | null> {
     const candidates = await this.prisma.walletProvisioningJob.findMany({
       where: this.claimableWhere(now),
       orderBy: [{ availableAt: 'asc' }, { createdAt: 'asc' }],
@@ -164,7 +177,10 @@ export class PrismaWalletProvisioningRepository implements WalletProvisioningRep
         data: {
           userId: job.wallet.userId,
           action: 'WALLET_PROVISIONING_ATTEMPTED',
-          metadata: JSON.stringify({ walletId: job.walletId, attempt: job.attempts }),
+          metadata: JSON.stringify({
+            walletId: job.walletId,
+            attempt: job.attempts,
+          }),
         },
       })
 
@@ -179,11 +195,15 @@ export class PrismaWalletProvisioningRepository implements WalletProvisioningRep
     walletId: string,
     leaseToken: string,
     material: StoredStellarKey,
-    now: Date
+    now: Date,
   ): Promise<WalletRecord> {
     return this.prisma.$transaction(async (tx) => {
-      const job = await tx.walletProvisioningJob.findUniqueOrThrow({ where: { walletId } })
-      const wallet = await tx.wallet.findUniqueOrThrow({ where: { id: walletId } })
+      const job = await tx.walletProvisioningJob.findUniqueOrThrow({
+        where: { walletId },
+      })
+      const wallet = await tx.wallet.findUniqueOrThrow({
+        where: { id: walletId },
+      })
 
       if (wallet.status === 'ACTIVE') return wallet as unknown as WalletRecord
       if (job.status !== 'PROCESSING' || job.leaseToken !== leaseToken) {
@@ -252,7 +272,7 @@ export class PrismaWalletProvisioningRepository implements WalletProvisioningRep
     leaseToken: string,
     code: WalletProvisioningFailureCode,
     retryAt: Date | null,
-    now: Date
+    now: Date,
   ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       const job = await tx.walletProvisioningJob.findUniqueOrThrow({
@@ -284,8 +304,14 @@ export class PrismaWalletProvisioningRepository implements WalletProvisioningRep
       await tx.auditLog.create({
         data: {
           userId: job.wallet.userId,
-          action: terminal ? 'WALLET_PROVISIONING_FAILED' : 'WALLET_PROVISIONING_RETRY_SCHEDULED',
-          metadata: JSON.stringify({ walletId, failureCode: code, attempt: job.attempts }),
+          action: terminal
+            ? 'WALLET_PROVISIONING_FAILED'
+            : 'WALLET_PROVISIONING_RETRY_SCHEDULED',
+          metadata: JSON.stringify({
+            walletId,
+            failureCode: code,
+            attempt: job.attempts,
+          }),
         },
       })
     })

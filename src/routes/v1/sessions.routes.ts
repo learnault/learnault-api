@@ -1,6 +1,9 @@
 import { Router } from 'express'
 import { SessionController } from '../../controllers/session.controller'
-import { authenticate, requireActiveAccount } from '../../middleware/auth.middleware'
+import {
+  authenticate,
+  requireActiveAccount,
+} from '../../middleware/auth.middleware'
 
 const router: Router = Router()
 const sessionController = new SessionController()
@@ -13,10 +16,7 @@ router.use(authenticate, requireActiveAccount)
  * @desc List the authenticated user's active sessions (paginated)
  * @access Private (active accounts only)
  */
-router.get(
-  '/',
-  sessionController.listSessions.bind(sessionController)
-)
+router.get('/', sessionController.listSessions.bind(sessionController))
 
 /**
  * @route DELETE /api/v1/sessions
@@ -25,7 +25,7 @@ router.get(
  */
 router.delete(
   '/',
-  sessionController.revokeAllOtherSessions.bind(sessionController)
+  sessionController.revokeAllOtherSessions.bind(sessionController),
 )
 
 /**
@@ -35,7 +35,7 @@ router.delete(
  */
 router.delete(
   '/:sessionId',
-  sessionController.revokeSession.bind(sessionController)
+  sessionController.revokeSession.bind(sessionController),
 )
 
 export default router

@@ -37,7 +37,10 @@ export interface WalletExportAuthorizationRepository {
     sessionId: string
     now: Date
   }): Promise<WalletExportClaim | null>
-  completeMigration(authorizationId: string, completedAt: Date): Promise<boolean>
+  completeMigration(
+    authorizationId: string,
+    completedAt: Date,
+  ): Promise<boolean>
   releaseClaim(authorizationId: string): Promise<void>
 }
 

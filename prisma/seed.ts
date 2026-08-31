@@ -78,7 +78,9 @@ async function upsertUsers(passwordHash: string) {
       },
     })
   }
-  console.log(`✅ Upserted ${seedUserFixtures.length} users (learners, employers, admin)`)
+  console.log(
+    `✅ Upserted ${seedUserFixtures.length} users (learners, employers, admin)`,
+  )
 }
 
 async function upsertModules() {
@@ -95,7 +97,9 @@ async function upsertModules() {
       create: moduleData,
     })
   }
-  console.log(`✅ Upserted ${seedModuleFixtures.length} modules across all categories`)
+  console.log(
+    `✅ Upserted ${seedModuleFixtures.length} modules across all categories`,
+  )
 }
 
 async function seedLearningData() {
@@ -110,7 +114,9 @@ async function seedLearningData() {
       const completed = rand() < 0.72
       if (!completed) continue
 
-      const completedAt = new Date(Date.now() - Math.floor(rand() * 75) * MS_PER_DAY)
+      const completedAt = new Date(
+        Date.now() - Math.floor(rand() * 75) * MS_PER_DAY,
+      )
       const score = scoreFor(moduleData, rand)
       const completionId = `seed-completion-${user.id}-${moduleData.id}`
 
@@ -143,14 +149,20 @@ async function seedLearningData() {
               userId: user.id,
               moduleId: moduleData.id,
               onChainId: `cred_${user.id.slice(-5)}_${moduleData.id.slice(-5)}`,
-              issuedAt: new Date(completedAt.getTime() + Math.floor(rand() * 12) * 60 * 60 * 1000),
+              issuedAt: new Date(
+                completedAt.getTime() +
+                  Math.floor(rand() * 12) * 60 * 60 * 1000,
+              ),
             },
             create: {
               id: credentialId,
               userId: user.id,
               moduleId: moduleData.id,
               onChainId: `cred_${user.id.slice(-5)}_${moduleData.id.slice(-5)}`,
-              issuedAt: new Date(completedAt.getTime() + Math.floor(rand() * 12) * 60 * 60 * 1000),
+              issuedAt: new Date(
+                completedAt.getTime() +
+                  Math.floor(rand() * 12) * 60 * 60 * 1000,
+              ),
             },
           }),
         )
@@ -190,7 +202,9 @@ async function seedLearningData() {
           amount: Number((15 + rand() * 30).toFixed(2)),
           type: 'withdrawal',
           status: rand() < 0.85 ? 'completed' : 'pending',
-          createdAt: new Date(Date.now() - Math.floor(rand() * 30) * MS_PER_DAY),
+          createdAt: new Date(
+            Date.now() - Math.floor(rand() * 30) * MS_PER_DAY,
+          ),
         },
         create: {
           id: payoutTxnId,
@@ -198,13 +212,17 @@ async function seedLearningData() {
           amount: Number((15 + rand() * 30).toFixed(2)),
           type: 'withdrawal',
           status: rand() < 0.85 ? 'completed' : 'pending',
-          createdAt: new Date(Date.now() - Math.floor(rand() * 30) * MS_PER_DAY),
+          createdAt: new Date(
+            Date.now() - Math.floor(rand() * 30) * MS_PER_DAY,
+          ),
         },
       }),
     )
   }
 
-  const employers = seedUserFixtures.filter((u) => u.email.includes('.employer+'))
+  const employers = seedUserFixtures.filter((u) =>
+    u.email.includes('.employer+'),
+  )
   for (const employer of employers) {
     const txId = `seed-transaction-employer-credit-${employer.id}`
     transactions.push(
@@ -274,7 +292,13 @@ async function main() {
   await seedLearningData()
   await seedWebhookData()
 
-  const [userCount, moduleCount, completionCount, credentialCount, transactionCount] = await Promise.all([
+  const [
+    userCount,
+    moduleCount,
+    completionCount,
+    credentialCount,
+    transactionCount,
+  ] = await Promise.all([
     prisma.user.count(),
     prisma.module.count(),
     prisma.completion.count(),

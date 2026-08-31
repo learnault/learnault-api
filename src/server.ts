@@ -3,10 +3,16 @@ import app from './app'
 import { schedulerConfig } from './config/scheduler'
 import logger from './utils/logger'
 import prisma from './config/database'
-import { createScheduledJobRunner, ScheduledJobRunner } from './workers/scheduled-job-runner'
+import {
+  createScheduledJobRunner,
+  ScheduledJobRunner,
+} from './workers/scheduled-job-runner'
 
 const PORT = process.env.PORT || 5000
-const SHUTDOWN_TIMEOUT_MS = parseInt(process.env.SHUTDOWN_TIMEOUT_MS || '30000', 10)
+const SHUTDOWN_TIMEOUT_MS = parseInt(
+  process.env.SHUTDOWN_TIMEOUT_MS || '30000',
+  10,
+)
 
 const server: Server = app.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`)
@@ -19,7 +25,7 @@ if (schedulerConfig.inProcess) {
   scheduler = createScheduledJobRunner({ prisma })
   scheduler.start()
   logger.info(
-    `In-process scheduler enabled for queues: ${scheduler.registeredQueues.join(', ') || 'none'}`
+    `In-process scheduler enabled for queues: ${scheduler.registeredQueues.join(', ') || 'none'}`,
   )
 }
 
@@ -39,7 +45,9 @@ async function gracefulShutdown(signal: string): Promise<void> {
 
   // Set a hard deadline for shutdown
   const shutdownTimer = setTimeout(() => {
-    logger.error(`Shutdown timeout (${SHUTDOWN_TIMEOUT_MS}ms) exceeded, forcing exit`)
+    logger.error(
+      `Shutdown timeout (${SHUTDOWN_TIMEOUT_MS}ms) exceeded, forcing exit`,
+    )
     process.exit(1)
   }, SHUTDOWN_TIMEOUT_MS)
 

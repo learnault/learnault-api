@@ -6,7 +6,7 @@ const isProduction = process.env.NODE_ENV === 'production'
 const jsonFormat = winston.format.combine(
   winston.format.timestamp(),
   winston.format.errors({ stack: true }),
-  winston.format.json()
+  winston.format.json(),
 )
 
 // Human-readable format for development
@@ -19,9 +19,9 @@ const devFormat = winston.format.combine(
     if (Object.keys(meta).length > 0) {
       metaStr = JSON.stringify(meta, null, 2)
     }
-    
-return `${timestamp} [${level}]: ${message}${metaStr ? '\n' + metaStr : ''}`
-  })
+
+    return `${timestamp} [${level}]: ${message}${metaStr ? '\n' + metaStr : ''}`
+  }),
 )
 
 const logger = winston.createLogger({
@@ -30,7 +30,7 @@ const logger = winston.createLogger({
   transports: [
     new winston.transports.Console({
       stderrLevels: ['error'],
-    })
+    }),
   ],
   // Don't exit on uncaught exceptions - let the process handle it
   exitOnError: false,

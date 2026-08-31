@@ -55,14 +55,14 @@ describe('StellarService', () => {
         this._pub = pub
         this._sec = sec
       }
-      publicKey () {
+      publicKey() {
         return this._pub
       }
-      secret () {
+      secret() {
         return this._sec
       }
 
-      static random () {
+      static random() {
         const seg = () =>
           Math.random().toString(36).slice(2).toUpperCase().padEnd(11, 'A')
         const pub = ('G' + seg() + seg() + seg() + seg() + seg()).slice(0, 56)
@@ -71,44 +71,44 @@ describe('StellarService', () => {
         return new FakeKeypair(pub, sec)
       }
 
-      static fromSecret (secret: string) {
+      static fromSecret(secret: string) {
         return new FakeKeypair(('G' + secret.slice(1)).slice(0, 56), secret)
       }
     }
 
     // ── FakeTransactionBuilder ─────────────────────────────────────────────
     class FakeTransactionBuilder {
-      addOperation (_op: unknown) {
+      addOperation(_op: unknown) {
         return this
       }
-      addMemo (_m: unknown) {
+      addMemo(_m: unknown) {
         return this
       }
-      setTimeout (_t: number) {
+      setTimeout(_t: number) {
         return this
       }
-      build () {
+      build() {
         return { sign: vi.fn() }
       }
     }
 
     // ── FakeServer  (MUST use `function`, not arrow) ───────────────────────
 
-    function FakeServer (this: any) {
+    function FakeServer(this: any) {
       this.getAccount = mockGetAccount
       this.sendTransaction = mockSendTransaction
       this.simulateTransaction = mockSimulateTransaction
       this.getTransaction = mockGetTransaction
     }
 
-    function FakeHorizonServer (this: any) {
+    function FakeHorizonServer(this: any) {
       this.loadAccount = mockGetAccount
       this.submitTransaction = mockSubmitTransaction
     }
 
     // ── FakeContract (MUST use `function`, not arrow) ─────────────────────
 
-    function FakeContract (this: any) {
+    function FakeContract(this: any) {
       this.call = vi.fn().mockReturnValue('mock_operation')
     }
 
@@ -141,15 +141,11 @@ describe('StellarService', () => {
         })),
 
         Api: {
-          isSimulationError: vi.fn(
-            (r: unknown) =>
-              Boolean(r && typeof r === 'object' && 'error' in (r as object))
+          isSimulationError: vi.fn((r: unknown) =>
+            Boolean(r && typeof r === 'object' && 'error' in (r as object)),
           ),
-          isSimulationSuccess: vi.fn(
-            (r: unknown) =>
-              Boolean(
-                r && typeof r === 'object' && !('error' in (r as object))
-              )
+          isSimulationSuccess: vi.fn((r: unknown) =>
+            Boolean(r && typeof r === 'object' && !('error' in (r as object))),
           ),
           GetTransactionStatus,
         },
@@ -179,12 +175,11 @@ describe('StellarService', () => {
     }
   })
 
-
   // Typed helper for FakeKeypair static methods
   type FakeKeypairStatic = {
-    random: () => { publicKey: () => string; secret: () => string };
-    fromSecret: (s: string) => { publicKey: () => string; secret: () => string };
-  };
+    random: () => { publicKey: () => string; secret: () => string }
+    fromSecret: (s: string) => { publicKey: () => string; secret: () => string }
+  }
   const FakeKeypair = StellarSdk.Keypair as unknown as FakeKeypairStatic
 
   // ---------------------------------------------------------------------------
@@ -229,14 +224,14 @@ describe('StellarService', () => {
     it('throws StellarServiceError on mainnet', async () => {
       const mainnetService = new StellarService('mainnet')
       await expect(
-        mainnetService.fundTestnetAccount('GABC...')
+        mainnetService.fundTestnetAccount('GABC...'),
       ).rejects.toThrow(StellarServiceError)
     })
 
     it('error code is INVALID_NETWORK on mainnet', async () => {
       const mainnetService = new StellarService('mainnet')
       await expect(
-        mainnetService.fundTestnetAccount('GABC...')
+        mainnetService.fundTestnetAccount('GABC...'),
       ).rejects.toMatchObject({ code: 'INVALID_NETWORK' })
     })
 
@@ -245,14 +240,14 @@ describe('StellarService', () => {
       const { publicKey } = service.generateWallet()
       await service.fundTestnetAccount(publicKey)
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining(encodeURIComponent(publicKey))
+        expect.stringContaining(encodeURIComponent(publicKey)),
       )
     })
 
     it('throws FRIENDBOT_ERROR when friendbot returns non-ok response', async () => {
       global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 400 })
       await expect(
-        service.fundTestnetAccount('GPUBKEY...')
+        service.fundTestnetAccount('GPUBKEY...'),
       ).rejects.toMatchObject({ code: 'FRIENDBOT_ERROR' })
     })
   })
@@ -311,7 +306,7 @@ describe('StellarService', () => {
       expect(await service.getNativeBalance('GPUBKEY...')).toBe('42.0000000')
     })
 
-    it('returns \'0\' when no native balance exists', async () => {
+    it("returns '0' when no native balance exists", async () => {
       mockGetAccount.mockResolvedValue({ balances: [] })
       expect(await service.getNativeBalance('GPUBKEY...')).toBe('0')
     })
@@ -329,9 +324,12 @@ describe('StellarService', () => {
           sequence: '1234',
           balances: [{ asset_type: 'native', balance: '1000.0000000' }],
           incrementSequenceNumber: vi.fn(),
-        })
+        }),
       )
-      mockSubmitTransaction.mockResolvedValue({ successful: true, hash: 'TXHASH123' })
+      mockSubmitTransaction.mockResolvedValue({
+        successful: true,
+        hash: 'TXHASH123',
+      })
       mockGetTransaction.mockResolvedValue({ status: 'SUCCESS', ledger: 999 })
     })
 
@@ -366,7 +364,7 @@ describe('StellarService', () => {
           sourceSecret: sourceKeypair.secret(),
           destinationPublicKey: FakeKeypair.random().publicKey(),
           amount: '10',
-        })
+        }),
       ).rejects.toMatchObject({ code: 'PAYMENT_ERROR' })
     })
   })
@@ -388,7 +386,10 @@ describe('StellarService', () => {
         transactionData: 'mock_footprint',
         minResourceFee: '100',
       })
-      mockSendTransaction.mockResolvedValue({ status: 'PENDING', hash: 'CREDHASH456' })
+      mockSendTransaction.mockResolvedValue({
+        status: 'PENDING',
+        hash: 'CREDHASH456',
+      })
       mockGetTransaction.mockResolvedValue({
         status: 'SUCCESS',
         ledger: 1001,
@@ -415,7 +416,7 @@ describe('StellarService', () => {
           recipientPublicKey: 'GDEST...',
           credentialType: 'ID',
           data: {},
-        })
+        }),
       ).rejects.toMatchObject({ code: 'CONTRACT_NOT_CONFIGURED' })
     })
 
@@ -426,7 +427,7 @@ describe('StellarService', () => {
           recipientPublicKey: FakeKeypair.random().publicKey(),
           credentialType: 'ID',
           data: {},
-        })
+        }),
       ).rejects.toMatchObject({ code: 'CREDENTIAL_ISSUANCE_ERROR' })
     })
   })
@@ -508,7 +509,9 @@ describe('StellarService', () => {
 
   describe('StellarServiceError', () => {
     it('has name StellarServiceError', () => {
-      expect(new StellarServiceError('msg', 'CODE').name).toBe('StellarServiceError')
+      expect(new StellarServiceError('msg', 'CODE').name).toBe(
+        'StellarServiceError',
+      )
     })
 
     it('exposes code and message', () => {
@@ -519,7 +522,9 @@ describe('StellarService', () => {
 
     it('stores the original cause', () => {
       const cause = new Error('original')
-      expect(new StellarServiceError('wrapped', 'CODE', cause).cause).toBe(cause)
+      expect(new StellarServiceError('wrapped', 'CODE', cause).cause).toBe(
+        cause,
+      )
     })
 
     it('is an instance of Error', () => {

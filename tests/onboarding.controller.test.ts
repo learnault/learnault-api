@@ -84,7 +84,10 @@ describe('OnboardingController', () => {
 
     it('saves a valid step', async () => {
       req.body = { step: 'profile_basics' }
-      mockSaveStep.mockResolvedValue({ kind: 'saved', progress: { currentStep: 'profile_basics' } })
+      mockSaveStep.mockResolvedValue({
+        kind: 'saved',
+        progress: { currentStep: 'profile_basics' },
+      })
 
       await controller.saveStep(req, res)
 
@@ -94,7 +97,10 @@ describe('OnboardingController', () => {
 
     it('returns 409 when onboarding is already completed', async () => {
       req.body = { step: 'preferences' }
-      mockSaveStep.mockResolvedValue({ kind: 'already-completed', progress: { status: 'completed' } })
+      mockSaveStep.mockResolvedValue({
+        kind: 'already-completed',
+        progress: { status: 'completed' },
+      })
 
       await controller.saveStep(req, res)
 
@@ -121,7 +127,10 @@ describe('OnboardingController', () => {
     })
 
     it('returns 409 when required steps are missing', async () => {
-      mockComplete.mockResolvedValue({ kind: 'incomplete-steps', missingSteps: ['consent'] })
+      mockComplete.mockResolvedValue({
+        kind: 'incomplete-steps',
+        missingSteps: ['consent'],
+      })
 
       await controller.complete(req, res)
 
@@ -137,7 +146,10 @@ describe('OnboardingController', () => {
     })
 
     it('returns 200 on successful completion', async () => {
-      mockComplete.mockResolvedValue({ kind: 'completed', progress: { status: 'completed' } })
+      mockComplete.mockResolvedValue({
+        kind: 'completed',
+        progress: { status: 'completed' },
+      })
 
       await controller.complete(req, res)
 

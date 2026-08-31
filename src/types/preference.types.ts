@@ -1,17 +1,32 @@
 export const SUPPORTED_LOCALES = [
-  'en-US', 'en-GB', 'fr-FR', 'es-ES', 'pt-BR', 'sw-KE', 'ar-SA', 'de-DE',
+  'en-US',
+  'en-GB',
+  'fr-FR',
+  'es-ES',
+  'pt-BR',
+  'sw-KE',
+  'ar-SA',
+  'de-DE',
 ] as const
 
-export type SupportedLocale = typeof SUPPORTED_LOCALES[number]
+export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number]
 
 export const TEXT_SIZES = ['small', 'medium', 'large', 'extra_large'] as const
-export type TextSize = typeof TEXT_SIZES[number]
+export type TextSize = (typeof TEXT_SIZES)[number]
 
-export const DIFFICULTY_LEVELS = ['beginner', 'intermediate', 'advanced'] as const
-export type DifficultyLevel = typeof DIFFICULTY_LEVELS[number]
+export const DIFFICULTY_LEVELS = [
+  'beginner',
+  'intermediate',
+  'advanced',
+] as const
+export type DifficultyLevel = (typeof DIFFICULTY_LEVELS)[number]
 
-export const PROFILE_VISIBILITIES = ['public', 'private', 'connections'] as const
-export type ProfileVisibility = typeof PROFILE_VISIBILITIES[number]
+export const PROFILE_VISIBILITIES = [
+  'public',
+  'private',
+  'connections',
+] as const
+export type ProfileVisibility = (typeof PROFILE_VISIBILITIES)[number]
 
 export interface LearnerPreferences {
   id: string
@@ -48,8 +63,5 @@ export interface UpdateLearnerPreferencesData {
 }
 
 // Privacy-impacting fields are audited whenever they change.
-export const PRIVACY_IMPACTING_FIELDS: readonly (keyof UpdateLearnerPreferencesData)[] = [
-  'profileVisibility',
-  'analyticsConsent',
-  'dataSharingConsent',
-]
+export const PRIVACY_IMPACTING_FIELDS: readonly (keyof UpdateLearnerPreferencesData)[] =
+  ['profileVisibility', 'analyticsConsent', 'dataSharingConsent']

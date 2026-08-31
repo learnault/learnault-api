@@ -8,7 +8,7 @@ export const CONSENT_PURPOSES = [
   'data_sharing',
   'custodial_wallet',
 ] as const
-export type ConsentPurpose = typeof CONSENT_PURPOSES[number]
+export type ConsentPurpose = (typeof CONSENT_PURPOSES)[number]
 
 export const REQUIRED_CONSENT_PURPOSES: readonly ConsentPurpose[] = [
   'terms_of_service',
@@ -16,7 +16,7 @@ export const REQUIRED_CONSENT_PURPOSES: readonly ConsentPurpose[] = [
 ]
 
 export const CONSENT_STATUSES = ['granted', 'withdrawn'] as const
-export type ConsentStatus = typeof CONSENT_STATUSES[number]
+export type ConsentStatus = (typeof CONSENT_STATUSES)[number]
 
 export const CONSENT_TRANSITIONS: TransitionMap<ConsentStatus> = {
   granted: ['withdrawn'],
@@ -24,7 +24,7 @@ export const CONSENT_TRANSITIONS: TransitionMap<ConsentStatus> = {
 }
 
 export const CONSENT_SOURCES = ['onboarding', 'settings', 'api'] as const
-export type ConsentSource = typeof CONSENT_SOURCES[number]
+export type ConsentSource = (typeof CONSENT_SOURCES)[number]
 
 export interface ConsentRecordEntry {
   id: string

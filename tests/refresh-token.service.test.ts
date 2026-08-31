@@ -91,8 +91,12 @@ describe('RefreshTokenService', () => {
     vi.clearAllMocks()
     service = new RefreshTokenService()
 
-    vi.mocked(issueAccessToken).mockImplementation(({ id }: { id: string }) => `access-token-${id}`)
-    vi.mocked(prisma.refreshToken.updateMany).mockResolvedValue({ count: 1 } as any)
+    vi.mocked(issueAccessToken).mockImplementation(
+      ({ id }: { id: string }) => `access-token-${id}`,
+    )
+    vi.mocked(prisma.refreshToken.updateMany).mockResolvedValue({
+      count: 1,
+    } as any)
     vi.mocked(prisma.session.updateMany).mockResolvedValue({ count: 1 } as any)
     vi.mocked(prisma.session.create).mockResolvedValue({ id: 'sess-1' } as any)
     vi.mocked(prisma.refreshToken.create).mockResolvedValue({} as any)
@@ -119,7 +123,10 @@ describe('RefreshTokenService', () => {
         ipAddress: '1.2.3.4',
       })
 
-      expect(issueAccessToken).toHaveBeenCalledWith({ id: 'user-1', role: 'learner' })
+      expect(issueAccessToken).toHaveBeenCalledWith({
+        id: 'user-1',
+        role: 'learner',
+      })
       expect(prisma.$transaction).toHaveBeenCalled()
 
       const txOps = vi.mocked(prisma.$transaction).mock.calls[0][0] as unknown[]
@@ -135,7 +142,8 @@ describe('RefreshTokenService', () => {
       })
 
       // Only the hash of the refresh token is persisted — never the raw value.
-      const createArgs = vi.mocked(prisma.refreshToken.create).mock.calls[0][0] as any
+      const createArgs = vi.mocked(prisma.refreshToken.create).mock
+        .calls[0][0] as any
       expect(createArgs.data.tokenHash).not.toBe(result.refreshToken)
       expect(createArgs.data.tokenHash).toBe(hashToken(result.refreshToken))
       expect(createArgs.data.status).toBe('ACTIVE')
@@ -151,13 +159,19 @@ describe('RefreshTokenService', () => {
 
   describe('rotate', () => {
     it('rotates an ACTIVE token: consumes it and mints a new token in the same family', async () => {
-      vi.mocked(prisma.refreshToken.findUnique).mockResolvedValue(foundRow() as any)
+      vi.mocked(prisma.refreshToken.findUnique).mockResolvedValue(
+        foundRow() as any,
+      )
 
-      const result = await service.rotate('raw-refresh-token', { ipAddress: '1.2.3.4' })
+      const result = await service.rotate('raw-refresh-token', {
+        ipAddress: '1.2.3.4',
+      })
 
       // Looked up by hash
       expect(prisma.refreshToken.findUnique).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { tokenHash: hashToken('raw-refresh-token') } })
+        expect.objectContaining({
+          where: { tokenHash: hashToken('raw-refresh-token') },
+        }),
       )
 
       // Atomic claim
@@ -167,7 +181,8 @@ describe('RefreshTokenService', () => {
       })
 
       // New token is minted in the same family and the session is advanced
-      const createArgs = vi.mocked(prisma.refreshToken.create).mock.calls[0][0] as any
+      const createArgs = vi.mocked(prisma.refreshToken.create).mock
+        .calls[0][0] as any
       expect(createArgs.data).toMatchObject({
         sessionId: 'sess-1',
         familyId: 'family-1',
@@ -177,7 +192,7 @@ describe('RefreshTokenService', () => {
         expect.objectContaining({
           where: { id: 'sess-1' },
           data: expect.objectContaining({ token: 'access-token-user-1' }),
-        })
+        }),
       )
 
       expect(result).toMatchObject({
@@ -201,7 +216,7 @@ describe('RefreshTokenService', () => {
 
     it('rejects an expired token without rotating', async () => {
       vi.mocked(prisma.refreshToken.findUnique).mockResolvedValue(
-        foundRow({ expiresAt: PAST() }) as any
+        foundRow({ expiresAt: PAST() }) as any,
       )
 
       const result = await service.rotate('expired-token')
@@ -213,7 +228,7 @@ describe('RefreshTokenService', () => {
 
     it('rejects a REVOKED token', async () => {
       vi.mocked(prisma.refreshToken.findUnique).mockResolvedValue(
-        foundRow({ status: 'REVOKED' }) as any
+        foundRow({ status: 'REVOKED' }) as any,
       )
 
       expect(await service.rotate('revoked-token')).toEqual({ kind: 'revoked' })
@@ -221,7 +236,15 @@ describe('RefreshTokenService', () => {
 
     it('returns revoked without rotating when the session is already revoked', async () => {
       vi.mocked(prisma.refreshToken.findUnique).mockResolvedValue(
-        foundRow({ session: { id: 'sess-1', userId: 'user-1', isRevoked: true, expiresAt: FUTURE(), user: { id: 'user-1', role: 'learner' } } }) as any
+        foundRow({
+          session: {
+            id: 'sess-1',
+            userId: 'user-1',
+            isRevoked: true,
+            expiresAt: FUTURE(),
+            user: { id: 'user-1', role: 'learner' },
+          },
+        }) as any,
       )
 
       const result = await service.rotate('token-of-revoked-session')
@@ -233,15 +256,25 @@ describe('RefreshTokenService', () => {
 
     it('rejects an expired session', async () => {
       vi.mocked(prisma.refreshToken.findUnique).mockResolvedValue(
-        foundRow({ session: { id: 'sess-1', userId: 'user-1', isRevoked: false, expiresAt: PAST(), user: { id: 'user-1', role: 'learner' } } }) as any
+        foundRow({
+          session: {
+            id: 'sess-1',
+            userId: 'user-1',
+            isRevoked: false,
+            expiresAt: PAST(),
+            user: { id: 'user-1', role: 'learner' },
+          },
+        }) as any,
       )
 
-      expect(await service.rotate('token-of-expired-session')).toEqual({ kind: 'expired' })
+      expect(await service.rotate('token-of-expired-session')).toEqual({
+        kind: 'expired',
+      })
     })
 
     it('detects replay of a ROTATED token and revokes the entire family', async () => {
       vi.mocked(prisma.refreshToken.findUnique).mockResolvedValue(
-        foundRow({ status: 'ROTATED' }) as any
+        foundRow({ status: 'ROTATED' }) as any,
       )
 
       const result = await service.rotate('replayed-token')
@@ -252,21 +285,25 @@ describe('RefreshTokenService', () => {
         expect.objectContaining({
           where: { familyId: 'family-1', status: { not: 'REVOKED' } },
           data: { status: 'REVOKED' },
-        })
+        }),
       )
       // …and the parent session revoked
       expect(prisma.session.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 'sess-1', isRevoked: false },
           data: expect.objectContaining({ isRevoked: true }),
-        })
+        }),
       )
     })
 
     it('treats a lost rotation race as reuse and revokes the family', async () => {
-      vi.mocked(prisma.refreshToken.findUnique).mockResolvedValue(foundRow() as any)
+      vi.mocked(prisma.refreshToken.findUnique).mockResolvedValue(
+        foundRow() as any,
+      )
       // Another request claimed the ACTIVE→ROTATED transition first.
-      vi.mocked(prisma.refreshToken.updateMany).mockResolvedValue({ count: 0 } as any)
+      vi.mocked(prisma.refreshToken.updateMany).mockResolvedValue({
+        count: 0,
+      } as any)
 
       const result = await service.rotate('raced-token')
 
@@ -283,14 +320,18 @@ describe('RefreshTokenService', () => {
         session: { userId: 'user-1' },
       } as any)
 
-      const result = await service.revokeByRefreshToken('current-token', { ipAddress: '1.2.3.4' })
+      const result = await service.revokeByRefreshToken('current-token', {
+        ipAddress: '1.2.3.4',
+      })
 
       expect(result).toEqual({ revokedCount: 1 })
       expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { familyId: 'family-1', status: { not: 'REVOKED' } } })
+        expect.objectContaining({
+          where: { familyId: 'family-1', status: { not: 'REVOKED' } },
+        }),
       )
       expect(prisma.session.updateMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: 'sess-1', isRevoked: false } })
+        expect.objectContaining({ where: { id: 'sess-1', isRevoked: false } }),
       )
     })
 
@@ -309,18 +350,26 @@ describe('RefreshTokenService', () => {
       vi.mocked(prisma.refreshToken.findUnique).mockResolvedValue({
         session: { userId: 'user-1' },
       } as any)
-      vi.mocked(prisma.session.findMany).mockResolvedValue([{ id: 'sess-1' }, { id: 'sess-2' }] as any)
+      vi.mocked(prisma.session.findMany).mockResolvedValue([
+        { id: 'sess-1' },
+        { id: 'sess-2' },
+      ] as any)
 
       const result = await service.revokeAllByRefreshToken('any-token')
 
       expect(result).toEqual({ revokedCount: 2 })
       expect(prisma.session.updateMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: { in: ['sess-1', 'sess-2'] }, isRevoked: false } })
+        expect.objectContaining({
+          where: { id: { in: ['sess-1', 'sess-2'] }, isRevoked: false },
+        }),
       )
       expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { sessionId: { in: ['sess-1', 'sess-2'] }, status: { not: 'REVOKED' } },
-        })
+          where: {
+            sessionId: { in: ['sess-1', 'sess-2'] },
+            status: { not: 'REVOKED' },
+          },
+        }),
       )
     })
 
@@ -338,7 +387,9 @@ describe('RefreshTokenService', () => {
     it('is a neutral no-op for an unknown token', async () => {
       vi.mocked(prisma.refreshToken.findUnique).mockResolvedValue(null)
 
-      expect(await service.revokeAllByRefreshToken('unknown')).toEqual({ revokedCount: 0 })
+      expect(await service.revokeAllByRefreshToken('unknown')).toEqual({
+        revokedCount: 0,
+      })
     })
   })
 
@@ -347,7 +398,7 @@ describe('RefreshTokenService', () => {
       const { auditService } = await import('../src/services/audit.service')
 
       vi.mocked(prisma.refreshToken.findUnique).mockResolvedValue(
-        foundRow({ status: 'ROTATED' }) as any
+        foundRow({ status: 'ROTATED' }) as any,
       )
 
       await service.rotate('replayed-token')
@@ -356,7 +407,7 @@ describe('RefreshTokenService', () => {
         expect.objectContaining({
           userId: 'user-1',
           action: SessionAuditAction.REFRESH_REUSE_DETECTED,
-        })
+        }),
       )
     })
 
@@ -372,7 +423,9 @@ describe('RefreshTokenService', () => {
       await service.revokeByRefreshToken('current-token')
 
       expect(auditService.op).toHaveBeenCalledWith(
-        expect.objectContaining({ action: SessionAuditAction.SESSION_LOGGED_OUT })
+        expect.objectContaining({
+          action: SessionAuditAction.SESSION_LOGGED_OUT,
+        }),
       )
     })
   })

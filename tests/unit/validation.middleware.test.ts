@@ -15,14 +15,16 @@ const makeMocks = (body = {}, query = {}, params = {}) => {
   const status = vi.fn().mockReturnValue({ json })
   const res: Partial<Response> = { status, json }
   const next: NextFunction = vi.fn()
-  
-return { req, res, next, json, status }
+
+  return { req, res, next, json, status }
 }
 
 describe('commonSchemas', () => {
   describe('email', () => {
     it('accepts a valid email address', () => {
-      expect(commonSchemas.email.safeParse('user@example.com').success).toBe(true)
+      expect(commonSchemas.email.safeParse('user@example.com').success).toBe(
+        true,
+      )
     })
 
     it('rejects an invalid email string', () => {
@@ -101,7 +103,9 @@ describe('commonSchemas', () => {
 
   describe('url', () => {
     it('accepts valid HTTP/HTTPS URLs', () => {
-      expect(commonSchemas.url.safeParse('https://example.com').success).toBe(true)
+      expect(commonSchemas.url.safeParse('https://example.com').success).toBe(
+        true,
+      )
     })
 
     it('rejects plain strings', () => {
@@ -136,7 +140,7 @@ describe('validate factory middleware', () => {
       expect.objectContaining({
         message: 'Validation failed',
         errors: { body: ['String must contain at least 5 character(s)'] },
-      })
+      }),
     )
     expect(next).not.toHaveBeenCalled()
   })
@@ -153,7 +157,7 @@ describe('validate factory middleware', () => {
       expect.objectContaining({
         message: 'Validation failed',
         errors: { query: expect.any(Array) },
-      })
+      }),
     )
     expect(next).not.toHaveBeenCalled()
   })
@@ -170,7 +174,7 @@ describe('validate factory middleware', () => {
       expect.objectContaining({
         message: 'Validation failed',
         errors: { params: ['Invalid ID format'] },
-      })
+      }),
     )
     expect(next).not.toHaveBeenCalled()
   })
@@ -179,7 +183,10 @@ describe('validate factory middleware', () => {
     const bodySchema = z.object({ name: z.string().min(5) })
     const querySchema = z.object({ limit: z.number() })
     const middleware = validate({ body: bodySchema, query: querySchema })
-    const { req, res, next } = makeMocks({ name: 'abc' }, { limit: 'not-a-number' })
+    const { req, res, next } = makeMocks(
+      { name: 'abc' },
+      { limit: 'not-a-number' },
+    )
 
     middleware(req as Request, res as Response, next)
 
@@ -191,7 +198,9 @@ describe('validate factory middleware', () => {
   })
 
   it('parses and updates req.body when validation passes', () => {
-    const schema = z.object({ age: z.string().transform((val) => parseInt(val)) })
+    const schema = z.object({
+      age: z.string().transform((val) => parseInt(val)),
+    })
     const middleware = validate({ body: schema })
     const { req, res, next } = makeMocks({ age: '25' })
 
@@ -238,7 +247,7 @@ describe('validateProfileUpdate', () => {
       expect.objectContaining({
         message: 'Validation failed',
         errors: { body: ['Username must be at least 3 characters long'] },
-      })
+      }),
     )
     expect(next).not.toHaveBeenCalled()
   })
@@ -253,7 +262,7 @@ describe('validateProfileUpdate', () => {
       expect.objectContaining({
         message: 'Validation failed',
         errors: { body: ['Username must be less than 30 characters'] },
-      })
+      }),
     )
   })
 
@@ -267,11 +276,9 @@ describe('validateProfileUpdate', () => {
       expect.objectContaining({
         message: 'Validation failed',
         errors: {
-          body: [
-            'Username can only contain letters, numbers, and underscores',
-          ],
+          body: ['Username can only contain letters, numbers, and underscores'],
         },
-      })
+      }),
     )
   })
 
@@ -285,7 +292,7 @@ describe('validateProfileUpdate', () => {
       expect.objectContaining({
         message: 'Validation failed',
         errors: { body: ['First name must be less than 50 characters'] },
-      })
+      }),
     )
   })
 
@@ -299,7 +306,7 @@ describe('validateProfileUpdate', () => {
       expect.objectContaining({
         message: 'Validation failed',
         errors: { body: ['Last name must be less than 50 characters'] },
-      })
+      }),
     )
   })
 
@@ -313,7 +320,7 @@ describe('validateProfileUpdate', () => {
       expect.objectContaining({
         message: 'Validation failed',
         errors: { body: ['Bio must be less than 500 characters'] },
-      })
+      }),
     )
   })
 
@@ -327,7 +334,7 @@ describe('validateProfileUpdate', () => {
       expect.objectContaining({
         message: 'Validation failed',
         errors: { body: ['Invalid URL format'] },
-      })
+      }),
     )
   })
 
@@ -370,7 +377,7 @@ describe('validatePasswordChange', () => {
       expect.objectContaining({
         message: 'Validation failed',
         errors: { body: ['Current password is required'] },
-      })
+      }),
     )
   })
 
@@ -384,7 +391,7 @@ describe('validatePasswordChange', () => {
       expect.objectContaining({
         message: 'Validation failed',
         errors: { body: ['New password is required'] },
-      })
+      }),
     )
   })
 
@@ -401,7 +408,7 @@ describe('validatePasswordChange', () => {
       expect.objectContaining({
         message: 'Validation failed',
         errors: { body: ['Password must be at least 8 characters long'] },
-      })
+      }),
     )
   })
 
@@ -420,7 +427,7 @@ describe('validatePasswordChange', () => {
         errors: {
           body: ['Password must contain at least one lowercase letter'],
         },
-      })
+      }),
     )
   })
 
@@ -439,7 +446,7 @@ describe('validatePasswordChange', () => {
         errors: {
           body: ['Password must contain at least one uppercase letter'],
         },
-      })
+      }),
     )
   })
 
@@ -456,7 +463,7 @@ describe('validatePasswordChange', () => {
       expect.objectContaining({
         message: 'Validation failed',
         errors: { body: ['Password must contain at least one number'] },
-      })
+      }),
     )
   })
 
@@ -475,7 +482,7 @@ describe('validatePasswordChange', () => {
         errors: {
           body: ['Password must contain at least one special character'],
         },
-      })
+      }),
     )
   })
 
@@ -494,7 +501,7 @@ describe('validatePasswordChange', () => {
         errors: {
           body: ['New password must be different from current password'],
         },
-      })
+      }),
     )
   })
 })
@@ -523,7 +530,7 @@ describe('validateWalletAddress', () => {
       expect.objectContaining({
         message: 'Validation failed',
         errors: { body: ['Required'] },
-      })
+      }),
     )
     expect(next).not.toHaveBeenCalled()
   })
@@ -540,7 +547,7 @@ describe('validateWalletAddress', () => {
       expect.objectContaining({
         message: 'Validation failed',
         errors: { body: ['Invalid Stellar wallet address format'] },
-      })
+      }),
     )
   })
 
@@ -554,7 +561,7 @@ describe('validateWalletAddress', () => {
       expect.objectContaining({
         message: 'Validation failed',
         errors: { body: ['Invalid Stellar wallet address format'] },
-      })
+      }),
     )
   })
 
@@ -570,7 +577,7 @@ describe('validateWalletAddress', () => {
       expect.objectContaining({
         message: 'Validation failed',
         errors: { body: ['Invalid Stellar wallet address format'] },
-      })
+      }),
     )
   })
 
@@ -584,7 +591,7 @@ describe('validateWalletAddress', () => {
       expect.objectContaining({
         message: 'Validation failed',
         errors: { body: ['Expected string, received number'] },
-      })
+      }),
     )
     expect(next).not.toHaveBeenCalled()
   })

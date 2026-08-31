@@ -47,9 +47,9 @@ vi.mock('../src/utils/logger', () => ({
 
 // Mock the entire session service so controller tests are true unit tests
 vi.mock('../src/services/session.service', async () => {
-  const actual = await vi.importActual<typeof import('../src/services/session.service')>(
-    '../src/services/session.service'
-  )
+  const actual = await vi.importActual<
+    typeof import('../src/services/session.service')
+  >('../src/services/session.service')
 
   return {
     ...actual, // keep redactIp, redactFingerprint, toSessionView real
@@ -67,7 +67,8 @@ import { sessionService } from '../src/services/session.service'
 
 // ── Test helpers ─────────────────────────────────────────────────────────
 
-const flushPromises = () => new Promise<void>(resolve => setTimeout(resolve, 0))
+const flushPromises = () =>
+  new Promise<void>((resolve) => setTimeout(resolve, 0))
 
 interface AuthRequest extends Partial<Request> {
   user?: { id: string; email: string; role: string }
@@ -93,18 +94,20 @@ function makeRes(): Partial<Response> {
 }
 
 /** A factory for a minimal SessionView-shaped object */
-function sessionFixture(overrides: Partial<{
-  id: string
-  deviceName: string | null
-  browser: string | null
-  os: string | null
-  country: string | null
-  city: string | null
-  createdAt: string
-  lastUsedAt: string | null
-  expiresAt: string
-  isCurrent: boolean
-}> = {}) {
+function sessionFixture(
+  overrides: Partial<{
+    id: string
+    deviceName: string | null
+    browser: string | null
+    os: string | null
+    country: string | null
+    city: string | null
+    createdAt: string
+    lastUsedAt: string | null
+    expiresAt: string
+    isCurrent: boolean
+  }> = {},
+) {
   return {
     id: 'session-1',
     deviceName: 'Chrome on Linux',
@@ -262,18 +265,16 @@ describe('SessionController', () => {
     })
 
     it('respects custom page and limit query params', async () => {
-      vi.mocked(sessionService.list).mockResolvedValue({ sessions: [], total: 50 })
+      vi.mocked(sessionService.list).mockResolvedValue({
+        sessions: [],
+        total: 50,
+      })
 
       const req = makeReq({ query: { page: '3', limit: '10' } })
       controller.listSessions(req as Request, res as Response)
       await flushPromises()
 
-      expect(sessionService.list).toHaveBeenCalledWith(
-        'user-1',
-        null,
-        3,
-        10
-      )
+      expect(sessionService.list).toHaveBeenCalledWith('user-1', null, 3, 10)
 
       const body = vi.mocked(res.json).mock.calls[0][0] as {
         pagination: Record<string, unknown>
@@ -290,7 +291,10 @@ describe('SessionController', () => {
     })
 
     it('hasNext is true when more pages exist', async () => {
-      vi.mocked(sessionService.list).mockResolvedValue({ sessions: [], total: 100 })
+      vi.mocked(sessionService.list).mockResolvedValue({
+        sessions: [],
+        total: 100,
+      })
 
       const req = makeReq({ query: { page: '1', limit: '10' } })
       controller.listSessions(req as Request, res as Response)
@@ -310,7 +314,7 @@ describe('SessionController', () => {
 
       expect(res.status).toHaveBeenCalledWith(400)
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ error: 'Validation failed' })
+        expect.objectContaining({ error: 'Validation failed' }),
       )
     })
 
@@ -363,12 +367,19 @@ describe('SessionController', () => {
       const body = vi.mocked(res.json).mock.calls[0][0] as {
         sessions: { id: string; isCurrent: boolean }[]
       }
-      expect(body.sessions.find(s => s.id === 'session-current')?.isCurrent).toBe(true)
-      expect(body.sessions.find(s => s.id === 'session-other')?.isCurrent).toBe(false)
+      expect(
+        body.sessions.find((s) => s.id === 'session-current')?.isCurrent,
+      ).toBe(true)
+      expect(
+        body.sessions.find((s) => s.id === 'session-other')?.isCurrent,
+      ).toBe(false)
     })
 
     it('handles an empty session list gracefully', async () => {
-      vi.mocked(sessionService.list).mockResolvedValue({ sessions: [], total: 0 })
+      vi.mocked(sessionService.list).mockResolvedValue({
+        sessions: [],
+        total: 0,
+      })
 
       controller.listSessions(makeReq() as Request, res as Response)
       await flushPromises()
@@ -397,12 +408,14 @@ describe('SessionController', () => {
 
       expect(res.status).toHaveBeenCalledWith(200)
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'Session revoked successfully' })
+        expect.objectContaining({ message: 'Session revoked successfully' }),
       )
     })
 
     it('returns 404 when session is not found', async () => {
-      vi.mocked(sessionService.revokeOne).mockResolvedValue({ kind: 'not_found' })
+      vi.mocked(sessionService.revokeOne).mockResolvedValue({
+        kind: 'not_found',
+      })
 
       const req = makeReq({ params: { sessionId: VALID_SESSION_ID } })
       controller.revokeSession(req as Request, res as Response)
@@ -413,7 +426,9 @@ describe('SessionController', () => {
     })
 
     it('returns 404 (not 403) for a cross-user session — prevents session-existence leaking', async () => {
-      vi.mocked(sessionService.revokeOne).mockResolvedValue({ kind: 'cross_user' })
+      vi.mocked(sessionService.revokeOne).mockResolvedValue({
+        kind: 'cross_user',
+      })
 
       const req = makeReq({ params: { sessionId: VALID_SESSION_ID } })
       controller.revokeSession(req as Request, res as Response)
@@ -426,7 +441,9 @@ describe('SessionController', () => {
     })
 
     it('returns 400 with code CURRENT_SESSION when caller tries to revoke their own current session', async () => {
-      vi.mocked(sessionService.revokeOne).mockResolvedValue({ kind: 'current_session' })
+      vi.mocked(sessionService.revokeOne).mockResolvedValue({
+        kind: 'current_session',
+      })
 
       const req = makeReq({ params: { sessionId: VALID_SESSION_ID } })
       controller.revokeSession(req as Request, res as Response)
@@ -434,7 +451,7 @@ describe('SessionController', () => {
 
       expect(res.status).toHaveBeenCalledWith(400)
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ code: 'CURRENT_SESSION' })
+        expect.objectContaining({ code: 'CURRENT_SESSION' }),
       )
     })
 
@@ -445,7 +462,7 @@ describe('SessionController', () => {
 
       expect(res.status).toHaveBeenCalledWith(400)
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ error: 'Validation failed' })
+        expect.objectContaining({ error: 'Validation failed' }),
       )
       // Service must NOT have been called
       expect(sessionService.revokeOne).not.toHaveBeenCalled()
@@ -460,7 +477,9 @@ describe('SessionController', () => {
     })
 
     it('returns 500 when sessionService.revokeOne throws', async () => {
-      vi.mocked(sessionService.revokeOne).mockRejectedValue(new Error('db failure'))
+      vi.mocked(sessionService.revokeOne).mockRejectedValue(
+        new Error('db failure'),
+      )
 
       const req = makeReq({ params: { sessionId: VALID_SESSION_ID } })
       controller.revokeSession(req as Request, res as Response)
@@ -493,7 +512,7 @@ describe('SessionController', () => {
         expect.objectContaining({
           ipAddress: '10.0.0.1',
           userAgent: 'TestAgent/1.0',
-        })
+        }),
       )
     })
   })
@@ -502,19 +521,25 @@ describe('SessionController', () => {
 
   describe('revokeAllOtherSessions', () => {
     it('returns 200 with the revoked count', async () => {
-      vi.mocked(sessionService.revokeAll).mockResolvedValue({ kind: 'ok', revokedCount: 3 })
+      vi.mocked(sessionService.revokeAll).mockResolvedValue({
+        kind: 'ok',
+        revokedCount: 3,
+      })
 
       controller.revokeAllOtherSessions(makeReq() as Request, res as Response)
       await flushPromises()
 
       expect(res.status).toHaveBeenCalledWith(200)
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ revokedCount: 3 })
+        expect.objectContaining({ revokedCount: 3 }),
       )
     })
 
     it('uses plural message when revokedCount > 1', async () => {
-      vi.mocked(sessionService.revokeAll).mockResolvedValue({ kind: 'ok', revokedCount: 5 })
+      vi.mocked(sessionService.revokeAll).mockResolvedValue({
+        kind: 'ok',
+        revokedCount: 5,
+      })
 
       controller.revokeAllOtherSessions(makeReq() as Request, res as Response)
       await flushPromises()
@@ -524,7 +549,10 @@ describe('SessionController', () => {
     })
 
     it('uses singular message when revokedCount === 1', async () => {
-      vi.mocked(sessionService.revokeAll).mockResolvedValue({ kind: 'ok', revokedCount: 1 })
+      vi.mocked(sessionService.revokeAll).mockResolvedValue({
+        kind: 'ok',
+        revokedCount: 1,
+      })
 
       controller.revokeAllOtherSessions(makeReq() as Request, res as Response)
       await flushPromises()
@@ -534,7 +562,10 @@ describe('SessionController', () => {
     })
 
     it('returns appropriate message when there are no other sessions', async () => {
-      vi.mocked(sessionService.revokeAll).mockResolvedValue({ kind: 'ok', revokedCount: 0 })
+      vi.mocked(sessionService.revokeAll).mockResolvedValue({
+        kind: 'ok',
+        revokedCount: 0,
+      })
 
       controller.revokeAllOtherSessions(makeReq() as Request, res as Response)
       await flushPromises()
@@ -561,12 +592,16 @@ describe('SessionController', () => {
       await flushPromises()
 
       expect(res2.status).toHaveBeenCalledWith(200)
-      const body2 = vi.mocked(res2.json).mock.calls[0][0] as { revokedCount: number }
+      const body2 = vi.mocked(res2.json).mock.calls[0][0] as {
+        revokedCount: number
+      }
       expect(body2.revokedCount).toBe(0)
     })
 
     it('returns 500 when sessionService.revokeAll throws', async () => {
-      vi.mocked(sessionService.revokeAll).mockRejectedValue(new Error('db down'))
+      vi.mocked(sessionService.revokeAll).mockRejectedValue(
+        new Error('db down'),
+      )
 
       controller.revokeAllOtherSessions(makeReq() as Request, res as Response)
       await flushPromises()
@@ -576,7 +611,10 @@ describe('SessionController', () => {
     })
 
     it('passes userId, currentSessionId, and audit context to service', async () => {
-      vi.mocked(sessionService.revokeAll).mockResolvedValue({ kind: 'ok', revokedCount: 2 })
+      vi.mocked(sessionService.revokeAll).mockResolvedValue({
+        kind: 'ok',
+        revokedCount: 2,
+      })
 
       const req = makeReq({
         ip: '172.16.0.5',
@@ -596,7 +634,7 @@ describe('SessionController', () => {
         expect.objectContaining({
           ipAddress: '172.16.0.5',
           userAgent: 'Mozilla/5.0',
-        })
+        }),
       )
     })
   })
@@ -647,7 +685,10 @@ describe('SessionService', () => {
       const session1 = { ...dbRow, id: 'session-1' }
       const session2 = { ...dbRow, id: 'session-current' }
 
-      vi.mocked(prisma.$transaction).mockResolvedValue([[session1, session2], 2])
+      vi.mocked(prisma.$transaction).mockResolvedValue([
+        [session1, session2],
+        2,
+      ])
 
       const result = await service.list('user-1', 'session-current', 1, 20)
 
@@ -697,7 +738,12 @@ describe('SessionService', () => {
     it('returns not_found when session does not exist', async () => {
       vi.mocked(prisma.session.findUnique).mockResolvedValue(null)
 
-      const result = await service.revokeOne('user-1', 'sess-missing', null, ctx)
+      const result = await service.revokeOne(
+        'user-1',
+        'sess-missing',
+        null,
+        ctx,
+      )
 
       expect(result.kind).toBe('not_found')
     })
@@ -751,7 +797,12 @@ describe('SessionService', () => {
         expiresAt: future,
       } as any)
 
-      const result = await service.revokeOne('user-1', 'sess-current', 'sess-current', ctx)
+      const result = await service.revokeOne(
+        'user-1',
+        'sess-current',
+        'sess-current',
+        ctx,
+      )
 
       expect(result.kind).toBe('current_session')
       expect(prisma.$transaction).not.toHaveBeenCalled()
@@ -782,7 +833,7 @@ describe('SessionService', () => {
             action: 'SESSION_REVOKED',
             userId: 'user-1',
           }),
-        })
+        }),
       )
     })
   })
@@ -793,7 +844,9 @@ describe('SessionService', () => {
     const ctx = { ipAddress: '1.2.3.4', userAgent: 'test' }
 
     it('returns ok with the count of revoked sessions', async () => {
-      vi.mocked(prisma.session.updateMany).mockResolvedValue({ count: 4 } as any)
+      vi.mocked(prisma.session.updateMany).mockResolvedValue({
+        count: 4,
+      } as any)
       vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any)
 
       const result = await service.revokeAll('user-1', null, ctx)
@@ -803,7 +856,9 @@ describe('SessionService', () => {
     })
 
     it('excludes the current session from bulk revocation', async () => {
-      vi.mocked(prisma.session.updateMany).mockResolvedValue({ count: 2 } as any)
+      vi.mocked(prisma.session.updateMany).mockResolvedValue({
+        count: 2,
+      } as any)
       vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any)
 
       await service.revokeAll('user-1', 'session-current', ctx)
@@ -813,12 +868,14 @@ describe('SessionService', () => {
           where: expect.objectContaining({
             NOT: { id: { in: ['session-current'] } },
           }),
-        })
+        }),
       )
     })
 
     it('writes SESSION_ALL_REVOKED audit entry when sessions were revoked', async () => {
-      vi.mocked(prisma.session.updateMany).mockResolvedValue({ count: 3 } as any)
+      vi.mocked(prisma.session.updateMany).mockResolvedValue({
+        count: 3,
+      } as any)
       vi.mocked(prisma.auditLog.create).mockResolvedValue({} as any)
 
       await service.revokeAll('user-1', null, ctx)
@@ -829,12 +886,14 @@ describe('SessionService', () => {
             action: 'SESSION_ALL_REVOKED',
             userId: 'user-1',
           }),
-        })
+        }),
       )
     })
 
     it('does NOT write an audit entry when revokedCount is 0', async () => {
-      vi.mocked(prisma.session.updateMany).mockResolvedValue({ count: 0 } as any)
+      vi.mocked(prisma.session.updateMany).mockResolvedValue({
+        count: 0,
+      } as any)
 
       await service.revokeAll('user-1', null, ctx)
 
@@ -842,7 +901,9 @@ describe('SessionService', () => {
     })
 
     it('returns revokedCount 0 when all sessions are already revoked', async () => {
-      vi.mocked(prisma.session.updateMany).mockResolvedValue({ count: 0 } as any)
+      vi.mocked(prisma.session.updateMany).mockResolvedValue({
+        count: 0,
+      } as any)
 
       const result = await service.revokeAll('user-1', null, ctx)
 
@@ -851,7 +912,9 @@ describe('SessionService', () => {
     })
 
     it('includes metadata about whether the current session was kept', async () => {
-      vi.mocked(prisma.session.updateMany).mockResolvedValue({ count: 2 } as any)
+      vi.mocked(prisma.session.updateMany).mockResolvedValue({
+        count: 2,
+      } as any)
 
       let auditData: any
       vi.mocked(prisma.auditLog.create).mockImplementation((args: any) => {

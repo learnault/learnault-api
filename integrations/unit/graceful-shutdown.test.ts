@@ -8,14 +8,14 @@ describe('Graceful Shutdown', () => {
     if (serverProcess && !serverProcess.killed) {
       serverProcess.kill('SIGTERM')
       // Wait a bit for the process to shut down
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 1000))
     }
   })
 
   it('should handle SIGTERM and shutdown gracefully', async () => {
     // This is a simulation test - in real scenario, you'd start the server
     // and send SIGTERM to test graceful shutdown
-    
+
     const mockServer = {
       close: vi.fn((callback) => callback()),
     }
@@ -55,7 +55,7 @@ describe('Graceful Shutdown', () => {
     }
 
     const lifecycleSweepInterval = setInterval(() => {}, 1000)
-    
+
     // Simulate clearing interval during shutdown
     clearInterval(lifecycleSweepInterval)
     mockInterval.clear()
@@ -131,7 +131,7 @@ describe('Graceful Shutdown', () => {
       isShuttingDown = true
       shutdownCount++
       // Simulate shutdown
-      await new Promise(resolve => setTimeout(resolve, 10))
+      await new Promise((resolve) => setTimeout(resolve, 10))
     }
 
     // Simulate multiple signals

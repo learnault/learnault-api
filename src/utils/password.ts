@@ -20,8 +20,8 @@ export function isStrongPassword(password: string): boolean {
   const hasLower = /[a-z]/.test(password)
   const hasNumber = /[0-9]/.test(password)
   const hasSymbol = /[^A-Za-z0-9]/.test(password)
-  
-return (
+
+  return (
     password.length >= minLength &&
     hasUpper &&
     hasLower &&
@@ -32,14 +32,14 @@ return (
 
 export async function hashPassword(
   password: string,
-  saltRounds = getConfiguredSaltRounds()
+  saltRounds = getConfiguredSaltRounds(),
 ): Promise<string> {
   return bcrypt.hash(password, saltRounds)
 }
 
 export async function comparePassword(
   password: string,
-  hashed: string
+  hashed: string,
 ): Promise<boolean> {
   return bcrypt.compare(password, hashed)
 }

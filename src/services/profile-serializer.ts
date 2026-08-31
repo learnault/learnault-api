@@ -29,10 +29,16 @@ function isFilled(value: unknown): boolean {
   return true
 }
 
-export function computeProfileCompletion(profile: LearnerProfileRecord): ProfileCompletion {
-  const missingFields = PROFILE_COMPLETION_FIELDS.filter(field => !isFilled(profile[field]))
+export function computeProfileCompletion(
+  profile: LearnerProfileRecord,
+): ProfileCompletion {
+  const missingFields = PROFILE_COMPLETION_FIELDS.filter(
+    (field) => !isFilled(profile[field]),
+  )
   const filledCount = PROFILE_COMPLETION_FIELDS.length - missingFields.length
-  const percent = Math.round((filledCount / PROFILE_COMPLETION_FIELDS.length) * 100)
+  const percent = Math.round(
+    (filledCount / PROFILE_COMPLETION_FIELDS.length) * 100,
+  )
 
   return { percent, missingFields: [...missingFields] }
 }
@@ -47,7 +53,9 @@ export function computeProfileCompletion(profile: LearnerProfileRecord): Profile
  * response anyway, because TypeScript checks the declared type and not the
  * object that actually arrives at runtime.
  */
-export function toProfileRecord(profile: LearnerProfileRecord): LearnerProfileRecord {
+export function toProfileRecord(
+  profile: LearnerProfileRecord,
+): LearnerProfileRecord {
   return {
     id: profile.id,
     userId: profile.userId,
@@ -66,11 +74,18 @@ export function toProfileRecord(profile: LearnerProfileRecord): LearnerProfileRe
   }
 }
 
-export function toOwnerProfile(profile: LearnerProfileRecord): OwnerProfileView {
-  return { ...toProfileRecord(profile), completion: computeProfileCompletion(profile) }
+export function toOwnerProfile(
+  profile: LearnerProfileRecord,
+): OwnerProfileView {
+  return {
+    ...toProfileRecord(profile),
+    completion: computeProfileCompletion(profile),
+  }
 }
 
-export function toEmployerProfile(profile: LearnerProfileRecord): EmployerProfileView {
+export function toEmployerProfile(
+  profile: LearnerProfileRecord,
+): EmployerProfileView {
   if (VISIBILITY_RANK[profile.visibility] < VISIBILITY_RANK.employer) {
     return { id: profile.id, visible: false }
   }
@@ -90,7 +105,9 @@ export function toEmployerProfile(profile: LearnerProfileRecord): EmployerProfil
   }
 }
 
-export function toPublicProfile(profile: LearnerProfileRecord): PublicProfileView {
+export function toPublicProfile(
+  profile: LearnerProfileRecord,
+): PublicProfileView {
   if (VISIBILITY_RANK[profile.visibility] < VISIBILITY_RANK.public) {
     return { id: profile.id, visible: false }
   }
@@ -111,7 +128,7 @@ export function toPublicProfile(profile: LearnerProfileRecord): PublicProfileVie
 // view through a public or employer-facing endpoint.
 export function toPrivateProfile(
   profile: LearnerProfileRecord,
-  account: AccountPrivateFields
+  account: AccountPrivateFields,
 ): PrivateProfileView {
   return { ...toProfileRecord(profile), ...account }
 }
@@ -157,7 +174,7 @@ export function isDisclosureAllowed(input: {
   }
 
   const dataSharing = input.consents.find(
-    consent => consent.purpose === DISCLOSURE_CONSENT_PURPOSE
+    (consent) => consent.purpose === DISCLOSURE_CONSENT_PURPOSE,
   )
 
   return dataSharing?.status !== 'withdrawn'
@@ -171,7 +188,10 @@ export function isDisclosureAllowed(input: {
  * profile from a withdrawn consent from a deactivated account. Distinguishable
  * refusals would leak the very state they refuse to disclose.
  */
-export function redactedProfile(profileId: string): { id: string; visible: false } {
+export function redactedProfile(profileId: string): {
+  id: string
+  visible: false
+} {
   return { id: profileId, visible: false }
 }
 
@@ -216,7 +236,7 @@ export function toOnboardingSummary(progress: {
     // Computed rather than stored, for the same reason completion is: it can
     // then never disagree with `completedSteps`.
     requiredStepsRemaining: REQUIRED_ONBOARDING_STEPS.filter(
-      step => !progress.completedSteps.includes(step)
+      (step) => !progress.completedSteps.includes(step),
     ),
     startedAt: progress.startedAt,
     completedAt: progress.completedAt,

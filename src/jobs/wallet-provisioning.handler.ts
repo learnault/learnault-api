@@ -52,7 +52,9 @@ export class WalletProvisioningOutboxHandler {
     return this.handleClaimed(claimed)
   }
 
-  async handleWallet(walletId: string): Promise<WalletProvisioningHandleResult> {
+  async handleWallet(
+    walletId: string,
+  ): Promise<WalletProvisioningHandleResult> {
     const claimed = await this.repository.claimByWalletId(
       walletId,
       this.now(),

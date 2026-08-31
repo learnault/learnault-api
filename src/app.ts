@@ -21,7 +21,7 @@ app.use(cors())
 app.use(
   helmet({
     contentSecurityPolicy: false, // Disable CSP for Swagger UI to work correctly
-  })
+  }),
 )
 
 // Request context middleware - must be early to track all requests

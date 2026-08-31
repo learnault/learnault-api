@@ -1,6 +1,9 @@
 import { Request, Response } from 'express'
 import { z } from 'zod'
-import { AvatarService, AvatarValidationError } from '../services/avatar.service'
+import {
+  AvatarService,
+  AvatarValidationError,
+} from '../services/avatar.service'
 import { InMemoryStorageProvider } from '../services/storage/in-memory-storage'
 import { AVATAR_MAX_BYTES } from '../types/avatar.types'
 

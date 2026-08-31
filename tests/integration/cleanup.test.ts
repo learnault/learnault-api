@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  getWorkerSchemaName,
-  buildWorkerDatabaseUrl,
-} from '../helpers/db'
+import { getWorkerSchemaName, buildWorkerDatabaseUrl } from '../helpers/db'
 
 describe('Database cleanup utilities', () => {
   describe('getWorkerSchemaName', () => {

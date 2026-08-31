@@ -46,7 +46,9 @@ const OTHER_ADDRESS = `G${'B'.repeat(55)}`
  * A stand-in transaction client covering the tables the mutation touches, so a
  * test can assert what ran inside the transaction and in what order.
  */
-function fakeTransaction(options: { sessions?: { id: string }[]; updateResult?: unknown } = {}) {
+function fakeTransaction(
+  options: { sessions?: { id: string }[]; updateResult?: unknown } = {},
+) {
   const calls: string[] = []
   const auditCreate = vi.fn(async () => {
     calls.push('audit')
@@ -80,14 +82,23 @@ function fakeTransaction(options: { sessions?: { id: string }[]; updateResult?: 
   }
 
   mockTransaction.mockImplementation(
-    async (callback: (client: unknown) => Promise<unknown>) => callback(tx)
+    async (callback: (client: unknown) => Promise<unknown>) => callback(tx),
   )
 
-  return { calls, auditCreate, userUpdate, sessionUpdateMany, refreshTokenUpdateMany }
+  return {
+    calls,
+    auditCreate,
+    userUpdate,
+    sessionUpdateMany,
+    refreshTokenUpdateMany,
+  }
 }
 
-function auditRow(auditCreate: ReturnType<typeof vi.fn>): Record<string, unknown> {
-  return (auditCreate.mock.calls[0][0] as { data: Record<string, unknown> }).data
+function auditRow(
+  auditCreate: ReturnType<typeof vi.fn>,
+): Record<string, unknown> {
+  return (auditCreate.mock.calls[0][0] as { data: Record<string, unknown> })
+    .data
 }
 
 describe('UserAccountService', () => {
@@ -100,12 +111,18 @@ describe('UserAccountService', () => {
   })
 
   describe('changePassword', () => {
-    const account = { id: 'user1', password: '$2b$12$oldhash', status: 'ACTIVE' }
+    const account = {
+      id: 'user1',
+      password: '$2b$12$oldhash',
+      status: 'ACTIVE',
+    }
 
     it('reports not-found for an unknown account', async () => {
       mockUserFindUnique.mockResolvedValue(null)
 
-      expect(await service.changePassword('missing', 'old', 'New1!pass', context)).toEqual({
+      expect(
+        await service.changePassword('missing', 'old', 'New1!pass', context),
+      ).toEqual({
         kind: 'not-found',
       })
     })
@@ -113,7 +130,9 @@ describe('UserAccountService', () => {
     it('reports not-found for a tombstoned account', async () => {
       mockUserFindUnique.mockResolvedValue({ ...account, status: 'DELETED' })
 
-      expect(await service.changePassword('user1', 'old', 'New1!pass', context)).toEqual({
+      expect(
+        await service.changePassword('user1', 'old', 'New1!pass', context),
+      ).toEqual({
         kind: 'not-found',
       })
     })
@@ -122,7 +141,9 @@ describe('UserAccountService', () => {
       mockUserFindUnique.mockResolvedValue(account)
       mockCompare.mockResolvedValue(false)
 
-      expect(await service.changePassword('user1', 'wrong', 'New1!pass', context)).toEqual({
+      expect(
+        await service.changePassword('user1', 'wrong', 'New1!pass', context),
+      ).toEqual({
         kind: 'invalid-password',
       })
       expect(mockTransaction).not.toHaveBeenCalled()
@@ -146,11 +167,17 @@ describe('UserAccountService', () => {
     it('revokes every live session and refresh token in the same transaction', async () => {
       mockUserFindUnique.mockResolvedValue(account)
       mockCompare.mockResolvedValue(true)
-      const { calls, sessionUpdateMany, refreshTokenUpdateMany } = fakeTransaction({
-        sessions: [{ id: 's1' }, { id: 's2' }],
-      })
+      const { calls, sessionUpdateMany, refreshTokenUpdateMany } =
+        fakeTransaction({
+          sessions: [{ id: 's1' }, { id: 's2' }],
+        })
 
-      const result = await service.changePassword('user1', 'old', 'New1!pass', context)
+      const result = await service.changePassword(
+        'user1',
+        'old',
+        'New1!pass',
+        context,
+      )
 
       expect(result).toEqual({ kind: 'changed', revokedSessionCount: 2 })
       expect(sessionUpdateMany).toHaveBeenCalledWith({
@@ -175,7 +202,9 @@ describe('UserAccountService', () => {
       mockCompare.mockResolvedValue(true)
       const { sessionUpdateMany } = fakeTransaction({ sessions: [] })
 
-      expect(await service.changePassword('user1', 'old', 'New1!pass', context)).toEqual({
+      expect(
+        await service.changePassword('user1', 'old', 'New1!pass', context),
+      ).toEqual({
         kind: 'changed',
         revokedSessionCount: 0,
       })
@@ -211,7 +240,7 @@ describe('UserAccountService', () => {
       mockTransaction.mockRejectedValue(new Error('audit trail unavailable'))
 
       await expect(
-        service.changePassword('user1', 'old', 'New1!pass', context)
+        service.changePassword('user1', 'old', 'New1!pass', context),
       ).rejects.toThrow('audit trail unavailable')
     })
   })
@@ -222,7 +251,9 @@ describe('UserAccountService', () => {
     it('reports not-found for an unknown account', async () => {
       mockUserFindUnique.mockResolvedValue(null)
 
-      expect(await service.updateWalletAddress('missing', VALID_ADDRESS, context)).toEqual({
+      expect(
+        await service.updateWalletAddress('missing', VALID_ADDRESS, context),
+      ).toEqual({
         kind: 'not-found',
       })
     })
@@ -230,15 +261,22 @@ describe('UserAccountService', () => {
     it('reports not-found for a tombstoned account', async () => {
       mockUserFindUnique.mockResolvedValue({ ...account, status: 'DELETED' })
 
-      expect(await service.updateWalletAddress('user1', VALID_ADDRESS, context)).toEqual({
+      expect(
+        await service.updateWalletAddress('user1', VALID_ADDRESS, context),
+      ).toEqual({
         kind: 'not-found',
       })
     })
 
     it('is a no-op when the address is already the one on file', async () => {
-      mockUserFindUnique.mockResolvedValue({ ...account, walletAddress: VALID_ADDRESS })
+      mockUserFindUnique.mockResolvedValue({
+        ...account,
+        walletAddress: VALID_ADDRESS,
+      })
 
-      expect(await service.updateWalletAddress('user1', VALID_ADDRESS, context)).toEqual({
+      expect(
+        await service.updateWalletAddress('user1', VALID_ADDRESS, context),
+      ).toEqual({
         kind: 'unchanged',
         walletAddress: VALID_ADDRESS,
       })
@@ -249,7 +287,9 @@ describe('UserAccountService', () => {
       mockUserFindUnique.mockResolvedValue(account)
       mockUserFindFirst.mockResolvedValue({ id: 'user2' })
 
-      expect(await service.updateWalletAddress('user1', VALID_ADDRESS, context)).toEqual({
+      expect(
+        await service.updateWalletAddress('user1', VALID_ADDRESS, context),
+      ).toEqual({
         kind: 'conflict',
       })
       expect(mockUserFindFirst).toHaveBeenCalledWith({
@@ -262,9 +302,13 @@ describe('UserAccountService', () => {
     it('conflicts when a concurrent write wins the unique constraint', async () => {
       mockUserFindUnique.mockResolvedValue(account)
       mockUserFindFirst.mockResolvedValue(null)
-      mockTransaction.mockRejectedValue(Object.assign(new Error('unique'), { code: 'P2002' }))
+      mockTransaction.mockRejectedValue(
+        Object.assign(new Error('unique'), { code: 'P2002' }),
+      )
 
-      expect(await service.updateWalletAddress('user1', VALID_ADDRESS, context)).toEqual({
+      expect(
+        await service.updateWalletAddress('user1', VALID_ADDRESS, context),
+      ).toEqual({
         kind: 'conflict',
       })
     })
@@ -275,16 +319,23 @@ describe('UserAccountService', () => {
       mockTransaction.mockRejectedValue(new Error('connection reset'))
 
       await expect(
-        service.updateWalletAddress('user1', VALID_ADDRESS, context)
+        service.updateWalletAddress('user1', VALID_ADDRESS, context),
       ).rejects.toThrow('connection reset')
     })
 
     it('persists the address and audits it', async () => {
-      mockUserFindUnique.mockResolvedValue({ ...account, walletAddress: OTHER_ADDRESS })
+      mockUserFindUnique.mockResolvedValue({
+        ...account,
+        walletAddress: OTHER_ADDRESS,
+      })
       mockUserFindFirst.mockResolvedValue(null)
       const { calls, auditCreate, userUpdate } = fakeTransaction()
 
-      const result = await service.updateWalletAddress('user1', VALID_ADDRESS, context)
+      const result = await service.updateWalletAddress(
+        'user1',
+        VALID_ADDRESS,
+        context,
+      )
 
       expect(result).toEqual({ kind: 'updated', walletAddress: VALID_ADDRESS })
       expect(userUpdate).toHaveBeenCalledWith({

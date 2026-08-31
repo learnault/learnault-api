@@ -22,9 +22,10 @@ vi.mock('../../src/config/database', () => ({
 }))
 
 const { issueAccessToken } = await import('../../src/config/jwt')
-const employerRoutes = (await import('../../src/routes/v1/employer.routes')).default
+const employerRoutes = (await import('../../src/routes/v1/employer.routes'))
+  .default
 
-function makeToken (role: 'learner' | 'employer') {
+function makeToken(role: 'learner' | 'employer') {
   return issueAccessToken({ id: 'user-1', role })
 }
 
@@ -44,7 +45,11 @@ describe('employer.routes', () => {
   })
 
   it('restricts access to employer accounts only', async () => {
-    findUniqueMock.mockResolvedValue({ role: 'learner', status: 'ACTIVE', isVerified: true })
+    findUniqueMock.mockResolvedValue({
+      role: 'learner',
+      status: 'ACTIVE',
+      isVerified: true,
+    })
 
     const app = express()
     app.use(express.json())
@@ -58,7 +63,11 @@ describe('employer.routes', () => {
   })
 
   it('applies employer rate limiter and allows employer role', async () => {
-    findUniqueMock.mockResolvedValue({ role: 'employer', status: 'ACTIVE', isVerified: true })
+    findUniqueMock.mockResolvedValue({
+      role: 'employer',
+      status: 'ACTIVE',
+      isVerified: true,
+    })
 
     const app = express()
     app.use(express.json())
@@ -73,7 +82,11 @@ describe('employer.routes', () => {
   })
 
   it('rejects an employer with an unverified email', async () => {
-    findUniqueMock.mockResolvedValue({ role: 'employer', status: 'ACTIVE', isVerified: false })
+    findUniqueMock.mockResolvedValue({
+      role: 'employer',
+      status: 'ACTIVE',
+      isVerified: false,
+    })
 
     const app = express()
     app.use(express.json())

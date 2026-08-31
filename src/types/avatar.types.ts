@@ -1,6 +1,11 @@
 // ── Avatar lifecycle statuses ─────────────────────────────────────
 
-export const AVATAR_STATUSES = ['PENDING', 'PROCESSING', 'ACTIVE', 'FAILED'] as const
+export const AVATAR_STATUSES = [
+  'PENDING',
+  'PROCESSING',
+  'ACTIVE',
+  'FAILED',
+] as const
 export type AvatarStatus = (typeof AVATAR_STATUSES)[number]
 
 export const AVATAR_SCAN_RESULTS = ['clean', 'rejected', 'error'] as const
@@ -14,7 +19,7 @@ export type AvatarVariantLabel = (typeof AVARIANT_LABELS)[number]
 // ── Upload constraints ────────────────────────────────────────────
 
 export const AVATAR_MAX_BYTES = 5 * 1024 * 1024 // 5 MB
-export const AVATAR_MIN_BYTES = 1 * 1024         // 1 KB
+export const AVATAR_MIN_BYTES = 1 * 1024 // 1 KB
 export const AVATAR_INTENT_TTL_MS = 15 * 60 * 1000 // 15 minutes
 
 export const AVATAR_ALLOWED_MIME_TYPES = [
@@ -120,13 +125,22 @@ export interface ImageDimensions {
 
 export interface StorageProvider {
   /** Generate a signed upload URL for a user-scoped object. */
-  createSignedUpload(userId: string, key: string, contentType: string, expiresMs: number): Promise<SignedUploadUrl>
+  createSignedUpload(
+    userId: string,
+    key: string,
+    contentType: string,
+    expiresMs: number,
+  ): Promise<SignedUploadUrl>
 
   /** Read raw bytes from a stored object. */
   readBytes(storageKey: string): Promise<Buffer>
 
   /** Write raw bytes (for variants produced by the processing pipeline). */
-  writeBytes(storageKey: string, data: Buffer, contentType: string): Promise<void>
+  writeBytes(
+    storageKey: string,
+    data: Buffer,
+    contentType: string,
+  ): Promise<void>
 
   /** Delete an object and all its variants. */
   deleteObject(storageKey: string): Promise<void>

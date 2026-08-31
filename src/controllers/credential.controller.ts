@@ -1,6 +1,10 @@
 import { Request, Response } from 'express'
 import { asyncHandler } from '../middleware/error.middleware'
-import { BadRequestError, NotFoundError, UnauthorizedError } from '../utils/errors'
+import {
+  BadRequestError,
+  NotFoundError,
+  UnauthorizedError,
+} from '../utils/errors'
 import { prisma } from '../config/database'
 
 export class CredentialController {
@@ -211,7 +215,7 @@ export class CredentialController {
               description: true,
               category: true,
               difficulty: true,
-              reward: true,
+              rewardStroops: true,
             },
           },
         },
@@ -241,7 +245,7 @@ export class CredentialController {
           issuedAt: credential.issuedAt.toISOString(),
           shareableLink: `/api/v1/credentials/verify/${credential.onChainId || credential.id}`,
           metadata: {
-            reward: credential.module.reward,
+            reward: credential.module.rewardStroops.toString(),
             verificationUrl: `/api/v1/credentials/verify/${credential.onChainId || credential.id}`,
           },
         },

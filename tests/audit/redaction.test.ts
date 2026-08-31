@@ -81,16 +81,26 @@ describe('audit redaction', () => {
 
   describe('value deny-list', () => {
     it('denies a Stellar secret seed', () => {
-      expect(isDeniedValue('SBQWY3DNPFWGSZTFNV4WQZLBOJ7SFQNDBQFXHTOYIY5QYVCSFRCFUKPP')).toBe(true)
+      expect(
+        isDeniedValue(
+          'SBQWY3DNPFWGSZTFNV4WQZLBOJ7SFQNDBQFXHTOYIY5QYVCSFRCFUKPP',
+        ),
+      ).toBe(true)
     })
 
     it('denies a Stellar public key', () => {
-      expect(isDeniedValue('GCKFBEIYV2U22IO2BJ4KVJOIP7XPWQGQFKKWXR6DOSJBV7STMAQSMTGG')).toBe(true)
+      expect(
+        isDeniedValue(
+          'GCKFBEIYV2U22IO2BJ4KVJOIP7XPWQGQFKKWXR6DOSJBV7STMAQSMTGG',
+        ),
+      ).toBe(true)
     })
 
     it('denies a JWT', () => {
       expect(
-        isDeniedValue('eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U')
+        isDeniedValue(
+          'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U',
+        ),
       ).toBe(true)
     })
 
@@ -152,7 +162,10 @@ describe('audit redaction', () => {
     })
 
     it('replaces a denied key without inspecting its value', () => {
-      const { value, redactedPaths } = redactMetadata({ password: 'hunter2', userId: 'u-1' })
+      const { value, redactedPaths } = redactMetadata({
+        password: 'hunter2',
+        userId: 'u-1',
+      })
 
       expect(value).toMatchObject({ password: REDACTED, userId: 'u-1' })
       expect(redactedPaths).toEqual(['password'])
@@ -174,7 +187,9 @@ describe('audit redaction', () => {
         recipients: [{ email: 'a@b.com' }, { email: 'c@d.com' }],
       })
 
-      expect((value!.session as Record<string, unknown>).ipAddress).toBe(REDACTED)
+      expect((value!.session as Record<string, unknown>).ipAddress).toBe(
+        REDACTED,
+      )
       expect(redactedPaths).toContain('session.ipAddress')
       expect(redactedPaths).toContain('recipients[0].email')
       expect(redactedPaths).toContain('recipients[1].email')
@@ -205,13 +220,15 @@ describe('audit redaction', () => {
         ids: Array.from({ length: 100 }, (_, index) => `id-${index}`),
       })
 
-      expect((value!.ids as unknown[]).length).toBe(RedactionLimits.maxArrayLength)
+      expect((value!.ids as unknown[]).length).toBe(
+        RedactionLimits.maxArrayLength,
+      )
       expect(truncated).toBe(true)
     })
 
     it('caps object breadth', () => {
       const wide = Object.fromEntries(
-        Array.from({ length: 100 }, (_, index) => [`k${index}`, index])
+        Array.from({ length: 100 }, (_, index) => [`k${index}`, index]),
       )
       const { value, truncated } = redactMetadata(wide)
 
@@ -222,7 +239,9 @@ describe('audit redaction', () => {
     it('truncates an over-long string', () => {
       const { value, truncated } = redactMetadata({ note: 'x'.repeat(1000) })
 
-      expect(value!.note).toBe(`${'x'.repeat(RedactionLimits.maxStringLength)}${TRUNCATED}`)
+      expect(value!.note).toBe(
+        `${'x'.repeat(RedactionLimits.maxStringLength)}${TRUNCATED}`,
+      )
       expect(truncated).toBe(true)
     })
 
@@ -245,7 +264,8 @@ describe('audit redaction', () => {
 
     it('renders a Date as an ISO timestamp', () => {
       expect(
-        redactMetadata({ archivedAt: new Date('2026-08-24T10:00:00.000Z') }).value
+        redactMetadata({ archivedAt: new Date('2026-08-24T10:00:00.000Z') })
+          .value,
       ).toEqual({ archivedAt: '2026-08-24T10:00:00.000Z' })
     })
 
@@ -268,7 +288,9 @@ describe('audit redaction', () => {
     })
 
     it('normalizes a non-finite number to null', () => {
-      expect(redactMetadata({ ratio: Number.NaN, size: Infinity }).value).toEqual({
+      expect(
+        redactMetadata({ ratio: Number.NaN, size: Infinity }).value,
+      ).toEqual({
         ratio: null,
         size: null,
       })
@@ -282,7 +304,10 @@ describe('audit redaction', () => {
     })
 
     it('produces parseable JSON with secrets already replaced', () => {
-      const serialized = serializeMetadata({ password: 'hunter2', userId: 'u-1' })!
+      const serialized = serializeMetadata({
+        password: 'hunter2',
+        userId: 'u-1',
+      })!
       const parsed = JSON.parse(serialized)
 
       expect(parsed).toMatchObject({ password: REDACTED, userId: 'u-1' })
@@ -296,7 +321,7 @@ describe('audit redaction', () => {
 
       expect(() => JSON.parse(serialized)).not.toThrow()
       expect(Buffer.byteLength(serialized)).toBeLessThanOrEqual(
-        RedactionLimits.maxSerializedBytes
+        RedactionLimits.maxSerializedBytes,
       )
     })
 
@@ -324,12 +349,14 @@ describe('audit redaction', () => {
     })
 
     it('is stable, so events from one source can be correlated', () => {
-      expect(hashIpAddress('203.0.113.42', secret)).toBe(hashIpAddress('203.0.113.42', secret))
+      expect(hashIpAddress('203.0.113.42', secret)).toBe(
+        hashIpAddress('203.0.113.42', secret),
+      )
     })
 
     it('separates different addresses', () => {
       expect(hashIpAddress('203.0.113.42', secret)).not.toBe(
-        hashIpAddress('203.0.113.43', secret)
+        hashIpAddress('203.0.113.43', secret),
       )
     })
 
@@ -337,12 +364,14 @@ describe('audit redaction', () => {
       // The point of HMAC over a bare digest: the IPv4 space is small enough
       // that an unkeyed hash is reversible by enumeration.
       expect(hashIpAddress('203.0.113.42', 'secret-a')).not.toBe(
-        hashIpAddress('203.0.113.42', 'secret-b')
+        hashIpAddress('203.0.113.42', 'secret-b'),
       )
     })
 
     it('ignores surrounding whitespace', () => {
-      expect(hashIpAddress(' 203.0.113.42 ', secret)).toBe(hashIpAddress('203.0.113.42', secret))
+      expect(hashIpAddress(' 203.0.113.42 ', secret)).toBe(
+        hashIpAddress('203.0.113.42', secret),
+      )
     })
   })
 
@@ -353,8 +382,14 @@ describe('audit redaction', () => {
     })
 
     it.each([
-      ['Mozilla/5.0 (Windows NT 10.0) Chrome/120.0.0.0 Safari/537.36', 'Chrome'],
-      ['Mozilla/5.0 (Windows NT 10.0) Chrome/120 Safari/537.36 Edg/120.0', 'Edge'],
+      [
+        'Mozilla/5.0 (Windows NT 10.0) Chrome/120.0.0.0 Safari/537.36',
+        'Chrome',
+      ],
+      [
+        'Mozilla/5.0 (Windows NT 10.0) Chrome/120 Safari/537.36 Edg/120.0',
+        'Edge',
+      ],
       ['Mozilla/5.0 (X11; Linux) Firefox/121.0', 'Firefox'],
       ['Mozilla/5.0 (Macintosh) Version/17.0 Safari/605.1.15', 'Safari'],
       ['okhttp/4.12.0', 'Android'],
@@ -367,7 +402,9 @@ describe('audit redaction', () => {
     })
 
     it('resolves Edge before Chrome, which it also advertises', () => {
-      expect(userAgentFamily('Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0')).toBe('Edge')
+      expect(
+        userAgentFamily('Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0'),
+      ).toBe('Edge')
     })
 
     it('falls back to Other for an unrecognized agent', () => {
@@ -375,7 +412,9 @@ describe('audit redaction', () => {
     })
 
     it('discards the version and platform detail it was given', () => {
-      const family = userAgentFamily('Mozilla/5.0 (Windows NT 10.0; Win64) Chrome/120.0.6099.109')!
+      const family = userAgentFamily(
+        'Mozilla/5.0 (Windows NT 10.0; Win64) Chrome/120.0.6099.109',
+      )!
 
       expect(family).toBe('Chrome')
       expect(family).not.toContain('120')

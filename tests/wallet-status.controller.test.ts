@@ -19,7 +19,9 @@ describe('WalletStatusController', () => {
       getBalances: vi.fn(),
       getHistory: vi.fn(),
     }
-    controller = new WalletStatusController(service as unknown as WalletStatusService)
+    controller = new WalletStatusController(
+      service as unknown as WalletStatusService,
+    )
     req = { user: { id: 'user-1' }, query: {} }
     res = {
       status: vi.fn().mockReturnThis(),
@@ -35,13 +37,20 @@ describe('WalletStatusController', () => {
 
       expect(service.getStatus).toHaveBeenCalledWith('user-1')
       expect(res.status).toHaveBeenCalledWith(200)
-      expect(res.json).toHaveBeenCalledWith({ success: true, data: { status: 'ACTIVE' } })
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        data: { status: 'ACTIVE' },
+      })
     })
   })
 
   describe('getBalances', () => {
     it('returns exact balances on success', async () => {
-      const balances = { publicKey: 'GABC', sourceTime: '2026-08-30T00:00:00Z', balances: [] }
+      const balances = {
+        publicKey: 'GABC',
+        sourceTime: '2026-08-30T00:00:00Z',
+        balances: [],
+      }
       service.getBalances.mockResolvedValue(balances)
 
       await controller.getBalances(req, res)
@@ -51,7 +60,9 @@ describe('WalletStatusController', () => {
     })
 
     it('returns 404 without leaking details when the caller has no active wallet', async () => {
-      service.getBalances.mockRejectedValue(new WalletStatusError('WALLET_NOT_FOUND'))
+      service.getBalances.mockRejectedValue(
+        new WalletStatusError('WALLET_NOT_FOUND'),
+      )
 
       await controller.getBalances(req, res)
 
@@ -63,7 +74,9 @@ describe('WalletStatusController', () => {
     })
 
     it('maps a Horizon timeout to 504', async () => {
-      service.getBalances.mockRejectedValue(new WalletStatusError('HORIZON_TIMEOUT', 'timed out'))
+      service.getBalances.mockRejectedValue(
+        new WalletStatusError('HORIZON_TIMEOUT', 'timed out'),
+      )
 
       await controller.getBalances(req, res)
 
@@ -71,7 +84,9 @@ describe('WalletStatusController', () => {
     })
 
     it('maps Horizon unavailability to 503', async () => {
-      service.getBalances.mockRejectedValue(new WalletStatusError('HORIZON_UNAVAILABLE', 'down'))
+      service.getBalances.mockRejectedValue(
+        new WalletStatusError('HORIZON_UNAVAILABLE', 'down'),
+      )
 
       await controller.getBalances(req, res)
 
@@ -112,7 +127,10 @@ describe('WalletStatusController', () => {
 
     it('returns paginated history with stable cursor metadata', async () => {
       req.query = { cursor: 'abc', limit: '10', direction: 'incoming' }
-      service.getHistory.mockResolvedValue({ entries: [{ id: 'op-1' }], nextCursor: 'def' })
+      service.getHistory.mockResolvedValue({
+        entries: [{ id: 'op-1' }],
+        nextCursor: 'def',
+      })
 
       await controller.getHistory(req, res)
 
@@ -135,7 +153,9 @@ describe('WalletStatusController', () => {
       await controller.getHistory(req, res)
 
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ meta: expect.objectContaining({ hasMore: false }) }),
+        expect.objectContaining({
+          meta: expect.objectContaining({ hasMore: false }),
+        }),
       )
     })
   })

@@ -26,37 +26,37 @@ export enum UserStatus {
  * a value, and do not add new ones here.
  */
 export interface User {
-  id: string;
-  email: string;
-  username: string;
-  firstName?: string;
-  lastName?: string;
-  bio?: string;
-  avatar?: string;
-  walletAddress?: string;
-  role: UserRole;
-  status: UserStatus;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  lastLoginAt?: Date;
+  id: string
+  email: string
+  username: string
+  firstName?: string
+  lastName?: string
+  bio?: string
+  avatar?: string
+  walletAddress?: string
+  role: UserRole
+  status: UserStatus
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
+  lastLoginAt?: Date
 }
 
 export interface UserProfile extends User {
-  totalCredentials: number;
-  totalPoints: number;
-  completedModules: number;
+  totalCredentials: number
+  totalPoints: number
+  completedModules: number
 }
 
 // ── Request types ──────────────────────────────────────────
 
 export interface CreateUserData {
-  email: string;
-  username: string;
-  password: string;
-  firstName?: string;
-  lastName?: string;
-  role?: UserRole;
+  email: string
+  username: string
+  password: string
+  firstName?: string
+  lastName?: string
+  role?: UserRole
 }
 
 // `UpdateUserData`, `ChangePasswordData`, `UpdateWalletData` and
@@ -67,16 +67,16 @@ export interface CreateUserData {
 // in types/profile.types.ts, so a shape and its validation can no longer drift.
 
 export interface UpdateUserRoleData {
-  role: UserRole;
+  role: UserRole
 }
 
 export interface UpdateUserStatusData {
-  status: UserStatus;
+  status: UserStatus
 }
 
 export interface UserFilterParams {
-  role?: UserRole;
-  status?: UserStatus;
-  search?: string;
-  isActive?: boolean;
+  role?: UserRole
+  status?: UserStatus
+  search?: string
+  isActive?: boolean
 }

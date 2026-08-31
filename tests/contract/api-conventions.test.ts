@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Request, Response, NextFunction } from 'express'
-import {
-  ErrorCode,
-  SortOrder,
-} from '../../src/types/api.types'
+import { ErrorCode, SortOrder } from '../../src/types/api.types'
 import {
   pagePaginationSchema,
   cursorPaginationSchema,
@@ -144,7 +141,7 @@ describe('API Conventions & Contract Standard Suite', () => {
 
       const cursorEnvelope = createCursorPaginatedEnvelope(
         [{ logId: 'log-1' }],
-        cursorMeta
+        cursorMeta,
       )
       expect(cursorEnvelope.success).toBe(true)
       expect(cursorEnvelope.meta.hasMore).toBe(true)
@@ -180,11 +177,9 @@ describe('API Conventions & Contract Standard Suite', () => {
   describe('3. Serialization Rules (ISO Dates, Asset Amounts, UUIDs)', () => {
     it('validates ISO 8601 UTC date strings', () => {
       expect(isoDateSchema.safeParse('2026-07-25T14:00:00.000Z').success).toBe(
-        true
+        true,
       )
-      expect(isoDateSchema.safeParse('2026-07-25 14:00:00').success).toBe(
-        false
-      )
+      expect(isoDateSchema.safeParse('2026-07-25 14:00:00').success).toBe(false)
     })
 
     it('validates exact financial and token asset amounts', () => {
@@ -218,7 +213,7 @@ describe('API Conventions & Contract Standard Suite', () => {
         error,
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       )
 
       expect(statusMock).toHaveBeenCalledWith(400)
@@ -241,7 +236,7 @@ describe('API Conventions & Contract Standard Suite', () => {
         error,
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       )
 
       expect(statusMock).toHaveBeenCalledWith(404)
@@ -257,7 +252,7 @@ describe('API Conventions & Contract Standard Suite', () => {
         error,
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       )
 
       expect(statusMock).toHaveBeenCalledWith(422)
@@ -288,11 +283,7 @@ describe('API Conventions & Contract Standard Suite', () => {
 
       mockRequest.body = { email: 'invalid-date' }
 
-      middleware(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      )
+      middleware(mockRequest as Request, mockResponse as Response, mockNext)
 
       expect(statusMock).toHaveBeenCalledWith(400)
       const res = jsonMock.mock.calls[0][0]
@@ -307,7 +298,7 @@ describe('API Conventions & Contract Standard Suite', () => {
       apiVersionHeader(
         mockRequest as Request,
         mockResponse as Response,
-        mockNext
+        mockNext,
       )
 
       expect(setHeaderMock).toHaveBeenCalledWith('X-API-Version', 'v1')
@@ -323,11 +314,11 @@ describe('API Conventions & Contract Standard Suite', () => {
       expect(setHeaderMock).toHaveBeenCalledWith('Deprecation', 'true')
       expect(setHeaderMock).toHaveBeenCalledWith(
         'Sunset',
-        'Sun, 31 Dec 2026 23:59:59 GMT'
+        'Sun, 31 Dec 2026 23:59:59 GMT',
       )
       expect(setHeaderMock).toHaveBeenCalledWith(
         'Link',
-        '<https://api.learnault.com/docs/deprecations#v1-feature>; rel="sunset"'
+        '<https://api.learnault.com/docs/deprecations#v1-feature>; rel="sunset"',
       )
     })
 
@@ -336,16 +327,12 @@ describe('API Conventions & Contract Standard Suite', () => {
         sunsetDate: 'Sun, 31 Dec 2026 23:59:59 GMT',
       })
 
-      middleware(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      )
+      middleware(mockRequest as Request, mockResponse as Response, mockNext)
 
       expect(setHeaderMock).toHaveBeenCalledWith('Deprecation', 'true')
       expect(setHeaderMock).toHaveBeenCalledWith(
         'Sunset',
-        'Sun, 31 Dec 2026 23:59:59 GMT'
+        'Sun, 31 Dec 2026 23:59:59 GMT',
       )
       expect(mockNext).toHaveBeenCalled()
     })

@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest'
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  vi,
+} from 'vitest'
 import { Pool } from 'pg'
 import request from 'supertest'
 import { validateTestDatabaseUrl } from '../helpers/guard'
@@ -17,7 +25,11 @@ import { validateTestDatabaseUrl } from '../helpers/guard'
 async function isDatabaseAvailable(): Promise<boolean> {
   try {
     const url = validateTestDatabaseUrl()
-    const pool = new Pool({ connectionString: url, max: 1, connectionTimeoutMillis: 3000 })
+    const pool = new Pool({
+      connectionString: url,
+      max: 1,
+      connectionTimeoutMillis: 3000,
+    })
     const client = await pool.connect()
     client.release()
     await pool.end()
@@ -70,7 +82,11 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
   }, HOOK_TIMEOUT_MS)
 
   async function createLearner(
-    overrides: Partial<{ status: string; password: string; walletAddress: string | null }> = {}
+    overrides: Partial<{
+      status: string
+      password: string
+      walletAddress: string | null
+    }> = {},
   ) {
     uniqueSuffix += 1
     const plaintext = overrides.password ?? 'Str0ng!Pass'
@@ -107,7 +123,10 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
     })
 
     it('rejects PATCH /users/me without a token', async () => {
-      await request(app).patch('/api/v1/users/me').send({ displayName: 'Ada' }).expect(401)
+      await request(app)
+        .patch('/api/v1/users/me')
+        .send({ displayName: 'Ada' })
+        .expect(401)
     })
 
     it('rejects an invalid token', async () => {
@@ -124,7 +143,9 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
 
     it('serves GET /users/{id} to an anonymous caller', async () => {
       const { user } = await createLearner()
-      await prisma.learnerProfile.create({ data: { userId: user.id, visibility: 'public' } })
+      await prisma.learnerProfile.create({
+        data: { userId: user.id, visibility: 'public' },
+      })
 
       await request(app).get(`/api/v1/users/${user.id}`).expect(200)
     })
@@ -136,7 +157,10 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
     it('returns real persisted data, not a fixture', async () => {
       const { user, auth } = await createLearner()
 
-      const response = await request(app).get('/api/v1/users/me').set('Authorization', auth).expect(200)
+      const response = await request(app)
+        .get('/api/v1/users/me')
+        .set('Authorization', auth)
+        .expect(200)
 
       expect(response.body.data.account.id).toBe(user.id)
       expect(response.body.data.account.email).toBe(user.email)
@@ -147,7 +171,9 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
     it('never returns the password hash', async () => {
       const { auth } = await createLearner()
 
-      const response = await request(app).get('/api/v1/users/me').set('Authorization', auth)
+      const response = await request(app)
+        .get('/api/v1/users/me')
+        .set('Authorization', auth)
 
       expect(JSON.stringify(response.body)).not.toContain('$2')
       expect(response.body.data.account).not.toHaveProperty('password')
@@ -156,40 +182,74 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
     it('returns only the documented profile fields, not the archive bookkeeping', async () => {
       const { auth } = await createLearner()
 
-      const response = await request(app).get('/api/v1/users/me').set('Authorization', auth).expect(200)
+      const response = await request(app)
+        .get('/api/v1/users/me')
+        .set('Authorization', auth)
+        .expect(200)
 
       expect(Object.keys(response.body.data.profile).sort()).toEqual([
-        'avatarUrl', 'bio', 'country', 'createdAt', 'displayName', 'goals', 'id',
-        'interests', 'languages', 'level', 'timezone', 'updatedAt', 'userId', 'visibility',
+        'avatarUrl',
+        'bio',
+        'country',
+        'createdAt',
+        'displayName',
+        'goals',
+        'id',
+        'interests',
+        'languages',
+        'level',
+        'timezone',
+        'updatedAt',
+        'userId',
+        'visibility',
       ])
     })
 
     it('creates the profile row on first access and reports 0% completion', async () => {
       const { user, auth } = await createLearner()
 
-      const response = await request(app).get('/api/v1/users/me').set('Authorization', auth).expect(200)
+      const response = await request(app)
+        .get('/api/v1/users/me')
+        .set('Authorization', auth)
+        .expect(200)
 
       expect(response.body.data.completion.percent).toBe(0)
-      expect(response.body.data.completion.missingFields).toContain('displayName')
-      expect(await prisma.learnerProfile.findUnique({ where: { userId: user.id } })).not.toBeNull()
+      expect(response.body.data.completion.missingFields).toContain(
+        'displayName',
+      )
+      expect(
+        await prisma.learnerProfile.findUnique({ where: { userId: user.id } }),
+      ).not.toBeNull()
     })
 
     it('returns onboarding state and outstanding required steps', async () => {
       const { user, auth } = await createLearner()
       await prisma.onboardingProgress.create({
-        data: { userId: user.id, currentStep: 'profile_basics', completedSteps: ['profile_basics'] },
+        data: {
+          userId: user.id,
+          currentStep: 'profile_basics',
+          completedSteps: ['profile_basics'],
+        },
       })
 
-      const response = await request(app).get('/api/v1/users/me').set('Authorization', auth).expect(200)
+      const response = await request(app)
+        .get('/api/v1/users/me')
+        .set('Authorization', auth)
+        .expect(200)
 
       expect(response.body.data.onboarding.status).toBe('in_progress')
-      expect(response.body.data.onboarding.requiredStepsRemaining).toEqual(['consent'])
+      expect(response.body.data.onboarding.requiredStepsRemaining).toEqual([
+        'consent',
+      ])
     })
 
     it('reports null onboarding for a learner who never started', async () => {
       const { auth } = await createLearner()
 
-      const response = await request(app).get('/api/v1/users/me').set('Authorization', auth).expect(200)
+      const response = await request(app)
+        .get('/api/v1/users/me')
+        .set('Authorization', auth)
+        .expect(200)
 
       expect(response.body.data.onboarding).toBeNull()
     })
@@ -209,7 +269,10 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
         },
       })
 
-      const partial = await request(app).get('/api/v1/users/me').set('Authorization', auth).expect(200)
+      const partial = await request(app)
+        .get('/api/v1/users/me')
+        .set('Authorization', auth)
+        .expect(200)
       expect(partial.body.data.requiredConsentsGranted).toBe(false)
 
       await prisma.consentRecord.create({
@@ -224,7 +287,10 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
         },
       })
 
-      const complete = await request(app).get('/api/v1/users/me').set('Authorization', auth).expect(200)
+      const complete = await request(app)
+        .get('/api/v1/users/me')
+        .set('Authorization', auth)
+        .expect(200)
       expect(complete.body.data.requiredConsentsGranted).toBe(true)
       expect(complete.body.data.consents).toHaveLength(2)
     })
@@ -233,14 +299,23 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
       const { user, auth } = await createLearner()
       await prisma.user.delete({ where: { id: user.id } })
 
-      await request(app).get('/api/v1/users/me').set('Authorization', auth).expect(404)
+      await request(app)
+        .get('/api/v1/users/me')
+        .set('Authorization', auth)
+        .expect(404)
     })
 
     it('returns 404 for a tombstoned account', async () => {
       const { user, auth } = await createLearner()
-      await prisma.user.update({ where: { id: user.id }, data: { status: 'DELETED' } })
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { status: 'DELETED' },
+      })
 
-      await request(app).get('/api/v1/users/me').set('Authorization', auth).expect(404)
+      await request(app)
+        .get('/api/v1/users/me')
+        .set('Authorization', auth)
+        .expect(404)
     })
   })
 
@@ -262,7 +337,9 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
         .send({ bio: 'Building on Stellar' })
         .expect(200)
 
-      const stored = await prisma.learnerProfile.findUnique({ where: { userId: user.id } })
+      const stored = await prisma.learnerProfile.findUnique({
+        where: { userId: user.id },
+      })
 
       expect(stored?.displayName).toBe('Ada Lovelace')
       expect(stored?.country).toBe('NG')
@@ -275,11 +352,18 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
       const response = await request(app)
         .patch('/api/v1/users/me')
         .set('Authorization', auth)
-        .send({ displayName: 'Ada', bio: 'hi', country: 'NG', timezone: 'Africa/Lagos' })
+        .send({
+          displayName: 'Ada',
+          bio: 'hi',
+          country: 'NG',
+          timezone: 'Africa/Lagos',
+        })
         .expect(200)
 
       expect(response.body.data.completion.percent).toBe(50)
-      expect(response.body.data.completion.missingFields).not.toContain('displayName')
+      expect(response.body.data.completion.missingFields).not.toContain(
+        'displayName',
+      )
     })
 
     it.each([
@@ -294,15 +378,25 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
       const { user, auth } = await createLearner()
       const before = await prisma.user.findUnique({ where: { id: user.id } })
 
-      await request(app).patch('/api/v1/users/me').set('Authorization', auth).send(body).expect(400)
+      await request(app)
+        .patch('/api/v1/users/me')
+        .set('Authorization', auth)
+        .send(body)
+        .expect(400)
 
-      expect(await prisma.user.findUnique({ where: { id: user.id } })).toEqual(before)
+      expect(await prisma.user.findUnique({ where: { id: user.id } })).toEqual(
+        before,
+      )
     })
 
     it('rejects an empty body', async () => {
       const { auth } = await createLearner()
 
-      await request(app).patch('/api/v1/users/me').set('Authorization', auth).send({}).expect(400)
+      await request(app)
+        .patch('/api/v1/users/me')
+        .set('Authorization', auth)
+        .send({})
+        .expect(400)
     })
 
     it('rejects an out-of-range value without writing a partial update', async () => {
@@ -314,7 +408,9 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
         .send({ displayName: 'Ada', level: 'wizard' })
         .expect(400)
 
-      expect(await prisma.learnerProfile.findUnique({ where: { userId: user.id } })).toBeNull()
+      expect(
+        await prisma.learnerProfile.findUnique({ where: { userId: user.id } }),
+      ).toBeNull()
     })
 
     it('cannot touch another learner’s profile', async () => {
@@ -347,8 +443,13 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
         .send({ displayName: 'Ada Lovelace', bio: 'private medical history' })
         .expect(200)
 
-      const profile = await prisma.learnerProfile.findUnique({ where: { userId: user.id } })
-      const events = await auditEventsFor(profile!.id, 'learner_profile.updated')
+      const profile = await prisma.learnerProfile.findUnique({
+        where: { userId: user.id },
+      })
+      const events = await auditEventsFor(
+        profile!.id,
+        'learner_profile.updated',
+      )
 
       expect(events).toHaveLength(1)
       expect(events[0].actorType).toBe('USER')
@@ -382,7 +483,9 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
     })
 
     it('returns 404 for an unknown learner', async () => {
-      await request(app).get('/api/v1/users/00000000-0000-4000-8000-000000000000').expect(404)
+      await request(app)
+        .get('/api/v1/users/00000000-0000-4000-8000-000000000000')
+        .expect(404)
     })
 
     it('serves the public subset for a public profile', async () => {
@@ -401,9 +504,15 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
         },
       })
 
-      const response = await request(app).get(`/api/v1/users/${user.id}`).expect(200)
+      const response = await request(app)
+        .get(`/api/v1/users/${user.id}`)
+        .expect(200)
 
-      expect(response.body.data).toMatchObject({ visible: true, displayName: 'Ada', country: 'NG' })
+      expect(response.body.data).toMatchObject({
+        visible: true,
+        displayName: 'Ada',
+        country: 'NG',
+      })
       expect(response.body.data).not.toHaveProperty('goals')
       expect(response.body.data).not.toHaveProperty('timezone')
       expect(response.body.data).not.toHaveProperty('languages')
@@ -415,7 +524,9 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
         data: { userId: user.id, displayName: 'Ada', visibility: 'public' },
       })
 
-      const response = await request(app).get(`/api/v1/users/${user.id}`).expect(200)
+      const response = await request(app)
+        .get(`/api/v1/users/${user.id}`)
+        .expect(200)
       const body = JSON.stringify(response.body)
 
       expect(body).not.toContain(user.email)
@@ -434,7 +545,9 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
         data: { userId: user.id, displayName: 'Ada', visibility: 'private' },
       })
 
-      const response = await request(app).get(`/api/v1/users/${user.id}`).expect(200)
+      const response = await request(app)
+        .get(`/api/v1/users/${user.id}`)
+        .expect(200)
 
       expect(response.body.data).toEqual({ id: profile.id, visible: false })
     })
@@ -445,7 +558,9 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
         data: { userId: user.id, displayName: 'Ada', visibility: 'employer' },
       })
 
-      const response = await request(app).get(`/api/v1/users/${user.id}`).expect(200)
+      const response = await request(app)
+        .get(`/api/v1/users/${user.id}`)
+        .expect(200)
 
       expect(response.body.data.visible).toBe(false)
       expect(response.body.data).not.toHaveProperty('displayName')
@@ -468,7 +583,9 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
         },
       })
 
-      const response = await request(app).get(`/api/v1/users/${user.id}`).expect(200)
+      const response = await request(app)
+        .get(`/api/v1/users/${user.id}`)
+        .expect(200)
 
       expect(response.body.data.visible).toBe(false)
     })
@@ -490,24 +607,28 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
         },
       })
 
-      const response = await request(app).get(`/api/v1/users/${user.id}`).expect(200)
+      const response = await request(app)
+        .get(`/api/v1/users/${user.id}`)
+        .expect(200)
 
       expect(response.body.data.visible).toBe(true)
     })
 
     it.each(['DEACTIVATED', 'PENDING_DELETION'])(
       'redacts a public profile for a %s account',
-      async status => {
+      async (status) => {
         const { user } = await createLearner()
         await prisma.learnerProfile.create({
           data: { userId: user.id, displayName: 'Ada', visibility: 'public' },
         })
         await prisma.user.update({ where: { id: user.id }, data: { status } })
 
-        const response = await request(app).get(`/api/v1/users/${user.id}`).expect(200)
+        const response = await request(app)
+          .get(`/api/v1/users/${user.id}`)
+          .expect(200)
 
         expect(response.body.data.visible).toBe(false)
-      }
+      },
     )
 
     it('excludes an archived profile entirely', async () => {
@@ -535,7 +656,9 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
         .get(`/api/v1/users/${user.id}`)
         .set('Authorization', auth)
         .expect(200)
-      const anonymous = await request(app).get(`/api/v1/users/${user.id}`).expect(200)
+      const anonymous = await request(app)
+        .get(`/api/v1/users/${user.id}`)
+        .expect(200)
 
       expect(asOwner.body).toEqual(anonymous.body)
       expect(asOwner.body.data.visible).toBe(false)
@@ -612,9 +735,14 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
       expect(after?.password).not.toBe(before?.password)
       expect(after?.password).not.toBe('Another1!Pass')
 
-      expect((await prisma.session.findUnique({ where: { id: session.id } }))?.isRevoked).toBe(true)
       expect(
-        await prisma.refreshToken.count({ where: { sessionId: session.id, status: 'REVOKED' } })
+        (await prisma.session.findUnique({ where: { id: session.id } }))
+          ?.isRevoked,
+      ).toBe(true)
+      expect(
+        await prisma.refreshToken.count({
+          where: { sessionId: session.id, status: 'REVOKED' },
+        }),
       ).toBe(1)
     })
 
@@ -669,14 +797,19 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
         .send({ walletAddress: PUBLIC_KEY_A })
         .expect(200)
 
-      expect((await prisma.user.findUnique({ where: { id: user.id } }))?.walletAddress).toBe(
-        PUBLIC_KEY_A
-      )
-      expect(await auditEventsFor(user.id, 'user.wallet_address_changed')).toHaveLength(1)
+      expect(
+        (await prisma.user.findUnique({ where: { id: user.id } }))
+          ?.walletAddress,
+      ).toBe(PUBLIC_KEY_A)
+      expect(
+        await auditEventsFor(user.id, 'user.wallet_address_changed'),
+      ).toHaveLength(1)
     })
 
     it('is idempotent and writes no second audit event', async () => {
-      const { user, auth } = await createLearner({ walletAddress: PUBLIC_KEY_A })
+      const { user, auth } = await createLearner({
+        walletAddress: PUBLIC_KEY_A,
+      })
 
       const response = await request(app)
         .patch('/api/v1/users/wallet')
@@ -685,7 +818,9 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
         .expect(200)
 
       expect(response.body.message).toBe('Wallet address unchanged')
-      expect(await auditEventsFor(user.id, 'user.wallet_address_changed')).toHaveLength(0)
+      expect(
+        await auditEventsFor(user.id, 'user.wallet_address_changed'),
+      ).toHaveLength(0)
     })
 
     it('returns 409 when the address is already claimed by another account', async () => {
@@ -699,12 +834,18 @@ describe.runIf(dbAvailable)('Identity and profile API', () => {
         .expect(409)
 
       expect(response.body.code).toBe('WALLET_ADDRESS_TAKEN')
-      expect((await prisma.user.findUnique({ where: { id: user.id } }))?.walletAddress).toBeNull()
+      expect(
+        (await prisma.user.findUnique({ where: { id: user.id } }))
+          ?.walletAddress,
+      ).toBeNull()
     })
 
     it('returns 404 for a tombstoned account', async () => {
       const { user, auth } = await createLearner()
-      await prisma.user.update({ where: { id: user.id }, data: { status: 'DELETED' } })
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { status: 'DELETED' },
+      })
 
       await request(app)
         .patch('/api/v1/users/wallet')

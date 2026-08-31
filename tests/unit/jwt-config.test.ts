@@ -25,7 +25,8 @@ describe('config/jwt — key rotation and token pinning', () => {
     vi.stubEnv('NODE_ENV', 'test')
     vi.stubEnv('JWT_SECRET', '')
 
-    const { issueAccessToken, verifyAccessToken } = await import('../../src/config/jwt')
+    const { issueAccessToken, verifyAccessToken } =
+      await import('../../src/config/jwt')
     const token = issueAccessToken({ id: 'u1', role: 'learner' })
     const claims = verifyAccessToken(token)
 
@@ -70,7 +71,10 @@ describe('config/jwt — key rotation and token pinning', () => {
 
     expect(claims.id).toBe('u1')
 
-    const newToken = rotatedModule.issueAccessToken({ id: 'u2', role: 'employer' })
+    const newToken = rotatedModule.issueAccessToken({
+      id: 'u2',
+      role: 'employer',
+    })
     expect(rotatedModule.verifyAccessToken(newToken).id).toBe('u2')
   })
 
@@ -80,7 +84,8 @@ describe('config/jwt — key rotation and token pinning', () => {
     vi.stubEnv('JWT_KEY_ID', 'key-new')
     vi.stubEnv('JWT_PREVIOUS_KEYS', '')
 
-    const { issueAccessToken, verifyAccessToken } = await import('../../src/config/jwt')
+    const { issueAccessToken, verifyAccessToken } =
+      await import('../../src/config/jwt')
     const jwtModule = (await import('jsonwebtoken')).default
     const forged = jwtModule.sign({ id: 'attacker' }, 'guessed-secret', {
       keyid: 'never-registered',
@@ -91,6 +96,8 @@ describe('config/jwt — key rotation and token pinning', () => {
 
     expect(() => verifyAccessToken(forged)).toThrow()
     // sanity: legitimate tokens from the same module still verify fine
-    expect(() => verifyAccessToken(issueAccessToken({ id: 'u1', role: 'learner' }))).not.toThrow()
+    expect(() =>
+      verifyAccessToken(issueAccessToken({ id: 'u1', role: 'learner' })),
+    ).not.toThrow()
   })
 })

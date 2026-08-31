@@ -60,8 +60,8 @@ describe('RewardController', () => {
       // Balance uses BigInt stroops internally; controller serialises to XLM strings
       const mockBalance = {
         availableStroops: 1_005_000_000n, // 100.5 XLM
-        pendingStroops:   100_000_000n,   // 10 XLM
-        lifetimeStroops:  1_500_000_000n, // 150 XLM
+        pendingStroops: 100_000_000n, // 10 XLM
+        lifetimeStroops: 1_500_000_000n, // 150 XLM
         updatedAt: new Date(),
       }
 
@@ -82,8 +82,8 @@ describe('RewardController', () => {
             balance: {
               // Amounts are serialised to 7-decimal XLM strings at the API boundary
               available: '100.5000000',
-              pending:   '10.0000000',
-              lifetime:  '150.0000000',
+              pending: '10.0000000',
+              lifetime: '150.0000000',
             },
           }),
         }),
@@ -324,7 +324,10 @@ describe('RewardController', () => {
       await controller.withdraw(mockRequest as any, mockResponse as any, nextFn)
 
       // Controller converts XLM string → stroops and passes BigInt to service
-      expect(hasSufficientBalanceSpy).toHaveBeenCalledWith('user-123', 500_000_000n)
+      expect(hasSufficientBalanceSpy).toHaveBeenCalledWith(
+        'user-123',
+        500_000_000n,
+      )
       expect(processWithdrawalSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: 'user-123',
@@ -406,7 +409,9 @@ describe('RewardController', () => {
 
       expect(nextFn).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: expect.stringMatching(/Amount must be greater than 0|Invalid amount/),
+          message: expect.stringMatching(
+            /Amount must be greater than 0|Invalid amount/,
+          ),
         }),
       )
     })
@@ -437,8 +442,8 @@ describe('RewardController', () => {
       // getBalance is called to format the error message — return BigInt stroops
       getBalanceSpy.mockReturnValue({
         availableStroops: 500_000_000n, // 50 XLM
-        pendingStroops:   0n,
-        lifetimeStroops:  1_000_000_000n,
+        pendingStroops: 0n,
+        lifetimeStroops: 1_000_000_000n,
       })
       const nextFn = createNextFunction()
 

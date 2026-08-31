@@ -44,7 +44,10 @@ export class WalletStatusController {
     }
 
     try {
-      const { entries, nextCursor } = await this.service.getHistory(req.user!.id, parsed.data)
+      const { entries, nextCursor } = await this.service.getHistory(
+        req.user!.id,
+        parsed.data,
+      )
       res.status(200).json({
         success: true,
         data: entries,
@@ -63,12 +66,17 @@ export class WalletStatusController {
   private respondWithError(res: Response, error: unknown): void {
     if (error instanceof WalletStatusError) {
       const statusCode = PROVIDER_ERROR_STATUS[error.code] ?? 500
-      res.status(statusCode).json({ success: false, error: { code: error.code, message: error.message } })
+      res.status(statusCode).json({
+        success: false,
+        error: { code: error.code, message: error.message },
+      })
 
       return
     }
 
     logger.error('[WalletStatusController] Unexpected error:', error)
-    res.status(500).json({ success: false, error: { code: 'INTERNAL_SERVER_ERROR' } })
+    res
+      .status(500)
+      .json({ success: false, error: { code: 'INTERNAL_SERVER_ERROR' } })
   }
 }

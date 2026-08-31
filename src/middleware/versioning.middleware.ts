@@ -11,7 +11,7 @@ export interface DeprecationOptions {
 export const apiVersionHeader = (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void => {
   res.setHeader('X-API-Version', 'v1')
   next()
@@ -22,7 +22,7 @@ export const apiVersionHeader = (
  */
 export const setDeprecationHeaders = (
   res: Response,
-  options: DeprecationOptions = {}
+  options: DeprecationOptions = {},
 ): void => {
   res.setHeader('Deprecation', 'true')
 

@@ -108,14 +108,17 @@ function fakeTransaction(result: unknown = baseProfile) {
       callback({
         auditEvent: { create: auditCreate },
         learnerProfile: { upsert: profileUpsert },
-      })
+      }),
   )
 
   return { calls, auditCreate, profileUpsert }
 }
 
-function auditRow(auditCreate: ReturnType<typeof vi.fn>): Record<string, unknown> {
-  return (auditCreate.mock.calls[0][0] as { data: Record<string, unknown> }).data
+function auditRow(
+  auditCreate: ReturnType<typeof vi.fn>,
+): Record<string, unknown> {
+  return (auditCreate.mock.calls[0][0] as { data: Record<string, unknown> })
+    .data
 }
 
 describe('ProfileService', () => {
@@ -145,7 +148,9 @@ describe('ProfileService', () => {
     it('preserves omitted fields via a partial upsert', async () => {
       mockUpsert.mockResolvedValue({ ...baseProfile, displayName: 'New Name' })
 
-      const result = await service.updateProfile('user1', { displayName: 'New Name' })
+      const result = await service.updateProfile('user1', {
+        displayName: 'New Name',
+      })
 
       expect(mockUpsert).toHaveBeenCalledWith({
         where: { userId: 'user1' },
@@ -160,7 +165,11 @@ describe('ProfileService', () => {
     it('writes the profile change and its audit event in one transaction', async () => {
       const { calls, auditCreate, profileUpsert } = fakeTransaction()
 
-      await service.updateProfileAudited('user1', { displayName: 'Ada' }, ownerContext)
+      await service.updateProfileAudited(
+        'user1',
+        { displayName: 'Ada' },
+        ownerContext,
+      )
 
       expect(mockTransaction).toHaveBeenCalledOnce()
       expect(profileUpsert).toHaveBeenCalledWith({
@@ -177,7 +186,11 @@ describe('ProfileService', () => {
     it('attributes the event to the owner and the affected profile row', async () => {
       const { auditCreate } = fakeTransaction()
 
-      await service.updateProfileAudited('user1', { displayName: 'Ada' }, ownerContext)
+      await service.updateProfileAudited(
+        'user1',
+        { displayName: 'Ada' },
+        ownerContext,
+      )
 
       expect(auditRow(auditCreate)).toMatchObject({
         action: 'learner_profile.updated',
@@ -196,7 +209,7 @@ describe('ProfileService', () => {
       await service.updateProfileAudited(
         'user1',
         { bio: 'my private medical history', displayName: 'Ada Lovelace' },
-        ownerContext
+        ownerContext,
       )
 
       const metadata = auditRow(auditCreate).metadata as string
@@ -211,7 +224,11 @@ describe('ProfileService', () => {
       mockTransaction.mockRejectedValue(new Error('audit trail unavailable'))
 
       await expect(
-        service.updateProfileAudited('user1', { displayName: 'Ada' }, ownerContext)
+        service.updateProfileAudited(
+          'user1',
+          { displayName: 'Ada' },
+          ownerContext,
+        ),
       ).rejects.toThrow('audit trail unavailable')
     })
 
@@ -222,8 +239,8 @@ describe('ProfileService', () => {
         service.updateProfileAudited(
           'user1',
           { displayName: 'Ada' },
-          { ...ownerContext, actor: { type: ActorType.USER } }
-        )
+          { ...ownerContext, actor: { type: ActorType.USER } },
+        ),
       ).rejects.toThrow(/unattributable/)
       expect(mockTransaction).not.toHaveBeenCalled()
     })
@@ -254,7 +271,10 @@ describe('ProfileService', () => {
     })
 
     it('returns null for a tombstoned account instead of materialising a profile', async () => {
-      mockUserFindUnique.mockResolvedValue({ ...baseAccount, status: 'DELETED' })
+      mockUserFindUnique.mockResolvedValue({
+        ...baseAccount,
+        status: 'DELETED',
+      })
 
       expect(await service.getOwnerAccountProfile('user1')).toBeNull()
       expect(mockUpsert).not.toHaveBeenCalled()
@@ -304,16 +324,44 @@ describe('ProfileService', () => {
     it('reports required consents as granted only when every required purpose is granted', async () => {
       mockUserFindUnique.mockResolvedValue(baseAccount)
       mockConsentFindMany.mockResolvedValue([
-        { purpose: 'terms_of_service', status: 'granted', required: true, policyVersion: '1', grantedAt: new Date(), withdrawnAt: null },
-        { purpose: 'privacy_policy', status: 'withdrawn', required: true, policyVersion: '1', grantedAt: null, withdrawnAt: new Date() },
+        {
+          purpose: 'terms_of_service',
+          status: 'granted',
+          required: true,
+          policyVersion: '1',
+          grantedAt: new Date(),
+          withdrawnAt: null,
+        },
+        {
+          purpose: 'privacy_policy',
+          status: 'withdrawn',
+          required: true,
+          policyVersion: '1',
+          grantedAt: null,
+          withdrawnAt: new Date(),
+        },
       ])
 
       const partial = await service.getOwnerAccountProfile('user1')
       expect(partial?.requiredConsentsGranted).toBe(false)
 
       mockConsentFindMany.mockResolvedValue([
-        { purpose: 'terms_of_service', status: 'granted', required: true, policyVersion: '1', grantedAt: new Date(), withdrawnAt: null },
-        { purpose: 'privacy_policy', status: 'granted', required: true, policyVersion: '1', grantedAt: new Date(), withdrawnAt: null },
+        {
+          purpose: 'terms_of_service',
+          status: 'granted',
+          required: true,
+          policyVersion: '1',
+          grantedAt: new Date(),
+          withdrawnAt: null,
+        },
+        {
+          purpose: 'privacy_policy',
+          status: 'granted',
+          required: true,
+          policyVersion: '1',
+          grantedAt: new Date(),
+          withdrawnAt: null,
+        },
       ])
 
       const complete = await service.getOwnerAccountProfile('user1')
@@ -343,20 +391,37 @@ describe('ProfileService', () => {
     it('redacts fields when visibility is below employer', async () => {
       mockFindFirst.mockResolvedValue(baseProfile)
 
-      expect(await service.getEmployerView('user1')).toEqual({ id: 'profile1', visible: false })
+      expect(await service.getEmployerView('user1')).toEqual({
+        id: 'profile1',
+        visible: false,
+      })
     })
 
     it('exposes the employer subset when visibility allows it', async () => {
-      mockFindFirst.mockResolvedValue({ ...baseProfile, visibility: 'employer' })
+      mockFindFirst.mockResolvedValue({
+        ...baseProfile,
+        visibility: 'employer',
+      })
 
-      expect(await service.getEmployerView('user1')).toMatchObject({ visible: true, displayName: 'Ada' })
+      expect(await service.getEmployerView('user1')).toMatchObject({
+        visible: true,
+        displayName: 'Ada',
+      })
     })
 
     it('redacts an employer-visible profile once data-sharing consent is withdrawn', async () => {
-      mockFindFirst.mockResolvedValue({ ...baseProfile, visibility: 'employer' })
-      mockConsentFindMany.mockResolvedValue([{ purpose: 'data_sharing', status: 'withdrawn' }])
+      mockFindFirst.mockResolvedValue({
+        ...baseProfile,
+        visibility: 'employer',
+      })
+      mockConsentFindMany.mockResolvedValue([
+        { purpose: 'data_sharing', status: 'withdrawn' },
+      ])
 
-      expect(await service.getEmployerView('user1')).toEqual({ id: 'profile1', visible: false })
+      expect(await service.getEmployerView('user1')).toEqual({
+        id: 'profile1',
+        visible: false,
+      })
     })
   })
 
@@ -378,7 +443,10 @@ describe('ProfileService', () => {
     it('redacts fields when visibility is below public', async () => {
       mockFindFirst.mockResolvedValue(baseProfile)
 
-      expect(await service.getPublicView('user1')).toEqual({ id: 'profile1', visible: false })
+      expect(await service.getPublicView('user1')).toEqual({
+        id: 'profile1',
+        visible: false,
+      })
     })
 
     it('exposes the public subset when visibility is public', async () => {
@@ -393,7 +461,10 @@ describe('ProfileService', () => {
     it('never leaks account-private fields, even for a fully public profile', async () => {
       mockFindFirst.mockResolvedValue({ ...baseProfile, visibility: 'public' })
 
-      const result = (await service.getPublicView('user1')) as Record<string, unknown>
+      const result = (await service.getPublicView('user1')) as Record<
+        string,
+        unknown
+      >
 
       expect(result).not.toHaveProperty('userId')
       expect(result).not.toHaveProperty('status')
@@ -405,19 +476,30 @@ describe('ProfileService', () => {
 
     it('redacts a public profile once data-sharing consent is withdrawn', async () => {
       mockFindFirst.mockResolvedValue({ ...baseProfile, visibility: 'public' })
-      mockConsentFindMany.mockResolvedValue([{ purpose: 'data_sharing', status: 'withdrawn' }])
+      mockConsentFindMany.mockResolvedValue([
+        { purpose: 'data_sharing', status: 'withdrawn' },
+      ])
 
-      expect(await service.getPublicView('user1')).toEqual({ id: 'profile1', visible: false })
+      expect(await service.getPublicView('user1')).toEqual({
+        id: 'profile1',
+        visible: false,
+      })
     })
 
     it.each(['DEACTIVATED', 'PENDING_DELETION'])(
       'redacts a public profile for a %s account',
-      async status => {
-        mockFindFirst.mockResolvedValue({ ...baseProfile, visibility: 'public' })
+      async (status) => {
+        mockFindFirst.mockResolvedValue({
+          ...baseProfile,
+          visibility: 'public',
+        })
         mockUserFindUnique.mockResolvedValue({ status })
 
-        expect(await service.getPublicView('user1')).toEqual({ id: 'profile1', visible: false })
-      }
+        expect(await service.getPublicView('user1')).toEqual({
+          id: 'profile1',
+          visible: false,
+        })
+      },
     )
   })
 
@@ -431,11 +513,19 @@ describe('ProfileService', () => {
 
     it('joins account-private fields onto the full profile', async () => {
       mockUpsert.mockResolvedValue(baseProfile)
-      mockUserFindUnique.mockResolvedValue({ status: 'ACTIVE', isVerified: true, phoneVerifiedAt: null })
+      mockUserFindUnique.mockResolvedValue({
+        status: 'ACTIVE',
+        isVerified: true,
+        phoneVerifiedAt: null,
+      })
 
       const result = await service.getPrivateView('user1')
 
-      expect(result).toMatchObject({ displayName: 'Ada', status: 'ACTIVE', isVerified: true })
+      expect(result).toMatchObject({
+        displayName: 'Ada',
+        status: 'ACTIVE',
+        isVerified: true,
+      })
     })
   })
 })

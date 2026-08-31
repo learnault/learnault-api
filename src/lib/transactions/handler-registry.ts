@@ -12,7 +12,7 @@ export class UnknownEventTypeError extends Error {
   constructor(handlerName: string, eventType: string, eventVersion: number) {
     super(
       `Outbox handler "${handlerName}" targets ${eventType} v${eventVersion}, ` +
-        'which has no registered event schema'
+        'which has no registered event schema',
     )
     this.name = 'UnknownEventTypeError'
   }
@@ -22,7 +22,7 @@ export class UnhandledEventTypeError extends Error {
   constructor(missing: string[]) {
     super(
       `No outbox handler registered for emitted event type(s): ${missing.join(', ')}. ` +
-        'Register a handler or stop emitting the event.'
+        'Register a handler or stop emitting the event.',
     )
     this.name = 'UnhandledEventTypeError'
   }
@@ -36,7 +36,9 @@ export class OutboxHandlerRegistry {
   private readonly byEvent = new Map<string, OutboxEventHandler[]>()
   private readonly byName = new Map<string, OutboxEventHandler>()
 
-  constructor(private readonly schemas: EventSchemaRegistry = getEventSchemaRegistry()) {}
+  constructor(
+    private readonly schemas: EventSchemaRegistry = getEventSchemaRegistry(),
+  ) {}
 
   register(handler: OutboxEventHandler): void {
     if (this.byName.has(handler.name)) {
@@ -44,7 +46,11 @@ export class OutboxHandlerRegistry {
     }
 
     if (!this.schemas.has(handler.eventType, handler.eventVersion)) {
-      throw new UnknownEventTypeError(handler.name, handler.eventType, handler.eventVersion)
+      throw new UnknownEventTypeError(
+        handler.name,
+        handler.eventType,
+        handler.eventVersion,
+      )
     }
 
     const key = keyOf(handler.eventType, handler.eventVersion)
@@ -67,7 +73,11 @@ export class OutboxHandlerRegistry {
     return [...this.byName.keys()].sort()
   }
 
-  describe(): Array<{ eventType: string; eventVersion: number; handlers: string[] }> {
+  describe(): Array<{
+    eventType: string
+    eventVersion: number
+    handlers: string[]
+  }> {
     return [...this.byEvent.entries()]
       .map(([key, handlers]) => {
         const [eventType, version] = key.split(':v')
@@ -75,16 +85,18 @@ export class OutboxHandlerRegistry {
         return {
           eventType,
           eventVersion: Number(version),
-          handlers: handlers.map(h => h.name).sort(),
+          handlers: handlers.map((h) => h.name).sort(),
         }
       })
       .sort((a, b) => a.eventType.localeCompare(b.eventType))
   }
 
-  assertHandlersFor(emitted: Array<{ eventType: string; eventVersion: number }>): void {
+  assertHandlersFor(
+    emitted: Array<{ eventType: string; eventVersion: number }>,
+  ): void {
     const missing = emitted
-      .filter(e => this.handlersFor(e.eventType, e.eventVersion).length === 0)
-      .map(e => keyOf(e.eventType, e.eventVersion))
+      .filter((e) => this.handlersFor(e.eventType, e.eventVersion).length === 0)
+      .map((e) => keyOf(e.eventType, e.eventVersion))
 
     if (missing.length > 0) {
       throw new UnhandledEventTypeError(missing)

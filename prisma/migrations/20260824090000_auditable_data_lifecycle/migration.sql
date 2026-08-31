@@ -143,11 +143,18 @@ ALTER TABLE "Module"
     ADD COLUMN "archivedById" TEXT,
     ADD COLUMN "archivedReason" TEXT;
 
--- AlterTable: avatars
-ALTER TABLE "avatars"
-    ADD COLUMN "archivedAt" TIMESTAMP(3),
-    ADD COLUMN "archivedById" TEXT,
-    ADD COLUMN "archivedReason" TEXT;
+-- `avatars` was introduced after this lifecycle migration in the schema
+-- history. Keep this migration deployable on a clean database while applying
+-- the archive policy when the table already exists.
+DO $$
+BEGIN
+    IF to_regclass('public.avatars') IS NOT NULL THEN
+        ALTER TABLE "avatars"
+            ADD COLUMN "archivedAt" TIMESTAMP(3),
+            ADD COLUMN "archivedById" TEXT,
+            ADD COLUMN "archivedReason" TEXT;
+    END IF;
+END $$;
 
 -- AlterTable: referral_codes
 ALTER TABLE "referral_codes"
@@ -168,7 +175,12 @@ ALTER TABLE "WebhookEndpoint"
 -- schema.prisma and no drift is reported.
 CREATE INDEX "learner_profiles_archivedAt_idx" ON "learner_profiles"("archivedAt");
 CREATE INDEX "Module_archivedAt_idx" ON "Module"("archivedAt");
-CREATE INDEX "avatars_archivedAt_idx" ON "avatars"("archivedAt");
+DO $$
+BEGIN
+    IF to_regclass('public.avatars') IS NOT NULL THEN
+        CREATE INDEX "avatars_archivedAt_idx" ON "avatars"("archivedAt");
+    END IF;
+END $$;
 CREATE INDEX "referral_codes_archivedAt_idx" ON "referral_codes"("archivedAt");
 CREATE INDEX "WebhookEndpoint_archivedAt_idx" ON "WebhookEndpoint"("archivedAt");
 
@@ -179,8 +191,13 @@ ALTER TABLE "learner_profiles" ADD CONSTRAINT "learner_profiles_archive_reason_c
     CHECK ("archivedAt" IS NULL OR "archivedReason" IS NOT NULL);
 ALTER TABLE "Module" ADD CONSTRAINT "Module_archive_reason_check"
     CHECK ("archivedAt" IS NULL OR "archivedReason" IS NOT NULL);
-ALTER TABLE "avatars" ADD CONSTRAINT "avatars_archive_reason_check"
-    CHECK ("archivedAt" IS NULL OR "archivedReason" IS NOT NULL);
+DO $$
+BEGIN
+    IF to_regclass('public.avatars') IS NOT NULL THEN
+        ALTER TABLE "avatars" ADD CONSTRAINT "avatars_archive_reason_check"
+            CHECK ("archivedAt" IS NULL OR "archivedReason" IS NOT NULL);
+    END IF;
+END $$;
 ALTER TABLE "referral_codes" ADD CONSTRAINT "referral_codes_archive_reason_check"
     CHECK ("archivedAt" IS NULL OR "archivedReason" IS NOT NULL);
 ALTER TABLE "WebhookEndpoint" ADD CONSTRAINT "WebhookEndpoint_archive_reason_check"

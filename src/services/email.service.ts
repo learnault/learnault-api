@@ -25,7 +25,7 @@ export class EmailService {
     to: string,
     subject: string,
     body: string,
-    type: string = 'EMAIL_VERIFICATION'
+    type: string = 'EMAIL_VERIFICATION',
   ): Promise<EmailDeliveryRecord> {
     const delivery = await prisma.emailDelivery.create({
       data: {
@@ -66,7 +66,7 @@ export class EmailService {
       // TODO: Replace with real email provider (SendGrid, SES, etc.)
       // In development, log to console
       logger.info(
-        `[EmailService] Sending email to=${delivery.to} subject="${delivery.subject}"`
+        `[EmailService] Sending email to=${delivery.to} subject="${delivery.subject}"`,
       )
 
       await prisma.emailDelivery.update({
@@ -74,11 +74,17 @@ export class EmailService {
         data: { status: 'sent', sentAt: new Date() },
       })
     } catch (error: any) {
-      await this.handleFailure(delivery, error.message ?? 'Email provider error')
+      await this.handleFailure(
+        delivery,
+        error.message ?? 'Email provider error',
+      )
     }
   }
 
-  private async handleFailure(delivery: EmailDeliveryRecord, error: string): Promise<void> {
+  private async handleFailure(
+    delivery: EmailDeliveryRecord,
+    error: string,
+  ): Promise<void> {
     const nextAttemptCount = delivery.attemptCount + 1
 
     if (nextAttemptCount >= delivery.maxAttempts) {

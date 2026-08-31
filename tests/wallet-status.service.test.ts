@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { WalletStatusService, type WalletStatusStellarProvider } from '../src/services/wallet-status.service'
+import {
+  WalletStatusService,
+  type WalletStatusStellarProvider,
+} from '../src/services/wallet-status.service'
 import { StellarServiceError } from '../src/services/stellar.service'
 import { WalletStatusError } from '../src/types/wallet-status.types'
 import type { WalletProvisioningRepository } from '../src/services/wallet-provisioning.repository'
@@ -36,14 +39,19 @@ class StubRepository implements Partial<WalletProvisioningRepository> {
   }
 }
 
-function repositoryFor(record: WalletRecord | null): WalletProvisioningRepository {
+function repositoryFor(
+  record: WalletRecord | null,
+): WalletProvisioningRepository {
   return new StubRepository(record) as unknown as WalletProvisioningRepository
 }
 
 describe('WalletStatusService', () => {
   describe('getStatus', () => {
     it('reports NOT_PROVISIONED when no wallet exists', async () => {
-      const service = new WalletStatusService(repositoryFor(null), {} as WalletStatusStellarProvider)
+      const service = new WalletStatusService(
+        repositoryFor(null),
+        {} as WalletStatusStellarProvider,
+      )
 
       const status = await service.getStatus(OWNER_ID)
 
@@ -57,8 +65,13 @@ describe('WalletStatusService', () => {
     })
 
     it('exposes the public key only when the wallet is ACTIVE', async () => {
-      const repository = repositoryFor(wallet({ status: 'PROVISIONING', publicKey: null }))
-      const service = new WalletStatusService(repository, {} as WalletStatusStellarProvider)
+      const repository = repositoryFor(
+        wallet({ status: 'PROVISIONING', publicKey: null }),
+      )
+      const service = new WalletStatusService(
+        repository,
+        {} as WalletStatusStellarProvider,
+      )
 
       const status = await service.getStatus(OWNER_ID)
 
@@ -77,8 +90,11 @@ describe('WalletStatusService', () => {
       expect(status.status).toBe('UNAVAILABLE')
     })
 
-    it('never exposes another user\'s wallet', async () => {
-      const service = new WalletStatusService(repositoryFor(wallet()), {} as WalletStatusStellarProvider)
+    it("never exposes another user's wallet", async () => {
+      const service = new WalletStatusService(
+        repositoryFor(wallet()),
+        {} as WalletStatusStellarProvider,
+      )
 
       const status = await service.getStatus('someone-else')
 
@@ -107,8 +123,18 @@ describe('WalletStatusService', () => {
             found: true,
             lastModifiedTime: '2026-08-30T00:00:00Z',
             balances: [
-              { assetType: 'native', assetCode: 'XLM', issuer: null, amount: '123.4567890' },
-              { assetType: 'credit_alphanum4', assetCode: 'USDC', issuer: 'GISSUER', amount: '10.0000001' },
+              {
+                assetType: 'native',
+                assetCode: 'XLM',
+                issuer: null,
+                amount: '123.4567890',
+              },
+              {
+                assetType: 'credit_alphanum4',
+                assetCode: 'USDC',
+                issuer: 'GISSUER',
+                amount: '10.0000001',
+              },
             ],
           }
         },
@@ -121,14 +147,28 @@ describe('WalletStatusService', () => {
       expect(balances.publicKey).toBe(PUBLIC_KEY)
       expect(balances.sourceTime).toBe('2026-08-30T00:00:00Z')
       expect(balances.balances).toEqual([
-        { assetType: 'native', assetCode: 'XLM', issuer: null, amount: '123.4567890' },
-        { assetType: 'credit_alphanum4', assetCode: 'USDC', issuer: 'GISSUER', amount: '10.0000001' },
+        {
+          assetType: 'native',
+          assetCode: 'XLM',
+          issuer: null,
+          amount: '123.4567890',
+        },
+        {
+          assetType: 'credit_alphanum4',
+          assetCode: 'USDC',
+          issuer: 'GISSUER',
+          amount: '10.0000001',
+        },
       ])
     })
 
     it('does not show an unfunded (not-yet-on-ledger) account as a zero balance error', async () => {
       const stellar: WalletStatusStellarProvider = {
-        getAccountSnapshot: async () => ({ found: false, lastModifiedTime: null, balances: [] }),
+        getAccountSnapshot: async () => ({
+          found: false,
+          lastModifiedTime: null,
+          balances: [],
+        }),
         getPaymentHistory: async () => ({ records: [], nextCursor: null }),
       }
       const service = new WalletStatusService(repositoryFor(wallet()), stellar)
@@ -141,7 +181,10 @@ describe('WalletStatusService', () => {
     it('normalizes a Horizon timeout to a stable provider error code', async () => {
       const stellar: WalletStatusStellarProvider = {
         getAccountSnapshot: async () => {
-          throw new StellarServiceError('Horizon request timed out', 'HORIZON_TIMEOUT')
+          throw new StellarServiceError(
+            'Horizon request timed out',
+            'HORIZON_TIMEOUT',
+          )
         },
         getPaymentHistory: async () => ({ records: [], nextCursor: null }),
       }
@@ -155,13 +198,18 @@ describe('WalletStatusService', () => {
     it('normalizes Horizon unavailability to a stable provider error code', async () => {
       const stellar: WalletStatusStellarProvider = {
         getAccountSnapshot: async () => {
-          throw new StellarServiceError('Horizon is unavailable', 'HORIZON_UNAVAILABLE')
+          throw new StellarServiceError(
+            'Horizon is unavailable',
+            'HORIZON_UNAVAILABLE',
+          )
         },
         getPaymentHistory: async () => ({ records: [], nextCursor: null }),
       }
       const service = new WalletStatusService(repositoryFor(wallet()), stellar)
 
-      await expect(service.getBalances(OWNER_ID)).rejects.toBeInstanceOf(WalletStatusError)
+      await expect(service.getBalances(OWNER_ID)).rejects.toBeInstanceOf(
+        WalletStatusError,
+      )
     })
   })
 
@@ -182,9 +230,13 @@ describe('WalletStatusService', () => {
       memoType: null,
     }
 
-    it('marks records as incoming or outgoing relative to the owner\'s address', async () => {
+    it("marks records as incoming or outgoing relative to the owner's address", async () => {
       const stellar: WalletStatusStellarProvider = {
-        getAccountSnapshot: async () => ({ found: true, lastModifiedTime: null, balances: [] }),
+        getAccountSnapshot: async () => ({
+          found: true,
+          lastModifiedTime: null,
+          balances: [],
+        }),
         getPaymentHistory: async () => ({
           records: [
             { ...baseRecord, id: 'op-in', to: PUBLIC_KEY, from: 'GOTHER' },
@@ -197,15 +249,29 @@ describe('WalletStatusService', () => {
 
       const page = await service.getHistory(OWNER_ID, {})
 
-      expect(page.entries.map((e) => e.direction)).toEqual(['incoming', 'outgoing'])
+      expect(page.entries.map((e) => e.direction)).toEqual([
+        'incoming',
+        'outgoing',
+      ])
       expect(page.nextCursor).toBe('cursor-2')
     })
 
     it('reports failed transactions with status "failed" rather than success', async () => {
       const stellar: WalletStatusStellarProvider = {
-        getAccountSnapshot: async () => ({ found: true, lastModifiedTime: null, balances: [] }),
+        getAccountSnapshot: async () => ({
+          found: true,
+          lastModifiedTime: null,
+          balances: [],
+        }),
         getPaymentHistory: async () => ({
-          records: [{ ...baseRecord, to: PUBLIC_KEY, from: 'GOTHER', transactionSuccessful: false }],
+          records: [
+            {
+              ...baseRecord,
+              to: PUBLIC_KEY,
+              from: 'GOTHER',
+              transactionSuccessful: false,
+            },
+          ],
           nextCursor: null,
         }),
       }
@@ -218,7 +284,11 @@ describe('WalletStatusService', () => {
 
     it('filters by direction when requested', async () => {
       const stellar: WalletStatusStellarProvider = {
-        getAccountSnapshot: async () => ({ found: true, lastModifiedTime: null, balances: [] }),
+        getAccountSnapshot: async () => ({
+          found: true,
+          lastModifiedTime: null,
+          balances: [],
+        }),
         getPaymentHistory: async () => ({
           records: [
             { ...baseRecord, id: 'op-in', to: PUBLIC_KEY, from: 'GOTHER' },
@@ -238,7 +308,11 @@ describe('WalletStatusService', () => {
     it('preserves the stable cursor for pagination', async () => {
       let receivedCursor: string | undefined
       const stellar: WalletStatusStellarProvider = {
-        getAccountSnapshot: async () => ({ found: true, lastModifiedTime: null, balances: [] }),
+        getAccountSnapshot: async () => ({
+          found: true,
+          lastModifiedTime: null,
+          balances: [],
+        }),
         getPaymentHistory: async (_publicKey, options) => {
           receivedCursor = options?.cursor
 

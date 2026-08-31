@@ -79,7 +79,9 @@ export class QueueMetricsRegistry {
   }
 
   snapshot(): QueueMetricsSnapshot[] {
-    return [...this.queues.values()].sort((a, b) => a.queue.localeCompare(b.queue))
+    return [...this.queues.values()].sort((a, b) =>
+      a.queue.localeCompare(b.queue),
+    )
   }
 
   reset(): void {
@@ -103,7 +105,10 @@ export class QueueMetricsRegistry {
     if (sample.outcome === 'failed') {
       logger.error('[scheduler] queue tick failed', meta)
     } else if (sample.outcome === 'skipped') {
-      logger.debug('[scheduler] queue tick skipped (lease held elsewhere)', meta)
+      logger.debug(
+        '[scheduler] queue tick skipped (lease held elsewhere)',
+        meta,
+      )
     } else {
       logger.info('[scheduler] queue tick', meta)
     }

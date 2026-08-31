@@ -8,7 +8,10 @@ import {
   getOutboxHandlerRegistry,
   OutboxHandlerRegistry,
 } from '../lib/transactions/handler-registry'
-import { createJobLeaseService, JobLeaseService } from '../lib/transactions/job-lease.service'
+import {
+  createJobLeaseService,
+  JobLeaseService,
+} from '../lib/transactions/job-lease.service'
 import logger from '../utils/logger'
 
 export interface OutboxRelayOptions {
@@ -63,7 +66,10 @@ export class OutboxRelay {
     return { materialized, dispatched, failed, unhandled }
   }
 
-  async materializePending(): Promise<{ materialized: number; unhandled: number }> {
+  async materializePending(): Promise<{
+    materialized: number
+    unhandled: number
+  }> {
     const pending = (await this.prisma.outboxEvent.findMany({
       where: { status: 'PENDING', jobAttempts: { none: {} } },
       orderBy: { createdAt: 'asc' },
@@ -82,12 +88,15 @@ export class OutboxRelay {
     let unhandled = 0
 
     for (const event of pending) {
-      const handlers = this.handlers.handlersFor(event.eventType, event.eventVersion)
+      const handlers = this.handlers.handlersFor(
+        event.eventType,
+        event.eventVersion,
+      )
 
       if (handlers.length === 0) {
         unhandled += 1
         this.log.error(
-          `[relay] no handler registered for ${event.eventType} v${event.eventVersion}; dead-lettering event ${event.id}`
+          `[relay] no handler registered for ${event.eventType} v${event.eventVersion}; dead-lettering event ${event.id}`,
         )
         await this.prisma.outboxEvent.update({
           where: { id: event.id },
@@ -97,7 +106,7 @@ export class OutboxRelay {
       }
 
       await this.prisma.$transaction(
-        handlers.map(handler =>
+        handlers.map((handler) =>
           this.prisma.jobAttempt.create({
             data: {
               outboxEventId: event.id,
@@ -110,13 +119,13 @@ export class OutboxRelay {
               backoffMultiplier: handler.backoffMultiplier ?? 2.0,
               availableAt: new Date(),
             },
-          })
-        )
+          }),
+        ),
       )
 
       materialized += 1
       this.log.info(
-        `[relay] materialized ${handlers.length} job(s) for ${event.eventType} v${event.eventVersion} (${event.id})`
+        `[relay] materialized ${handlers.length} job(s) for ${event.eventType} v${event.eventVersion} (${event.id})`,
       )
     }
 
@@ -143,11 +152,16 @@ export class OutboxRelay {
     return { dispatched, failed }
   }
 
-  private async dispatchOne(jobType: string): Promise<'ok' | 'failed' | 'idle'> {
+  private async dispatchOne(
+    jobType: string,
+  ): Promise<'ok' | 'failed' | 'idle'> {
     const handler = this.handlers.handlerByName(jobType)
     if (!handler) return 'idle'
 
-    const lease = await this.leases.leaseJob({ jobType, maxLeaseMs: this.leaseMs })
+    const lease = await this.leases.leaseJob({
+      jobType,
+      maxLeaseMs: this.leaseMs,
+    })
     if (!lease) return 'idle'
 
     const job = await this.prisma.jobAttempt.findUnique({
@@ -156,7 +170,11 @@ export class OutboxRelay {
     })
 
     if (!job?.outboxEvent) {
-      await this.leases.failJob(lease.jobId, lease.leaseToken, 'Outbox event missing for job')
+      await this.leases.failJob(
+        lease.jobId,
+        lease.leaseToken,
+        'Outbox event missing for job',
+      )
 
       return 'failed'
     }
@@ -164,7 +182,11 @@ export class OutboxRelay {
     const event = job.outboxEvent as unknown as EventRow
 
     try {
-      await this.schemas.validate(event.eventType, event.eventVersion, lease.payload)
+      await this.schemas.validate(
+        event.eventType,
+        event.eventVersion,
+        lease.payload,
+      )
 
       const result = await handler.handle({
         eventId: event.id,
@@ -183,14 +205,14 @@ export class OutboxRelay {
       })
 
       this.log.info(
-        `[relay] dispatched ${event.eventType} v${event.eventVersion} -> ${handler.name} (${event.id})`
+        `[relay] dispatched ${event.eventType} v${event.eventVersion} -> ${handler.name} (${event.id})`,
       )
 
       return 'ok'
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       this.log.error(
-        `[relay] handler ${handler.name} failed for ${event.eventType} (${event.id}) attempt ${lease.attempt + 1}: ${message}`
+        `[relay] handler ${handler.name} failed for ${event.eventType} (${event.id}) attempt ${lease.attempt + 1}: ${message}`,
       )
       await this.leases.failJob(lease.jobId, lease.leaseToken, error as Error)
 
@@ -213,12 +235,18 @@ export class OutboxRelay {
       data: { status: 'PENDING' },
     })
 
-    this.log.info(`[relay] replayed event ${eventId} (${jobs.length} job(s) reset)`)
+    this.log.info(
+      `[relay] replayed event ${eventId} (${jobs.length} job(s) reset)`,
+    )
 
     return jobs.length
   }
 
-  async deadLetterEvents(limit = 100): Promise<Array<{ id: string; eventType: string; lastError: string | null }>> {
+  async deadLetterEvents(
+    limit = 100,
+  ): Promise<
+    Array<{ id: string; eventType: string; lastError: string | null }>
+  > {
     const events = await this.prisma.outboxEvent.findMany({
       where: { status: 'DEAD_LETTER' },
       orderBy: { createdAt: 'asc' },
@@ -234,7 +262,7 @@ export class OutboxRelay {
       },
     })
 
-    return events.map(event => ({
+    return events.map((event) => ({
       id: event.id,
       eventType: event.eventType,
       lastError: event.jobAttempts[0]?.lastError ?? null,
@@ -242,6 +270,8 @@ export class OutboxRelay {
   }
 }
 
-export function createOutboxRelay(options: OutboxRelayOptions = {}): OutboxRelay {
+export function createOutboxRelay(
+  options: OutboxRelayOptions = {},
+): OutboxRelay {
   return new OutboxRelay(options)
 }

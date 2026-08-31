@@ -16,23 +16,31 @@ describe('wallet plaintext secret scan', () => {
       ? ['ManagedKeyReference', 'Wallet', 'WalletProvisioningJob']
           .map(
             (model) =>
-              source.match(new RegExp(`model ${model} \\{([\\s\\S]*?)\\n\\}`))?.[0] ?? ''
+              source.match(
+                new RegExp(`model ${model} \\{([\\s\\S]*?)\\n\\}`),
+              )?.[0] ?? '',
           )
           .join('\n')
       : source
     expect(walletPersistence).not.toMatch(
-      /\b(secret|seed|private_?key|secret_?key)\b\s+(String|TEXT)/i
+      /\b(secret|seed|private_?key|secret_?key)\b\s+(String|TEXT)/i,
     )
   })
 
   it('does not embed a Stellar secret in export source or documentation', () => {
-    const exportSources = files.slice(2).map((file) => readFileSync(file, 'utf8'))
+    const exportSources = files
+      .slice(2)
+      .map((file) => readFileSync(file, 'utf8'))
     expect(exportSources.join('\n')).not.toMatch(/S[A-Z2-7]{55}/)
   })
 
   it('keeps the public wallet DTO free of KMS references', () => {
-    const source = readFileSync('src/types/wallet-provisioning.types.ts', 'utf8')
-    const publicWallet = source.match(/export interface PublicWallet \{([\s\S]*?)\n\}/)?.[1] ?? ''
+    const source = readFileSync(
+      'src/types/wallet-provisioning.types.ts',
+      'utf8',
+    )
+    const publicWallet =
+      source.match(/export interface PublicWallet \{([\s\S]*?)\n\}/)?.[1] ?? ''
     expect(publicWallet).not.toMatch(/managedKey|opaqueReference|keyVersion/i)
   })
 })

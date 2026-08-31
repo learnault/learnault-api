@@ -3,7 +3,10 @@ import { WalletStatusController } from '../../controllers/wallet-status.controll
 import { WalletStatusService } from '../../services/wallet-status.service'
 import { PrismaWalletProvisioningRepository } from '../../services/wallet-provisioning.repository'
 import { stellarService } from '../../services/stellar.service'
-import { authenticate, requireActiveAccount } from '../../middleware/auth.middleware'
+import {
+  authenticate,
+  requireActiveAccount,
+} from '../../middleware/auth.middleware'
 import prisma from '../../config/database'
 
 const repository = new PrismaWalletProvisioningRepository(prisma)

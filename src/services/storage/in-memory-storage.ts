@@ -1,4 +1,8 @@
-import type { ImageDimensions, SignedUploadUrl, StorageProvider } from '../../types/avatar.types'
+import type {
+  ImageDimensions,
+  SignedUploadUrl,
+  StorageProvider,
+} from '../../types/avatar.types'
 
 /**
  * In-memory storage provider for development and testing.
@@ -35,7 +39,11 @@ export class InMemoryStorageProvider implements StorageProvider {
     return Buffer.from(buf)
   }
 
-  async writeBytes(storageKey: string, data: Buffer, _contentType: string): Promise<void> {
+  async writeBytes(
+    storageKey: string,
+    data: Buffer,
+    _contentType: string,
+  ): Promise<void> {
     this.objects.set(storageKey, Buffer.from(data))
   }
 
@@ -72,7 +80,9 @@ export class InMemoryStorageProvider implements StorageProvider {
 
 // ── Minimal image dimension extraction (no external deps) ─────────
 
-const PNG_IHDR_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+const PNG_IHDR_SIGNATURE = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+])
 const GIF87A = Buffer.from('GIF87a')
 const GIF89A = Buffer.from('GIF89a')
 const WEBP_RIFF = Buffer.from('RIFF')
@@ -97,7 +107,10 @@ export function extractImageDimensions(data: Buffer): ImageDimensions | null {
   }
 
   // GIF — dimensions at bytes 6-9
-  if (data.subarray(0, 6).equals(GIF87A) || data.subarray(0, 6).equals(GIF89A)) {
+  if (
+    data.subarray(0, 6).equals(GIF87A) ||
+    data.subarray(0, 6).equals(GIF89A)
+  ) {
     const width = data.readUInt16LE(6)
     const height = data.readUInt16LE(8)
 
@@ -110,7 +123,10 @@ export function extractImageDimensions(data: Buffer): ImageDimensions | null {
   }
 
   // WebP — RIFF....WEBP
-  if (data.subarray(0, 4).equals(WEBP_RIFF) && data.subarray(8, 12).equals(WEBP_WEBP)) {
+  if (
+    data.subarray(0, 4).equals(WEBP_RIFF) &&
+    data.subarray(8, 12).equals(WEBP_WEBP)
+  ) {
     return parseWebpDimensions(data)
   }
 
@@ -126,10 +142,10 @@ function parseJpegDimensions(data: Buffer): ImageDimensions | null {
     const marker = data[offset + 1]
     // SOF0–SOF3, SOF5–SOF7, SOF9–SOF11, SOF13–SOF15
     if (
-      (marker >= 0xc0 && marker <= 0xc3)
-      || (marker >= 0xc5 && marker <= 0xc7)
-      || (marker >= 0xc9 && marker <= 0xcb)
-      || (marker >= 0xcd && marker <= 0xcf)
+      (marker >= 0xc0 && marker <= 0xc3) ||
+      (marker >= 0xc5 && marker <= 0xc7) ||
+      (marker >= 0xc9 && marker <= 0xcb) ||
+      (marker >= 0xcd && marker <= 0xcf)
     ) {
       if (offset + 9 >= data.length) {
         return null
@@ -197,8 +213,11 @@ function parseWebpDimensions(data: Buffer): ImageDimensions | null {
 
 // ── MIME sniffing from magic bytes ────────────────────────────────
 
-const MIME_SIGNATURES: Array<{ bytes: Uint8Array, mime: string }> = [
-  { bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), mime: 'image/png' },
+const MIME_SIGNATURES: Array<{ bytes: Uint8Array; mime: string }> = [
+  {
+    bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    mime: 'image/png',
+  },
   { bytes: new Uint8Array([0xff, 0xd8, 0xff]), mime: 'image/jpeg' },
   { bytes: new Uint8Array([0x47, 0x49, 0x46, 0x38]), mime: 'image/gif' },
   { bytes: new Uint8Array([0x52, 0x49, 0x46, 0x46]), mime: 'image/webp' }, // RIFF container (WebP)

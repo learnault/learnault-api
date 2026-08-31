@@ -69,8 +69,8 @@ export class StellarFundingService {
 
     if (record.status === 'submitted') {
       await this.reconcile(record)
-      
-return
+
+      return
     }
 
     const alreadyFunded = await this.checkAlreadyFunded(record)
@@ -79,8 +79,8 @@ return
     const sourceSecret = process.env.STELLAR_FUNDING_SOURCE_SECRET
     if (!sourceSecret) {
       await this.handleFailure(record, 'Funding source secret not configured')
-      
-return
+
+      return
     }
 
     try {
@@ -91,11 +91,7 @@ return
         memo: 'Account funding',
       })
 
-      await this.markConfirmed(
-        record,
-        result.hash,
-        result.ledger
-      )
+      await this.markConfirmed(record, result.hash, result.ledger)
     } catch (err) {
       if (err instanceof StellarServiceError) {
         if (err.code === 'TRANSACTION_TIMEOUT') {
@@ -106,17 +102,20 @@ return
               error: 'Transaction submitted, awaiting confirmation',
             },
           })
-          
-return
+
+          return
         }
 
         if (
           err.code === 'PAYMENT_ERROR' &&
           this.isInsufficientFundsError(err)
         ) {
-          await this.handleFailure(record, 'Insufficient funding source balance')
-          
-return
+          await this.handleFailure(
+            record,
+            'Insufficient funding source balance',
+          )
+
+          return
         }
       }
 
@@ -132,16 +131,16 @@ return
     if (record.transactionHash) {
       try {
         const succeeded = await this.stellarService.verifyTransaction(
-          record.transactionHash
+          record.transactionHash,
         )
         if (succeeded) {
           await this.markConfirmed(
             record,
             record.transactionHash,
-            record.ledger ?? undefined
+            record.ledger ?? undefined,
           )
-          
-return
+
+          return
         }
       } catch {
         // verification failed, fall through to retry
@@ -150,33 +149,33 @@ return
 
     await this.handleFailure(
       record,
-      'Reconciliation: funding not confirmed, retrying'
+      'Reconciliation: funding not confirmed, retrying',
     )
   }
 
   private async checkAlreadyFunded(
-    record: StellarFundingRecord
+    record: StellarFundingRecord,
   ): Promise<boolean> {
     try {
       const balance = await this.stellarService.getNativeBalance(
-        record.publicKey
+        record.publicKey,
       )
       if (parseFloat(balance) >= parseFloat(stellarConfig.funding.minBalance)) {
         await this.markConfirmed(record)
-        
-return true
+
+        return true
       }
     } catch {
       // balance check failed, continue to submit
     }
-    
-return false
+
+    return false
   }
 
   private async markConfirmed(
     record: StellarFundingRecord,
     transactionHash?: string,
-    ledger?: number
+    ledger?: number,
   ): Promise<void> {
     const data: Record<string, unknown> = {
       status: 'confirmed',
@@ -193,7 +192,7 @@ return false
 
   private async handleFailure(
     record: StellarFundingRecord,
-    error: string
+    error: string,
   ): Promise<void> {
     const nextAttemptCount = record.retryCount + 1
 
@@ -205,11 +204,9 @@ return false
     } else {
       const backoffMinutes = Math.pow(
         stellarConfig.funding.backoffBaseMinutes,
-        nextAttemptCount - 1
+        nextAttemptCount - 1,
       )
-      const nextAttemptAt = new Date(
-        Date.now() + backoffMinutes * 60_000
-      )
+      const nextAttemptAt = new Date(Date.now() + backoffMinutes * 60_000)
 
       await prisma.stellarFunding.update({
         where: { id: record.id },
@@ -225,8 +222,8 @@ return false
   private isInsufficientFundsError(err: StellarServiceError): boolean {
     const causeMessage =
       err.cause instanceof Error ? err.cause.message : String(err.cause ?? '')
-    
-return (
+
+    return (
       causeMessage.includes('op_underfunded') ||
       causeMessage.includes('insufficient')
     )

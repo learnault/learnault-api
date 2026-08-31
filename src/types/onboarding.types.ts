@@ -1,12 +1,19 @@
 import { TransitionMap } from '../utils/transitions'
 
-export const ONBOARDING_STEPS = ['profile_basics', 'consent', 'preferences'] as const
-export type OnboardingStep = typeof ONBOARDING_STEPS[number]
+export const ONBOARDING_STEPS = [
+  'profile_basics',
+  'consent',
+  'preferences',
+] as const
+export type OnboardingStep = (typeof ONBOARDING_STEPS)[number]
 
-export const REQUIRED_ONBOARDING_STEPS: readonly OnboardingStep[] = ['profile_basics', 'consent']
+export const REQUIRED_ONBOARDING_STEPS: readonly OnboardingStep[] = [
+  'profile_basics',
+  'consent',
+]
 
 export const ONBOARDING_STATUSES = ['in_progress', 'completed'] as const
-export type OnboardingStatus = typeof ONBOARDING_STATUSES[number]
+export type OnboardingStatus = (typeof ONBOARDING_STATUSES)[number]
 
 export const ONBOARDING_TRANSITIONS: TransitionMap<OnboardingStatus> = {
   in_progress: ['completed'],

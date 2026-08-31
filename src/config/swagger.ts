@@ -44,15 +44,38 @@ const options: swaggerJsdoc.Options = {
     ],
     tags: [
       { name: 'Health', description: 'Service health check' },
-      { name: 'Auth', description: 'Registration, login, refresh rotation, logout, email verification, password reset, phone OTP' },
+      {
+        name: 'Auth',
+        description:
+          'Registration, login, refresh rotation, logout, email verification, password reset, phone OTP',
+      },
       { name: 'Users', description: 'User profile management' },
-      { name: 'Modules', description: 'Learning module catalogue and progress tracking' },
+      {
+        name: 'Modules',
+        description: 'Learning module catalogue and progress tracking',
+      },
       { name: 'Credentials', description: 'On-chain verifiable credentials' },
-      { name: 'Rewards', description: 'XLM balance, transaction history, and withdrawals' },
-      { name: 'Referrals', description: 'Referral code generation and bonus tracking' },
-      { name: 'Notifications', description: 'Push-notification device tokens and preferences' },
-      { name: 'Sync', description: 'Offline progress and completion reconciliation' },
-      { name: 'Employer', description: 'B2B talent search and candidate outreach (employer role required)' },
+      {
+        name: 'Rewards',
+        description: 'XLM balance, transaction history, and withdrawals',
+      },
+      {
+        name: 'Referrals',
+        description: 'Referral code generation and bonus tracking',
+      },
+      {
+        name: 'Notifications',
+        description: 'Push-notification device tokens and preferences',
+      },
+      {
+        name: 'Sync',
+        description: 'Offline progress and completion reconciliation',
+      },
+      {
+        name: 'Employer',
+        description:
+          'B2B talent search and candidate outreach (employer role required)',
+      },
     ],
     components: {
       securitySchemes: {

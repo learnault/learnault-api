@@ -25,36 +25,103 @@ const DOMAIN_PATHS = {
 }
 
 const SHARED_KERNEL_PATH = 'shared'
-const INFRASTRUCTURE_PATHS = ['infrastructure/blockchain', 'infrastructure/database']
+const INFRASTRUCTURE_PATHS = [
+  'infrastructure/blockchain',
+  'infrastructure/database',
+]
 
 // Forbidden cross-domain import patterns
 const FORBIDDEN_IMPORTS = [
   // Identity domain
-  { from: 'identity', cannot: ['users', 'learning', 'credentials', 'rewards', 'referrals', 'notifications', 'organizations', 'sync'] },
-  
+  {
+    from: 'identity',
+    cannot: [
+      'users',
+      'learning',
+      'credentials',
+      'rewards',
+      'referrals',
+      'notifications',
+      'organizations',
+      'sync',
+    ],
+  },
+
   // Users domain
-  { from: 'users', cannot: ['learning', 'credentials', 'rewards', 'referrals', 'organizations', 'sync'] },
-  
+  {
+    from: 'users',
+    cannot: [
+      'learning',
+      'credentials',
+      'rewards',
+      'referrals',
+      'organizations',
+      'sync',
+    ],
+  },
+
   // Learning domain
-  { from: 'learning', cannot: ['rewards', 'credentials', 'referrals', 'notifications', 'users', 'organizations'] },
-  
+  {
+    from: 'learning',
+    cannot: [
+      'rewards',
+      'credentials',
+      'referrals',
+      'notifications',
+      'users',
+      'organizations',
+    ],
+  },
+
   // Credentials domain
-  { from: 'credentials', cannot: ['rewards', 'referrals', 'notifications', 'learning', 'users'] },
-  
+  {
+    from: 'credentials',
+    cannot: ['rewards', 'referrals', 'notifications', 'learning', 'users'],
+  },
+
   // Rewards domain
-  { from: 'rewards', cannot: ['learning', 'credentials', 'referrals', 'notifications', 'users'] },
-  
+  {
+    from: 'rewards',
+    cannot: ['learning', 'credentials', 'referrals', 'notifications', 'users'],
+  },
+
   // Referrals domain
-  { from: 'referrals', cannot: ['rewards', 'learning', 'credentials', 'notifications', 'users'] },
-  
+  {
+    from: 'referrals',
+    cannot: ['rewards', 'learning', 'credentials', 'notifications', 'users'],
+  },
+
   // Notifications domain
-  { from: 'notifications', cannot: ['rewards', 'learning', 'credentials', 'referrals', 'users'] },
-  
+  {
+    from: 'notifications',
+    cannot: ['rewards', 'learning', 'credentials', 'referrals', 'users'],
+  },
+
   // Organizations domain
-  { from: 'organizations', cannot: ['rewards', 'learning', 'credentials', 'referrals', 'users', 'sync'] },
-  
+  {
+    from: 'organizations',
+    cannot: [
+      'rewards',
+      'learning',
+      'credentials',
+      'referrals',
+      'users',
+      'sync',
+    ],
+  },
+
   // Sync domain
-  { from: 'sync', cannot: ['rewards', 'learning', 'credentials', 'referrals', 'users', 'organizations'] },
+  {
+    from: 'sync',
+    cannot: [
+      'rewards',
+      'learning',
+      'credentials',
+      'referrals',
+      'users',
+      'organizations',
+    ],
+  },
 ]
 
 // Infrastructure cannot import from business domains
@@ -73,7 +140,7 @@ function findTsFiles(dir: string, fileList: string[] = []): string[] {
 
   const files = fs.readdirSync(dir)
 
-  files.forEach(file => {
+  files.forEach((file) => {
     const filePath = path.join(dir, file)
     const stat = fs.statSync(filePath)
 
@@ -176,17 +243,21 @@ describe('Architecture: Domain Boundaries', () => {
 
     FORBIDDEN_IMPORTS.forEach(({ from, cannot }) => {
       test(`Domain '${from}' should not import from forbidden domains: ${cannot.join(', ')}`, () => {
-        const violations: Array<{ file: string; importPath: string; targetDomain: string }> = []
+        const violations: Array<{
+          file: string
+          importPath: string
+          targetDomain: string
+        }> = []
 
-        allFiles.forEach(file => {
+        allFiles.forEach((file) => {
           const fileDomain = getDomainFromPath(file)
-          
+
           if (fileDomain === from) {
             const imports = extractImports(file)
-            
-            imports.forEach(importPath => {
+
+            imports.forEach((importPath) => {
               const targetDomain = getTargetDomain(importPath)
-              
+
               if (targetDomain && cannot.includes(targetDomain)) {
                 violations.push({
                   file: path.relative(srcDir, file),
@@ -199,14 +270,17 @@ describe('Architecture: Domain Boundaries', () => {
         })
 
         if (violations.length > 0) {
-          const violationDetails = violations.map(v => 
-            `  - ${v.file} imports from ${v.targetDomain}: '${v.importPath}'`
-          ).join('\n')
+          const violationDetails = violations
+            .map(
+              (v) =>
+                `  - ${v.file} imports from ${v.targetDomain}: '${v.importPath}'`,
+            )
+            .join('\n')
 
           throw new Error(
             'Domain boundary violation detected!\n\n' +
-            `Domain '${from}' has forbidden imports:\n${violationDetails}\n\n` +
-            `Forbidden domains: ${cannot.join(', ')}`
+              `Domain '${from}' has forbidden imports:\n${violationDetails}\n\n` +
+              `Forbidden domains: ${cannot.join(', ')}`,
           )
         }
 
@@ -218,18 +292,25 @@ describe('Architecture: Domain Boundaries', () => {
   describe('Infrastructure Layer Rules', () => {
     test('Infrastructure should not import from business domains', () => {
       const allFiles = findTsFiles(srcDir)
-      const violations: Array<{ file: string; importPath: string; targetDomain: string }> = []
+      const violations: Array<{
+        file: string
+        importPath: string
+        targetDomain: string
+      }> = []
 
-      allFiles.forEach(file => {
+      allFiles.forEach((file) => {
         const fileDomain = getDomainFromPath(file)
-        
+
         if (fileDomain === 'infrastructure') {
           const imports = extractImports(file)
-          
-          imports.forEach(importPath => {
+
+          imports.forEach((importPath) => {
             const targetDomain = getTargetDomain(importPath)
-            
-            if (targetDomain && INFRASTRUCTURE_FORBIDDEN.includes(targetDomain)) {
+
+            if (
+              targetDomain &&
+              INFRASTRUCTURE_FORBIDDEN.includes(targetDomain)
+            ) {
               violations.push({
                 file: path.relative(srcDir, file),
                 importPath,
@@ -241,13 +322,16 @@ describe('Architecture: Domain Boundaries', () => {
       })
 
       if (violations.length > 0) {
-        const violationDetails = violations.map(v => 
-          `  - ${v.file} imports from ${v.targetDomain}: '${v.importPath}'`
-        ).join('\n')
+        const violationDetails = violations
+          .map(
+            (v) =>
+              `  - ${v.file} imports from ${v.targetDomain}: '${v.importPath}'`,
+          )
+          .join('\n')
 
         throw new Error(
           'Infrastructure layer violation detected!\n\n' +
-          `Infrastructure files have forbidden domain imports:\n${violationDetails}`
+            `Infrastructure files have forbidden domain imports:\n${violationDetails}`,
         )
       }
 
@@ -258,18 +342,25 @@ describe('Architecture: Domain Boundaries', () => {
   describe('Shared Kernel Rules', () => {
     test('Shared kernel should not import from any business domain', () => {
       const allFiles = findTsFiles(srcDir)
-      const violations: Array<{ file: string; importPath: string; targetDomain: string }> = []
+      const violations: Array<{
+        file: string
+        importPath: string
+        targetDomain: string
+      }> = []
 
-      allFiles.forEach(file => {
+      allFiles.forEach((file) => {
         const fileDomain = getDomainFromPath(file)
-        
+
         if (fileDomain === 'shared') {
           const imports = extractImports(file)
-          
-          imports.forEach(importPath => {
+
+          imports.forEach((importPath) => {
             const targetDomain = getTargetDomain(importPath)
-            
-            if (targetDomain && SHARED_KERNEL_FORBIDDEN.includes(targetDomain)) {
+
+            if (
+              targetDomain &&
+              SHARED_KERNEL_FORBIDDEN.includes(targetDomain)
+            ) {
               violations.push({
                 file: path.relative(srcDir, file),
                 importPath,
@@ -281,14 +372,17 @@ describe('Architecture: Domain Boundaries', () => {
       })
 
       if (violations.length > 0) {
-        const violationDetails = violations.map(v => 
-          `  - ${v.file} imports from ${v.targetDomain}: '${v.importPath}'`
-        ).join('\n')
+        const violationDetails = violations
+          .map(
+            (v) =>
+              `  - ${v.file} imports from ${v.targetDomain}: '${v.importPath}'`,
+          )
+          .join('\n')
 
         throw new Error(
           'Shared kernel violation detected!\n\n' +
-          `Shared kernel files have forbidden domain imports:\n${violationDetails}\n\n` +
-          'The shared kernel must not depend on any business domain.'
+            `Shared kernel files have forbidden domain imports:\n${violationDetails}\n\n` +
+            'The shared kernel must not depend on any business domain.',
         )
       }
 
@@ -300,23 +394,31 @@ describe('Architecture: Domain Boundaries', () => {
     test('Should not have circular dependencies between domains', () => {
       // This is a simplified check - full circular dependency detection requires graph analysis
       // For now, we ensure no domain imports another domain that imports it back
-      
+
       const allFiles = findTsFiles(srcDir)
       const domainImports: Record<string, Set<string>> = {}
 
       // Build import graph
-      allFiles.forEach(file => {
+      allFiles.forEach((file) => {
         const fileDomain = getDomainFromPath(file)
-        
-        if (fileDomain && fileDomain !== 'shared' && fileDomain !== 'infrastructure') {
+
+        if (
+          fileDomain &&
+          fileDomain !== 'shared' &&
+          fileDomain !== 'infrastructure'
+        ) {
           if (!domainImports[fileDomain]) {
             domainImports[fileDomain] = new Set()
           }
 
           const imports = extractImports(file)
-          imports.forEach(importPath => {
+          imports.forEach((importPath) => {
             const targetDomain = getTargetDomain(importPath)
-            if (targetDomain && targetDomain !== 'shared' && targetDomain !== 'infrastructure') {
+            if (
+              targetDomain &&
+              targetDomain !== 'shared' &&
+              targetDomain !== 'infrastructure'
+            ) {
               domainImports[fileDomain].add(targetDomain)
             }
           })
@@ -325,13 +427,18 @@ describe('Architecture: Domain Boundaries', () => {
 
       // Check for direct circular dependencies (A → B, B → A)
       const circularDeps: Array<[string, string]> = []
-      
-      Object.keys(domainImports).forEach(domainA => {
-        domainImports[domainA].forEach(domainB => {
+
+      Object.keys(domainImports).forEach((domainA) => {
+        domainImports[domainA].forEach((domainB) => {
           if (domainImports[domainB]?.has(domainA)) {
             // Found circular dependency
-            const pair: [string, string] = [domainA, domainB].sort() as [string, string]
-            if (!circularDeps.some(([a, b]) => a === pair[0] && b === pair[1])) {
+            const pair: [string, string] = [domainA, domainB].sort() as [
+              string,
+              string,
+            ]
+            if (
+              !circularDeps.some(([a, b]) => a === pair[0] && b === pair[1])
+            ) {
               circularDeps.push(pair)
             }
           }
@@ -339,10 +446,12 @@ describe('Architecture: Domain Boundaries', () => {
       })
 
       if (circularDeps.length > 0) {
-        const details = circularDeps.map(([a, b]) => `  - ${a} ↔ ${b}`).join('\n')
+        const details = circularDeps
+          .map(([a, b]) => `  - ${a} ↔ ${b}`)
+          .join('\n')
         throw new Error(
           `Circular dependencies detected between domains:\n${details}\n\n` +
-          'Domains should not have circular dependencies.'
+            'Domains should not have circular dependencies.',
         )
       }
 
@@ -356,7 +465,7 @@ describe('Architecture: File Organization', () => {
     const allFiles = findTsFiles(srcDir)
     const unmappedFiles: string[] = []
 
-    allFiles.forEach(file => {
+    allFiles.forEach((file) => {
       const domain = getDomainFromPath(file)
       const relativePath = path.relative(srcDir, file)
 
@@ -379,7 +488,9 @@ describe('Architecture: File Organization', () => {
         'docs/',
       ]
 
-      const isLegacy = legacyPaths.some(legacy => relativePath.startsWith(legacy))
+      const isLegacy = legacyPaths.some((legacy) =>
+        relativePath.startsWith(legacy),
+      )
       if (isLegacy) {
         return // Skip legacy files during transition
       }
@@ -392,7 +503,7 @@ describe('Architecture: File Organization', () => {
     if (unmappedFiles.length > 0) {
       console.warn(
         `Warning: ${unmappedFiles.length} files are not mapped to any domain:\n` +
-        unmappedFiles.map(f => `  - ${f}`).join('\n')
+          unmappedFiles.map((f) => `  - ${f}`).join('\n'),
       )
     }
 

@@ -11,8 +11,8 @@ function makeMocks() {
     json: vi.fn(),
   } as Partial<Response>
   const next: NextFunction = vi.fn()
-  
-return { req, res, next }
+
+  return { req, res, next }
 }
 
 // ── errorHandler ──────────────────────────────────────────────────────────────

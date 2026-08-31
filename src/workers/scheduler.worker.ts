@@ -10,7 +10,9 @@ let isShuttingDown = false
 
 async function gracefulShutdown(signal: string): Promise<void> {
   if (isShuttingDown) {
-    logger.warn('[scheduler] shutdown already in progress, ignoring additional signal')
+    logger.warn(
+      '[scheduler] shutdown already in progress, ignoring additional signal',
+    )
 
     return
   }
@@ -51,12 +53,14 @@ process.on('unhandledRejection', (reason: unknown) => {
 
 logger.info(
   `[scheduler] starting runner ${schedulerConfig.ownerId} ` +
-    `(base interval ${schedulerConfig.intervalMs}ms, lease ${schedulerConfig.leaseMs}ms)`
+    `(base interval ${schedulerConfig.intervalMs}ms, lease ${schedulerConfig.leaseMs}ms)`,
 )
 
 runner.start()
 
 if (runner.registeredQueues.length === 0) {
-  logger.error('[scheduler] no queues registered; check SCHEDULER_QUEUES / SCHEDULER_DISABLED_QUEUES')
+  logger.error(
+    '[scheduler] no queues registered; check SCHEDULER_QUEUES / SCHEDULER_DISABLED_QUEUES',
+  )
   process.exit(1)
 }

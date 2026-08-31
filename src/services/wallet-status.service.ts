@@ -18,7 +18,7 @@ export interface WalletStatusStellarProvider {
   getAccountSnapshot(publicKey: string): Promise<AccountSnapshot>
   getPaymentHistory(
     publicKey: string,
-    options?: { cursor?: string; limit?: number; order?: 'asc' | 'desc' }
+    options?: { cursor?: string; limit?: number; order?: 'asc' | 'desc' },
   ): Promise<PaymentHistoryPage>
 }
 
@@ -32,7 +32,13 @@ export class WalletStatusService {
   async getStatus(userId: string): Promise<WalletStatusView> {
     const wallet = await this.repository.getByUserId(userId)
     if (!wallet) {
-      return { status: 'NOT_PROVISIONED', network: null, custody: null, publicKey: null, provisionedAt: null }
+      return {
+        status: 'NOT_PROVISIONED',
+        network: null,
+        custody: null,
+        publicKey: null,
+        provisionedAt: null,
+      }
     }
 
     return {
@@ -40,7 +46,9 @@ export class WalletStatusService {
       network: wallet.network,
       custody: wallet.custody,
       publicKey: wallet.status === 'ACTIVE' ? wallet.publicKey : null,
-      provisionedAt: wallet.provisionedAt ? wallet.provisionedAt.toISOString() : null,
+      provisionedAt: wallet.provisionedAt
+        ? wallet.provisionedAt.toISOString()
+        : null,
     }
   }
 
@@ -67,14 +75,20 @@ export class WalletStatusService {
     const direction = options.direction ?? 'all'
 
     const page = await this.wrapProviderErrors(() =>
-      this.stellar.getPaymentHistory(publicKey, { cursor: options.cursor, limit }),
+      this.stellar.getPaymentHistory(publicKey, {
+        cursor: options.cursor,
+        limit,
+      }),
     )
 
     const entries = page.records
       .map((record) => ({
         id: record.id,
-        direction: (record.to === publicKey ? 'incoming' : 'outgoing') as WalletHistoryDirection,
-        status: (record.transactionSuccessful ? 'success' : 'failed') as 'success' | 'failed',
+        direction: (record.to === publicKey
+          ? 'incoming'
+          : 'outgoing') as WalletHistoryDirection,
+        status: (record.transactionSuccessful ? 'success' : 'failed') as
+          'success' | 'failed',
         assetType: record.assetType,
         assetCode: record.assetCode,
         issuer: record.issuer,
@@ -114,9 +128,12 @@ export class WalletStatusService {
   }
 }
 
-function toStatusValue(walletStatus: WalletRecord['status']): WalletStatusView['status'] {
+function toStatusValue(
+  walletStatus: WalletRecord['status'],
+): WalletStatusView['status'] {
   if (walletStatus === 'ACTIVE') return 'ACTIVE'
-  if (walletStatus === 'DISABLED' || walletStatus === 'FAILED') return 'UNAVAILABLE'
+  if (walletStatus === 'DISABLED' || walletStatus === 'FAILED')
+    return 'UNAVAILABLE'
 
   return 'PENDING'
 }

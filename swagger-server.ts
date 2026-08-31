@@ -15,7 +15,8 @@ const options: swaggerJsdoc.Options = {
     info: {
       title: 'Learnault API Documentation',
       version: '1.0.0',
-      description: 'Comprehensive API documentation for Learnault - a decentralized learn-to-earn platform on Stellar',
+      description:
+        'Comprehensive API documentation for Learnault - a decentralized learn-to-earn platform on Stellar',
       contact: {
         name: 'Learnault Contributors',
         url: 'https://github.com/learnault/learnault',

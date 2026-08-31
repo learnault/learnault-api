@@ -119,6 +119,7 @@ The shared kernel contains cross-cutting concerns accessible to all domains:
 - **Messaging** (`shared/messaging/`): Email/webhook delivery, event bus
 
 **Rules:**
+
 - All domains can import from shared kernel
 - Shared kernel CANNOT import from domains
 - Keep shared kernel minimal and stable
@@ -133,6 +134,7 @@ Infrastructure provides technical capabilities without business logic:
 - **Database** (`shared/config/database.ts`): Prisma client
 
 **Rules:**
+
 - Infrastructure cannot import from business domains
 - Domains call infrastructure via well-defined interfaces
 - Infrastructure is replaceable (e.g., swap Stellar for different blockchain)
@@ -162,11 +164,13 @@ Circular dependencies ❌
 ### Communication Patterns
 
 **Preferred:**
+
 1. **Domain Events** (async, decoupled) - Use for cross-domain notifications
 2. **Public Service Interfaces** (sync, explicit) - Use sparingly for queries
 3. **Database Queries** (read-only) - Acceptable for simple lookups
 
 **Anti-Patterns:**
+
 - Direct controller-to-controller calls
 - Direct service-to-service imports across domains
 - Shared mutable state
@@ -247,6 +251,7 @@ Domain B (Event Handler)
 Database schema is defined in `prisma/schema.prisma` using Prisma ORM.
 
 **Key Models:**
+
 - `User` - User accounts and authentication
 - `Module` - Learning content
 - `Completion` - Module completion records
@@ -274,6 +279,7 @@ export class UserRepository {
 ```
 
 **Benefits:**
+
 - Testable (mock repositories in tests)
 - Encapsulates query logic
 - Can switch database technology
@@ -289,9 +295,9 @@ Domain events represent something that has happened in the system:
 ```typescript
 interface DomainEvent {
   eventId: string
-  eventType: string        // e.g., "UserRegistered"
-  aggregateId: string      // e.g., userId
-  aggregateType: string    // e.g., "User"
+  eventType: string // e.g., "UserRegistered"
+  aggregateId: string // e.g., userId
+  aggregateType: string // e.g., "User"
   payload: object
   timestamp: Date
   version: number
@@ -377,6 +383,7 @@ See `docs/ERROR_HANDLING.md` for details.
 - Located in `integrations/architecture/`
 
 **Run tests:**
+
 ```bash
 pnpm test              # All tests
 pnpm test:watch        # Watch mode
@@ -478,6 +485,7 @@ See `Dockerfile` and `docker-compose.yml`.
 ### Event Sourcing
 
 Store all domain events for:
+
 - Audit trail
 - Event replay
 - Temporal queries
@@ -485,18 +493,21 @@ Store all domain events for:
 ### CQRS (Command Query Responsibility Segregation)
 
 Separate read and write models:
+
 - Commands: Modify state
 - Queries: Read-optimized views
 
 ### Saga Pattern
 
 Coordinate distributed transactions across domains:
+
 - Orchestration-based sagas
 - Compensating transactions for rollback
 
 ### API Gateway
 
 Centralized API gateway for:
+
 - Rate limiting
 - Authentication
 - Routing

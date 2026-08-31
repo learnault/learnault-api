@@ -65,9 +65,11 @@ describe('wallet status transitions and lifecycle guards', () => {
       InvalidWalletTransitionError,
     )
     expect(() => assertValidWalletTransition('DISABLED', 'ACTIVE')).toThrow(
-      'Cannot transition wallet status from \'DISABLED\' to \'ACTIVE\'',
+      "Cannot transition wallet status from 'DISABLED' to 'ACTIVE'",
     )
-    expect(() => assertValidWalletTransition('ACTIVE', 'EXPORTING')).not.toThrow()
+    expect(() =>
+      assertValidWalletTransition('ACTIVE', 'EXPORTING'),
+    ).not.toThrow()
   })
 
   it('has exhaustive transition entries for every status', () => {

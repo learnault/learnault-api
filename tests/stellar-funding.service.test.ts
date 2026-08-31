@@ -3,13 +3,14 @@ import { StellarFundingService } from '../src/services/stellar-funding.service'
 import { StellarServiceError } from '../src/services/stellar.service'
 import type { StellarService } from '../src/services/stellar.service'
 
-const { mockFindUnique, mockCreate, mockFindMany, mockUpdate } =
-  vi.hoisted(() => ({
+const { mockFindUnique, mockCreate, mockFindMany, mockUpdate } = vi.hoisted(
+  () => ({
     mockFindUnique: vi.fn(),
     mockCreate: vi.fn(),
     mockFindMany: vi.fn(),
     mockUpdate: vi.fn(),
-  }))
+  }),
+)
 
 vi.mock('../src/config/database', () => ({
   default: {
@@ -32,18 +33,19 @@ vi.mock('../src/config/stellar', () => ({
     network: 'testnet',
     funding: {
       get amount() {
- return mockConfigAmount() 
-},
+        return mockConfigAmount()
+      },
       get minBalance() {
- return mockConfigMinBalance() 
-},
+        return mockConfigMinBalance()
+      },
       maxRetries: 5,
       backoffBaseMinutes: 5,
     },
   },
 }))
 
-const PUBLIC_KEY = 'GABCDEF12345678901234567890123456789012345678901234567890123'
+const PUBLIC_KEY =
+  'GABCDEF12345678901234567890123456789012345678901234567890123'
 const FUNDING_AMOUNT = '10'
 
 describe('StellarFundingService', () => {
@@ -116,7 +118,7 @@ describe('StellarFundingService', () => {
         expect.objectContaining({
           where: { id: record.id },
           data: expect.objectContaining({ status: 'confirmed' }),
-        })
+        }),
       )
       expect(stellarMock.sendPayment).not.toHaveBeenCalled()
     })
@@ -143,7 +145,7 @@ describe('StellarFundingService', () => {
           sourceSecret: 'SFAKE_SECRET_KEY',
           destinationPublicKey: record.publicKey,
           amount: FUNDING_AMOUNT,
-        })
+        }),
       )
       expect(mockUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -153,7 +155,7 @@ describe('StellarFundingService', () => {
             transactionHash: 'TXHASH123',
             ledger: 42,
           }),
-        })
+        }),
       )
     })
   })
@@ -166,8 +168,8 @@ describe('StellarFundingService', () => {
       vi.mocked(stellarMock.sendPayment).mockRejectedValue(
         new StellarServiceError(
           'Transaction TXHASH123 not confirmed after 20 attempts',
-          'TRANSACTION_TIMEOUT'
-        )
+          'TRANSACTION_TIMEOUT',
+        ),
       )
 
       await service.processQueue()
@@ -179,7 +181,7 @@ describe('StellarFundingService', () => {
             status: 'submitted',
             error: 'Transaction submitted, awaiting confirmation',
           }),
-        })
+        }),
       )
     })
   })
@@ -196,7 +198,7 @@ describe('StellarFundingService', () => {
         expect.objectContaining({
           where: { id: record.id },
           data: expect.objectContaining({ status: 'confirmed' }),
-        })
+        }),
       )
     })
 
@@ -220,7 +222,7 @@ describe('StellarFundingService', () => {
             transactionHash: 'TXHASH123',
             ledger: 42,
           }),
-        })
+        }),
       )
     })
 
@@ -243,7 +245,7 @@ describe('StellarFundingService', () => {
             status: 'pending',
             error: 'Reconciliation: funding not confirmed, retrying',
           }),
-        })
+        }),
       )
     })
   })
@@ -271,7 +273,7 @@ describe('StellarFundingService', () => {
       expect(mockUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ status: 'confirmed' }),
-        })
+        }),
       )
     })
   })
@@ -281,7 +283,9 @@ describe('StellarFundingService', () => {
       const record = makeRecord({ status: 'pending', retryCount: 0 })
       mockFindMany.mockResolvedValue([record])
       vi.mocked(stellarMock.getNativeBalance).mockResolvedValue('0')
-      vi.mocked(stellarMock.sendPayment).mockRejectedValue(new Error('Network error'))
+      vi.mocked(stellarMock.sendPayment).mockRejectedValue(
+        new Error('Network error'),
+      )
 
       await service.processQueue()
 
@@ -292,7 +296,7 @@ describe('StellarFundingService', () => {
             retryCount: { increment: 1 },
             lastAttemptAt: expect.any(Date),
           }),
-        })
+        }),
       )
     })
 
@@ -304,13 +308,15 @@ describe('StellarFundingService', () => {
       })
       mockFindMany.mockResolvedValue([record])
       vi.mocked(stellarMock.getNativeBalance).mockResolvedValue('0')
-      vi.mocked(stellarMock.sendPayment).mockRejectedValue(new Error('Final failure'))
+      vi.mocked(stellarMock.sendPayment).mockRejectedValue(
+        new Error('Final failure'),
+      )
 
       await service.processQueue()
 
       const calls = mockUpdate.mock.calls
       const deadLetterCall = calls.find(
-        (c: any[]) => c[0]?.data?.status === 'dead-letter'
+        (c: any[]) => c[0]?.data?.status === 'dead-letter',
       )
       expect(deadLetterCall).toBeDefined()
     })
@@ -325,7 +331,7 @@ describe('StellarFundingService', () => {
           where: expect.objectContaining({
             retryCount: { lt: 5 },
           }),
-        })
+        }),
       )
     })
   })
@@ -340,15 +346,14 @@ describe('StellarFundingService', () => {
       const paymentError = new StellarServiceError(
         'Payment transaction failed',
         'PAYMENT_ERROR',
-        cause
+        cause,
       )
       vi.mocked(stellarMock.sendPayment).mockRejectedValue(paymentError)
 
       await service.processQueue()
 
-      const errorUpdate = mockUpdate.mock.calls.find(
-        (c: any[]) =>
-          c[0]?.data?.error?.includes('Insufficient funding source balance')
+      const errorUpdate = mockUpdate.mock.calls.find((c: any[]) =>
+        c[0]?.data?.error?.includes('Insufficient funding source balance'),
       )
       expect(errorUpdate).toBeDefined()
     })
@@ -359,10 +364,10 @@ describe('StellarFundingService', () => {
       const record = makeRecord({ status: 'pending' })
       mockFindMany.mockResolvedValue([record])
       vi.mocked(stellarMock.getNativeBalance).mockRejectedValue(
-        new Error('Network timeout')
+        new Error('Network timeout'),
       )
       vi.mocked(stellarMock.sendPayment).mockRejectedValue(
-        new Error('Also down')
+        new Error('Also down'),
       )
 
       await service.processQueue()
@@ -375,13 +380,13 @@ describe('StellarFundingService', () => {
       mockFindMany.mockResolvedValue([record])
       vi.mocked(stellarMock.getNativeBalance).mockResolvedValue('0')
       vi.mocked(stellarMock.sendPayment).mockRejectedValue(
-        new Error('Horizon unreachable')
+        new Error('Horizon unreachable'),
       )
 
       await service.processQueue()
 
       const errorUpdate = mockUpdate.mock.calls.find(
-        (c: any[]) => c[0]?.data?.error === 'Horizon unreachable'
+        (c: any[]) => c[0]?.data?.error === 'Horizon unreachable',
       )
       expect(errorUpdate).toBeDefined()
     })
@@ -405,7 +410,7 @@ describe('StellarFundingService', () => {
       expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ amount: '25' }),
-        })
+        }),
       )
     })
 

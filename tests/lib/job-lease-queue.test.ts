@@ -15,7 +15,10 @@ describe('JobLeaseService queue leases', () => {
   beforeEach(() => {
     queryRaw = vi.fn()
     executeRaw = vi.fn()
-    service = new JobLeaseService({ $queryRaw: queryRaw, $executeRaw: executeRaw } as any)
+    service = new JobLeaseService({
+      $queryRaw: queryRaw,
+      $executeRaw: executeRaw,
+    } as any)
   })
 
   describe('acquireQueueLease', () => {
@@ -71,10 +74,14 @@ describe('JobLeaseService queue leases', () => {
   describe('renewQueueLease', () => {
     it('reports success only when the row still carries this token', async () => {
       executeRaw.mockResolvedValueOnce(1)
-      await expect(service.renewQueueLease('email', 'token-a', 5_000)).resolves.toBe(true)
+      await expect(
+        service.renewQueueLease('email', 'token-a', 5_000),
+      ).resolves.toBe(true)
 
       executeRaw.mockResolvedValueOnce(0)
-      await expect(service.renewQueueLease('email', 'stale-token')).resolves.toBe(false)
+      await expect(
+        service.renewQueueLease('email', 'stale-token'),
+      ).resolves.toBe(false)
 
       const values = executeRaw.mock.calls[0].slice(1)
       expect(values).toContain('email')
@@ -86,7 +93,9 @@ describe('JobLeaseService queue leases', () => {
     it('clears the lease scoped to the holding token', async () => {
       executeRaw.mockResolvedValue(1)
 
-      await expect(service.releaseQueueLease('data-export', 'token-a')).resolves.toBe(true)
+      await expect(
+        service.releaseQueueLease('data-export', 'token-a'),
+      ).resolves.toBe(true)
 
       const sql = sqlOf(executeRaw.mock.calls[0])
       expect(sql).toContain('"leaseToken" = NULL')
@@ -100,7 +109,9 @@ describe('JobLeaseService queue leases', () => {
     it('does not release a lease a successor now holds', async () => {
       executeRaw.mockResolvedValue(0)
 
-      await expect(service.releaseQueueLease('data-export', 'stale')).resolves.toBe(false)
+      await expect(
+        service.releaseQueueLease('data-export', 'stale'),
+      ).resolves.toBe(false)
     })
   })
 })

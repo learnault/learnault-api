@@ -22,7 +22,8 @@ vi.mock('../src/config/database', () => ({
 
 import prisma from '../src/config/database'
 
-const flushPromises = () => new Promise<void>((resolve) => setTimeout(resolve, 0))
+const flushPromises = () =>
+  new Promise<void>((resolve) => setTimeout(resolve, 0))
 
 interface AuthRequest extends Request {
   user?: { id: string; email: string; role: string }
@@ -73,7 +74,9 @@ describe('SyncController', () => {
       controller.syncProgress(req as Request, res as Response, next)
       await flushPromises()
 
-      expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: 'User ID not found' }))
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'User ID not found' }),
+      )
     })
 
     it('throws BadRequestError when events is not an array', async () => {
@@ -82,7 +85,11 @@ describe('SyncController', () => {
       controller.syncProgress(req as Request, res as Response, next)
       await flushPromises()
 
-      expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: 'events must be a non-empty array' }))
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'events must be a non-empty array',
+        }),
+      )
     })
 
     it('rejects event with missing required fields', async () => {
@@ -104,12 +111,16 @@ describe('SyncController', () => {
       await flushPromises()
 
       const call = vi.mocked(res.json).mock.calls[0][0]
-      expect(call.data.results[0]).toEqual(expect.objectContaining({ status: 'rejected' }))
+      expect(call.data.results[0]).toEqual(
+        expect.objectContaining({ status: 'rejected' }),
+      )
     })
 
     it('skips duplicate idempotency key', async () => {
       req.body = { events: [makeEvent()] }
-      vi.mocked(prisma.syncEvent.findUnique).mockResolvedValue({ id: 'existing' } as any)
+      vi.mocked(prisma.syncEvent.findUnique).mockResolvedValue({
+        id: 'existing',
+      } as any)
 
       controller.syncProgress(req as Request, res as Response, next)
       await flushPromises()
@@ -121,7 +132,9 @@ describe('SyncController', () => {
     it('skips stale sync version', async () => {
       req.body = { events: [makeEvent({ syncVersion: 1 })] }
       vi.mocked(prisma.syncEvent.findUnique).mockResolvedValue(null)
-      vi.mocked(prisma.syncEvent.findFirst).mockResolvedValue({ syncVersion: 5 } as any)
+      vi.mocked(prisma.syncEvent.findFirst).mockResolvedValue({
+        syncVersion: 5,
+      } as any)
 
       controller.syncProgress(req as Request, res as Response, next)
       await flushPromises()
@@ -172,7 +185,9 @@ describe('SyncController', () => {
       controller.syncCompletions(req as Request, res as Response, next)
       await flushPromises()
 
-      expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: 'User ID not found' }))
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'User ID not found' }),
+      )
     })
 
     it('rejects event for unknown module', async () => {
@@ -184,12 +199,19 @@ describe('SyncController', () => {
       await flushPromises()
 
       const call = vi.mocked(res.json).mock.calls[0][0]
-      expect(call.data.results[0]).toEqual(expect.objectContaining({ status: 'rejected', reason: 'Module not found' }))
+      expect(call.data.results[0]).toEqual(
+        expect.objectContaining({
+          status: 'rejected',
+          reason: 'Module not found',
+        }),
+      )
     })
 
     it('skips duplicate idempotency key', async () => {
       req.body = { events: [makeCompletionEvent()] }
-      vi.mocked(prisma.syncEvent.findUnique).mockResolvedValue({ id: 'existing' } as any)
+      vi.mocked(prisma.syncEvent.findUnique).mockResolvedValue({
+        id: 'existing',
+      } as any)
 
       controller.syncCompletions(req as Request, res as Response, next)
       await flushPromises()
@@ -201,8 +223,12 @@ describe('SyncController', () => {
     it('skips completion if existing score is higher', async () => {
       req.body = { events: [makeCompletionEvent({ score: 60 })] }
       vi.mocked(prisma.syncEvent.findUnique).mockResolvedValue(null)
-      vi.mocked(prisma.module.findUnique).mockResolvedValue({ id: 'module-1' } as any)
-      vi.mocked(prisma.completion.findUnique).mockResolvedValue({ score: 90 } as any)
+      vi.mocked(prisma.module.findUnique).mockResolvedValue({
+        id: 'module-1',
+      } as any)
+      vi.mocked(prisma.completion.findUnique).mockResolvedValue({
+        score: 90,
+      } as any)
       vi.mocked(prisma.syncEvent.create).mockResolvedValue({} as any)
 
       controller.syncCompletions(req as Request, res as Response, next)
@@ -216,8 +242,12 @@ describe('SyncController', () => {
     it('updates completion when new score is higher', async () => {
       req.body = { events: [makeCompletionEvent({ score: 95 })] }
       vi.mocked(prisma.syncEvent.findUnique).mockResolvedValue(null)
-      vi.mocked(prisma.module.findUnique).mockResolvedValue({ id: 'module-1' } as any)
-      vi.mocked(prisma.completion.findUnique).mockResolvedValue({ score: 70 } as any)
+      vi.mocked(prisma.module.findUnique).mockResolvedValue({
+        id: 'module-1',
+      } as any)
+      vi.mocked(prisma.completion.findUnique).mockResolvedValue({
+        score: 70,
+      } as any)
       vi.mocked(prisma.completion.update).mockResolvedValue({} as any)
       vi.mocked(prisma.syncEvent.create).mockResolvedValue({} as any)
 
@@ -232,7 +262,9 @@ describe('SyncController', () => {
     it('creates new completion when none exists', async () => {
       req.body = { events: [makeCompletionEvent()] }
       vi.mocked(prisma.syncEvent.findUnique).mockResolvedValue(null)
-      vi.mocked(prisma.module.findUnique).mockResolvedValue({ id: 'module-1' } as any)
+      vi.mocked(prisma.module.findUnique).mockResolvedValue({
+        id: 'module-1',
+      } as any)
       vi.mocked(prisma.completion.findUnique).mockResolvedValue(null)
       vi.mocked(prisma.completion.create).mockResolvedValue({} as any)
       vi.mocked(prisma.syncEvent.create).mockResolvedValue({} as any)

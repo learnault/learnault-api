@@ -53,7 +53,11 @@ class FakeLeaseStore implements QueueLeaseApi {
   private seq = 0
 
   acquireQueueLease = vi.fn(
-    async (options: { queueName: string; leaseMs?: number; owner?: string }) => {
+    async (options: {
+      queueName: string
+      leaseMs?: number
+      owner?: string
+    }) => {
       const now = Date.now()
       const leaseMs = options.leaseMs ?? 60_000
       const current = this.rows.get(options.queueName)
@@ -63,23 +67,28 @@ class FakeLeaseStore implements QueueLeaseApi {
       }
 
       const leaseToken = `${options.owner ?? 'anon'}-${++this.seq}`
-      this.rows.set(options.queueName, { token: leaseToken, until: now + leaseMs })
+      this.rows.set(options.queueName, {
+        token: leaseToken,
+        until: now + leaseMs,
+      })
 
       return {
         queueName: options.queueName,
         leaseToken,
         leasedUntil: new Date(now + leaseMs),
       }
-    }
+    },
   )
 
-  renewQueueLease = vi.fn(async (queueName: string, leaseToken: string, leaseMs = 60_000) => {
-    const current = this.rows.get(queueName)
-    if (!current || current.token !== leaseToken) return false
-    current.until = Date.now() + leaseMs
+  renewQueueLease = vi.fn(
+    async (queueName: string, leaseToken: string, leaseMs = 60_000) => {
+      const current = this.rows.get(queueName)
+      if (!current || current.token !== leaseToken) return false
+      current.until = Date.now() + leaseMs
 
-    return true
-  })
+      return true
+    },
+  )
 
   releaseQueueLease = vi.fn(async (queueName: string, leaseToken: string) => {
     const current = this.rows.get(queueName)
@@ -90,17 +99,23 @@ class FakeLeaseStore implements QueueLeaseApi {
   })
 
   hold(queueName: string, forMs: number): void {
-    this.rows.set(queueName, { token: 'foreign-holder', until: Date.now() + forMs })
+    this.rows.set(queueName, {
+      token: 'foreign-holder',
+      until: Date.now() + forMs,
+    })
   }
 }
 
-async function waitFor(predicate: () => boolean, timeoutMs = 2_000): Promise<void> {
+async function waitFor(
+  predicate: () => boolean,
+  timeoutMs = 2_000,
+): Promise<void> {
   const deadline = Date.now() + timeoutMs
   while (!predicate()) {
     if (Date.now() > deadline) {
       throw new Error('waitFor timed out')
     }
-    await new Promise(resolve => setTimeout(resolve, 5))
+    await new Promise((resolve) => setTimeout(resolve, 5))
   }
 }
 
@@ -113,7 +128,7 @@ function fakeQueue(
   name: string,
   rows: FakeRow[],
   processed: string[],
-  drainImpl?: () => Promise<void>
+  drainImpl?: () => Promise<void>,
 ): ScheduledQueue {
   return {
     name,
@@ -121,7 +136,7 @@ function fakeQueue(
       drainImpl ??
       (async () => {
         const now = Date.now()
-        const due = rows.filter(row => row.nextAttemptAt.getTime() <= now)
+        const due = rows.filter((row) => row.nextAttemptAt.getTime() <= now)
         for (const row of due) {
           rows.splice(rows.indexOf(row), 1)
           processed.push(row.id)
@@ -129,9 +144,9 @@ function fakeQueue(
       }),
     inspect: async () => {
       const now = Date.now()
-      const due = rows.filter(row => row.nextAttemptAt.getTime() <= now)
+      const due = rows.filter((row) => row.nextAttemptAt.getTime() <= now)
       const oldest = [...due].sort(
-        (a, b) => a.nextAttemptAt.getTime() - b.nextAttemptAt.getTime()
+        (a, b) => a.nextAttemptAt.getTime() - b.nextAttemptAt.getTime(),
       )[0]
 
       return {
@@ -155,7 +170,9 @@ describe('ScheduledJobRunner', () => {
 
   it('drains due rows on a timer with no inbound traffic', async () => {
     const processed: string[] = []
-    const rows: FakeRow[] = [{ id: 'row-1', nextAttemptAt: new Date(Date.now() - 1) }]
+    const rows: FakeRow[] = [
+      { id: 'row-1', nextAttemptAt: new Date(Date.now() - 1) },
+    ]
 
     const runner = new ScheduledJobRunner({
       queues: [fakeQueue('email', rows, processed)],
@@ -174,7 +191,9 @@ describe('ScheduledJobRunner', () => {
 
   it('picks up a row whose nextAttemptAt falls due within one interval', async () => {
     const processed: string[] = []
-    const rows: FakeRow[] = [{ id: 'retry-1', nextAttemptAt: new Date(Date.now() + 40) }]
+    const rows: FakeRow[] = [
+      { id: 'retry-1', nextAttemptAt: new Date(Date.now() + 40) },
+    ]
 
     const runner = new ScheduledJobRunner({
       queues: [fakeQueue('email', rows, processed)],
@@ -186,7 +205,7 @@ describe('ScheduledJobRunner', () => {
 
     runner.start()
 
-    await new Promise(resolve => setTimeout(resolve, 15))
+    await new Promise((resolve) => setTimeout(resolve, 15))
     expect(processed).toEqual([])
 
     await waitFor(() => processed.length === 1)
@@ -197,7 +216,9 @@ describe('ScheduledJobRunner', () => {
 
   it('skips a tick when another holder owns the queue lease', async () => {
     const processed: string[] = []
-    const rows: FakeRow[] = [{ id: 'row-1', nextAttemptAt: new Date(Date.now() - 1) }]
+    const rows: FakeRow[] = [
+      { id: 'row-1', nextAttemptAt: new Date(Date.now() - 1) },
+    ]
     leases.hold('email', 60_000)
 
     const runner = new ScheduledJobRunner({
@@ -225,12 +246,12 @@ describe('ScheduledJobRunner', () => {
 
     const slowDrain = async () => {
       const now = Date.now()
-      const due = rows.filter(row => row.nextAttemptAt.getTime() <= now)
+      const due = rows.filter((row) => row.nextAttemptAt.getTime() <= now)
       for (const row of due) {
         const index = rows.indexOf(row)
         if (index === -1) continue
         rows.splice(index, 1)
-        await new Promise(resolve => setTimeout(resolve, 1))
+        await new Promise((resolve) => setTimeout(resolve, 1))
         processed.push(row.id)
       }
     }
@@ -263,7 +284,11 @@ describe('ScheduledJobRunner', () => {
       drain: async () => {
         throw new Error('provider down')
       },
-      inspect: async () => ({ depth: 3, due: 3, oldestDueAt: new Date(Date.now() - 5_000) }),
+      inspect: async () => ({
+        depth: 3,
+        due: 3,
+        oldestDueAt: new Date(Date.now() - 5_000),
+      }),
     }
 
     const runner = new ScheduledJobRunner({
@@ -322,7 +347,7 @@ describe('ScheduledJobRunner', () => {
       name: 'data-export',
       drain: async () => {
         started = true
-        await new Promise(resolve => setTimeout(resolve, 60))
+        await new Promise((resolve) => setTimeout(resolve, 60))
       },
       inspect: async () => ({ depth: 1, due: 1, oldestDueAt: null }),
     }
@@ -341,10 +366,12 @@ describe('ScheduledJobRunner', () => {
     await runner.stop()
 
     expect(leases.releaseQueueLease).toHaveBeenCalledOnce()
-    expect(await leases.acquireQueueLease({ queueName: 'data-export' })).not.toBeNull()
+    expect(
+      await leases.acquireQueueLease({ queueName: 'data-export' }),
+    ).not.toBeNull()
 
     const ticksAtStop = metrics.snapshot()[0].attempts
-    await new Promise(resolve => setTimeout(resolve, 40))
+    await new Promise((resolve) => setTimeout(resolve, 40))
     expect(metrics.snapshot()[0].attempts).toBe(ticksAtStop)
   })
 

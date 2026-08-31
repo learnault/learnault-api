@@ -11,6 +11,7 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 **Location:** `src/domains/identity/`
 
 **Responsibility:**
+
 - User authentication (registration, login, logout)
 - Email verification and token management
 - JWT token generation and validation
@@ -18,6 +19,7 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 - Session management
 
 **Public Interface:**
+
 - `POST /api/v1/auth/register` - Register new user
 - `POST /api/v1/auth/login` - Authenticate user
 - `POST /api/v1/auth/logout` - End user session
@@ -27,15 +29,18 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 - Service: `IdentityService.getUserRole(userId: string): Role`
 
 **Domain Events Published:**
+
 - `UserRegistered(userId, email, role, timestamp)`
 - `EmailVerified(userId, timestamp)`
 - `UserLoggedIn(userId, timestamp)`
 
 **Allowed Dependencies:**
+
 - Shared kernel (config, errors, logging, database)
 - Messaging infrastructure (for email delivery)
 
 **Forbidden Dependencies:**
+
 - ❌ Cannot import from: users, learning, credentials, rewards, referrals, notifications domains
 - ❌ Cannot directly call services from other domains
 
@@ -46,12 +51,14 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 **Location:** `src/domains/users/`
 
 **Responsibility:**
+
 - User profile management (view, update)
 - Wallet address management
 - User preferences
 - User query and lookup (public profiles)
 
 **Public Interface:**
+
 - `GET /api/v1/users/me` - Get current user profile
 - `PUT /api/v1/users/profile` - Update user profile
 - `PUT /api/v1/users/wallet` - Update wallet address
@@ -61,15 +68,18 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 - Service: `UserService.getUserWallet(userId: string): WalletAddress | null`
 
 **Domain Events Published:**
+
 - `UserProfileUpdated(userId, changes, timestamp)`
 - `WalletAddressUpdated(userId, walletAddress, timestamp)`
 - `PasswordChanged(userId, timestamp)`
 
 **Allowed Dependencies:**
+
 - Shared kernel (config, errors, logging, database)
 - Identity domain (for authentication context)
 
 **Forbidden Dependencies:**
+
 - ❌ Cannot import from: learning, credentials, rewards, referrals domains
 - ❌ User domain does NOT own user business logic from other domains
 
@@ -80,6 +90,7 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 **Location:** `src/domains/learning/`
 
 **Responsibility:**
+
 - Module/course content management
 - Module metadata (title, description, difficulty, category)
 - Learning progress tracking
@@ -87,6 +98,7 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 - Curriculum structure
 
 **Public Interface:**
+
 - `GET /api/v1/modules` - List available modules
 - `GET /api/v1/modules/:id` - Get module details
 - `POST /api/v1/modules` - Create module (admin)
@@ -97,15 +109,18 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 - Service: `LearningService.recordCompletion(userId, moduleId, score): Completion`
 
 **Domain Events Published:**
+
 - `ModuleCreated(moduleId, title, difficulty, reward, timestamp)`
 - `ModuleCompleted(userId, moduleId, score, timestamp)`
 - `ProgressUpdated(userId, moduleId, progress, timestamp)`
 
 **Allowed Dependencies:**
+
 - Shared kernel (config, errors, logging, database)
 - Identity domain (for authentication context)
 
 **Forbidden Dependencies:**
+
 - ❌ Cannot import from: rewards, credentials, referrals, notifications
 - ❌ Does NOT orchestrate reward distribution or credential issuance
 - ❌ Only publishes domain events; does not call downstream services
@@ -117,6 +132,7 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 **Location:** `src/domains/credentials/`
 
 **Responsibility:**
+
 - Digital credential issuance
 - Credential verification
 - On-chain credential management
@@ -124,6 +140,7 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 - Credential lookup and validation
 
 **Public Interface:**
+
 - `GET /api/v1/credentials` - List user's credentials
 - `GET /api/v1/credentials/:id` - Get credential details
 - `POST /api/v1/credentials/issue` - Issue new credential
@@ -132,16 +149,19 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 - Service: `CredentialService.verifyCredential(credentialId): boolean`
 
 **Domain Events Published:**
+
 - `CredentialIssued(credentialId, userId, moduleId, onChainId, timestamp)`
 - `CredentialRevoked(credentialId, reason, timestamp)`
 - `CredentialVerified(credentialId, verifierId, timestamp)`
 
 **Allowed Dependencies:**
+
 - Shared kernel (config, errors, logging, database)
 - Identity domain (for authentication context)
 - Blockchain infrastructure (for on-chain operations)
 
 **Forbidden Dependencies:**
+
 - ❌ Cannot import from: rewards, referrals, notifications, learning (except via events)
 
 ---
@@ -151,6 +171,7 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 **Location:** `src/domains/rewards/`
 
 **Responsibility:**
+
 - Reward calculation (base, streak, referral bonuses)
 - Reward distribution via blockchain
 - Balance tracking and management
@@ -158,6 +179,7 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 - Transaction history
 
 **Public Interface:**
+
 - `GET /api/v1/rewards/balance` - Get user's reward balance
 - `GET /api/v1/rewards/history` - Get transaction history
 - `POST /api/v1/rewards/withdraw` - Process withdrawal
@@ -166,17 +188,20 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 - Service: `RewardService.getBalance(userId): Balance`
 
 **Domain Events Published:**
+
 - `RewardClaimed(userId, moduleId, amount, breakdown, txHash, timestamp)`
 - `RewardDistributed(userId, amount, type, txHash, timestamp)`
 - `WithdrawalProcessed(userId, amount, walletAddress, txHash, timestamp)`
 - `BalanceUpdated(userId, available, pending, lifetime, timestamp)`
 
 **Allowed Dependencies:**
+
 - Shared kernel (config, errors, logging, database)
 - Identity domain (for authentication context)
 - Blockchain infrastructure (for payment processing)
 
 **Forbidden Dependencies:**
+
 - ❌ Cannot import from: learning, credentials, referrals, notifications domains
 - ❌ Should receive module completion via events, not direct calls
 
@@ -187,12 +212,14 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 **Location:** `src/domains/referrals/`
 
 **Responsibility:**
+
 - Referral code generation and management
 - Referral tracking and attribution
 - Referral bonus eligibility calculation
 - Referral relationship management
 
 **Public Interface:**
+
 - `GET /api/v1/referrals/code` - Get user's referral code
 - `POST /api/v1/referrals/code` - Generate referral code
 - `POST /api/v1/referrals/apply` - Apply referral code
@@ -202,15 +229,18 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 - Service: `ReferralService.getReferrerForUser(userId): string | null`
 
 **Domain Events Published:**
+
 - `ReferralCodeGenerated(userId, code, timestamp)`
 - `ReferralApplied(referrerId, referreeId, code, timestamp)`
 - `ReferralBonusEligible(referrerId, referreeId, amount, reason, timestamp)`
 
 **Allowed Dependencies:**
+
 - Shared kernel (config, errors, logging, database)
 - Identity domain (for authentication context)
 
 **Forbidden Dependencies:**
+
 - ❌ Cannot import from: rewards, learning, credentials, notifications
 - ❌ Does NOT directly trigger reward payment; publishes events instead
 
@@ -221,6 +251,7 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 **Location:** `src/domains/notifications/`
 
 **Responsibility:**
+
 - Push notification delivery
 - Device token registration and management
 - Notification preferences management
@@ -228,6 +259,7 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 - Notification templates and formatting
 
 **Public Interface:**
+
 - `POST /api/v1/notifications/register-device` - Register device token
 - `PUT /api/v1/notifications/preferences` - Update notification preferences
 - `GET /api/v1/notifications/preferences` - Get notification preferences
@@ -235,16 +267,19 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 - Service: `NotificationService.sendNotification(userId, type, title, body): void`
 
 **Domain Events Published:**
+
 - `NotificationSent(userId, type, title, timestamp)`
 - `NotificationFailed(userId, type, error, timestamp)`
 - `DeviceTokenRegistered(userId, token, platform, timestamp)`
 
 **Allowed Dependencies:**
+
 - Shared kernel (config, errors, logging, database)
 - Identity domain (for authentication context)
 - External: Firebase Admin SDK
 
 **Forbidden Dependencies:**
+
 - ❌ Cannot import from: rewards, learning, credentials, referrals, users
 - ❌ Should be triggered by events or explicit calls, not direct imports
 
@@ -255,6 +290,7 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 **Location:** `src/domains/organizations/`
 
 **Responsibility:**
+
 - Employer/organization management
 - Organization profile and settings
 - Organization-learner relationships
@@ -262,6 +298,7 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 - Organization verification
 
 **Public Interface:**
+
 - `GET /api/v1/employer` - List employers
 - `GET /api/v1/employer/:id` - Get employer details
 - `POST /api/v1/employer` - Create employer (admin)
@@ -269,15 +306,18 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 - Service: `OrganizationService.getOrganization(orgId): Organization`
 
 **Domain Events Published:**
+
 - `OrganizationCreated(orgId, name, timestamp)`
 - `OrganizationUpdated(orgId, changes, timestamp)`
 - `OrganizationVerified(orgId, verifierId, timestamp)`
 
 **Allowed Dependencies:**
+
 - Shared kernel (config, errors, logging, database)
 - Identity domain (for authentication context)
 
 **Forbidden Dependencies:**
+
 - ❌ Cannot import from other business domains
 
 ---
@@ -287,6 +327,7 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 **Location:** `src/domains/sync/`
 
 **Responsibility:**
+
 - Client-server synchronization
 - Event deduplication (idempotency)
 - Conflict resolution
@@ -294,21 +335,25 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 - Sync event logging and replay
 
 **Public Interface:**
+
 - `POST /api/v1/sync/events` - Submit sync events
 - `GET /api/v1/sync/status` - Get sync status
 - Service: `SyncService.processSyncEvent(event): SyncResult`
 
 **Domain Events Published:**
+
 - `SyncEventReceived(userId, eventType, deviceId, timestamp)`
 - `SyncEventApplied(userId, eventType, timestamp)`
 - `SyncConflictDetected(userId, eventType, conflict, timestamp)`
 
 **Allowed Dependencies:**
+
 - Shared kernel (config, errors, logging, database)
 - Identity domain (for authentication context)
 - May coordinate with other domains via events
 
 **Forbidden Dependencies:**
+
 - ❌ Should not have hard dependencies on business domains
 - ❌ Coordinates via events and interfaces, not direct imports
 
@@ -319,6 +364,7 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 **Location:** `src/infrastructure/blockchain/`
 
 **Responsibility:**
+
 - Stellar network integration
 - Soroban smart contract interaction
 - Payment processing
@@ -327,20 +373,24 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 - Wallet management
 
 **Public Interface:**
+
 - Service: `BlockchainService.sendPayment(params): PaymentResult`
 - Service: `BlockchainService.getBalance(address): Balance`
 - Service: `BlockchainService.submitTransaction(tx): TxResult`
 - Service: `BlockchainService.issueOnChainCredential(data): OnChainId`
 
 **Used By:**
+
 - Rewards domain (for payment distribution)
 - Credentials domain (for on-chain credential issuance)
 
 **Allowed Dependencies:**
+
 - Shared kernel (config, errors, logging)
 - External: Stellar SDK, Soroban SDK
 
 **Forbidden Dependencies:**
+
 - ❌ Cannot import from any business domain
 - ❌ Pure infrastructure; no business logic
 
@@ -351,6 +401,7 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 **Location:** `src/shared/`
 
 **Components:**
+
 1. **Configuration** (`src/shared/config/`)
    - Database client, environment variables, logging, external service configs
 
@@ -372,6 +423,7 @@ This document defines the bounded contexts, responsibilities, public interfaces,
    - Event bus/dispatcher (future)
 
 **Allowed Dependencies:**
+
 - External libraries only
 - No business domain imports
 
@@ -380,9 +432,11 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 ## Orchestration Ownership
 
 ### Module Completion Orchestration
+
 **Owner:** Learning Content Domain
 
 **Flow:**
+
 1. Learning domain receives `POST /modules/:id/complete`
 2. Learning domain records completion
 3. Learning domain publishes `ModuleCompleted` event
@@ -392,9 +446,11 @@ This document defines the bounded contexts, responsibilities, public interfaces,
    - Notifications domain → sends notification
 
 ### Reward Distribution Orchestration
+
 **Owner:** Rewards Domain
 
 **Flow:**
+
 1. Rewards domain receives `ModuleCompleted` event OR direct `/rewards/claim` request
 2. Rewards domain calculates reward (queries referral status via service/event)
 3. Rewards domain processes payment via blockchain infrastructure
@@ -404,9 +460,11 @@ This document defines the bounded contexts, responsibilities, public interfaces,
    - Referrals domain → processes referral bonus eligibility
 
 ### Credential Issuance Orchestration
+
 **Owner:** Credentials Domain
 
 **Flow:**
+
 1. Credentials domain receives `ModuleCompleted` event OR direct `/credentials/issue` request
 2. Credentials domain validates completion
 3. Credentials domain issues credential via blockchain infrastructure
@@ -415,9 +473,11 @@ This document defines the bounded contexts, responsibilities, public interfaces,
    - Notifications domain → sends credential notification
 
 ### User Registration Orchestration
+
 **Owner:** Identity Domain
 
 **Flow:**
+
 1. Identity domain receives `POST /auth/register`
 2. Identity domain creates user record
 3. Identity domain generates verification token
@@ -452,11 +512,13 @@ This document defines the bounded contexts, responsibilities, public interfaces,
 ### Cross-Domain Communication
 
 **Preferred Methods:**
+
 1. **Domain Events** (async, decoupled) - Preferred
 2. **Public Service Interfaces** (sync, when necessary) - Use sparingly
 3. **Database queries** (read-only, via repository) - Acceptable for queries
 
 **Anti-Patterns:**
+
 - Direct controller-to-controller calls
 - Direct service-to-service imports across domains
 - Sharing internal domain models across boundaries

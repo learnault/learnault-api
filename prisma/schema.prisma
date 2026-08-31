@@ -7,106 +7,106 @@ datasource db {
 }
 
 model User {
-  id              String         @id @default(uuid())
-  email           String         @unique
-  username        String         @unique
-  password        String
-  role            Role           @default(LEARNER)
-  walletAddress   String?        @unique
-  isVerified      Boolean        @default(false)
-  phone           String?        @unique
-  phoneVerifiedAt DateTime?
-  status          String         @default("ACTIVE") // ACTIVE, DEACTIVATED, PENDING_DELETION, DELETED
-  statusChangedAt DateTime?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  lastLoginAt     DateTime?
-  completions     Completion[]
-  credentials     Credential[]
-  transactions    Transaction[]
-  deviceTokens    DeviceToken[]
-  notificationPref NotificationPreference?
-  notifications   NotificationLog[]
-  syncEvents      SyncEvent[]
-  referralCode    ReferralCode?
-  referrals       Referral[]     @relation("Referrer")
-  referredBy      Referral?      @relation("Referree")
-  verificationTokens VerificationToken[]
-  emailDeliveries EmailDelivery[]
-  learnerPreference LearnerPreference?
+  id                  String                   @id @default(uuid())
+  email               String                   @unique
+  username            String                   @unique
+  password            String
+  role                Role                     @default(LEARNER)
+  walletAddress       String?                  @unique
+  isVerified          Boolean                  @default(false)
+  phone               String?                  @unique
+  phoneVerifiedAt     DateTime?
+  status              String                   @default("ACTIVE") // ACTIVE, DEACTIVATED, PENDING_DELETION, DELETED
+  statusChangedAt     DateTime?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  lastLoginAt         DateTime?
+  completions         Completion[]
+  credentials         Credential[]
+  transactions        Transaction[]
+  deviceTokens        DeviceToken[]
+  notificationPref    NotificationPreference?
+  notifications       NotificationLog[]
+  syncEvents          SyncEvent[]
+  referralCode        ReferralCode?
+  referrals           Referral[]               @relation("Referrer")
+  referredBy          Referral?                @relation("Referree")
+  verificationTokens  VerificationToken[]
+  emailDeliveries     EmailDelivery[]
+  learnerPreference   LearnerPreference?
   preferenceAuditLogs PreferenceAuditLog[]
-  learnerProfile  LearnerProfile?
-  sessions        Session[]
-  audits          AuditLog[]
-  dataExports     DataExportRequest[]
-  deletionRequests AccountDeletionRequest[]
-  otpChallenges   OtpChallenge[]
-  onboarding      OnboardingProgress?
-  consentRecords  ConsentRecord[]
-  wallet          Wallet?
-  avatars         Avatar[]
+  learnerProfile      LearnerProfile?
+  sessions            Session[]
+  audits              AuditLog[]
+  dataExports         DataExportRequest[]
+  deletionRequests    AccountDeletionRequest[]
+  otpChallenges       OtpChallenge[]
+  onboarding          OnboardingProgress?
+  consentRecords      ConsentRecord[]
+  wallet              Wallet?
+  avatars             Avatar[]
 
   @@map("users")
 }
 
 model LearnerPreference {
-  id                  String   @id @default(uuid())
-  userId              String   @unique
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Locale & regional
-  locale              String   @default("en-US")
-  timezone            String   @default("UTC")
+  locale   String @default("en-US")
+  timezone String @default("UTC")
 
   // Connectivity
-  lowDataMode         Boolean  @default(false)
+  lowDataMode Boolean @default(false)
 
   // Accessibility
-  highContrast        Boolean  @default(false)
-  reduceMotion        Boolean  @default(false)
+  highContrast          Boolean @default(false)
+  reduceMotion          Boolean @default(false)
   screenReaderOptimized Boolean @default(false)
-  textSize            String   @default("medium") // small, medium, large, extra_large
+  textSize              String  @default("medium") // small, medium, large, extra_large
 
   // Content
   preferredDifficulty String   @default("beginner") // beginner, intermediate, advanced
   preferredCategories String[] @default([])
 
   // Privacy (authoritative source for privacy-impacting preferences)
-  profileVisibility   String   @default("public") // public, private, connections
-  analyticsConsent    Boolean  @default(false)
-  dataSharingConsent  Boolean  @default(false)
+  profileVisibility  String  @default("public") // public, private, connections
+  analyticsConsent   Boolean @default(false)
+  dataSharingConsent Boolean @default(false)
 
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("learner_preferences")
 }
 
 model LearnerProfile {
-  id            String   @id @default(uuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  displayName   String?
-  bio           String?
-  avatarUrl     String?
-  country       String?
-  timezone      String?
-  languages     String[] @default([])
-  level         String   @default("beginner") // beginner, intermediate, advanced, expert
-  interests     String[] @default([])
-  goals         String[] @default([])
+  displayName String?
+  bio         String?
+  avatarUrl   String?
+  country     String?
+  timezone    String?
+  languages   String[] @default([])
+  level       String   @default("beginner") // beginner, intermediate, advanced, expert
+  interests   String[] @default([])
+  goals       String[] @default([])
 
-  visibility    String   @default("private") // private, employer, public
+  visibility String @default("private") // private, employer, public
 
   // Archive (soft delete). Reads exclude archived rows by default — see
   // src/audit/archive.ts. Purged 365 days after archivedAt.
-  archivedAt      DateTime?
-  archivedById    String?
-  archivedReason  String?
+  archivedAt     DateTime?
+  archivedById   String?
+  archivedReason String?
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([country])
   @@index([level])
@@ -116,38 +116,38 @@ model LearnerProfile {
 }
 
 model OnboardingProgress {
-  id             String    @id @default(uuid())
-  userId         String    @unique
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   version        String   @default("v1")
   currentStep    String
   completedSteps String[] @default([])
   status         String   @default("in_progress") // in_progress, completed
 
-  startedAt      DateTime @default(now())
-  completedAt    DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([status])
   @@map("onboarding_progress")
 }
 
 model ConsentRecord {
-  id            String   @id @default(uuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  purpose       String   // terms_of_service, privacy_policy, marketing_emails, analytics, data_sharing, custodial_wallet
-  required      Boolean  @default(false)
+  purpose       String // terms_of_service, privacy_policy, marketing_emails, analytics, data_sharing, custodial_wallet
+  required      Boolean   @default(false)
   policyVersion String
-  status        String   // granted, withdrawn
-  source        String   // onboarding, settings, api
+  status        String // granted, withdrawn
+  source        String // onboarding, settings, api
   grantedAt     DateTime?
   withdrawnAt   DateTime?
 
-  createdAt     DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId, purpose, createdAt])
   @@map("consent_records")
@@ -167,29 +167,29 @@ model PreferenceAuditLog {
 }
 
 model Session {
-  id           String    @id @default(uuid())
-  userId       String
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token        String    @unique
-  refreshToken String?   @unique
-  userAgent    String?
-  ipAddress    String?
+  id            String         @id @default(uuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token         String         @unique
+  refreshToken  String?        @unique
+  userAgent     String?
+  ipAddress     String?
   // Device / browser / OS labels (derived at login time from User-Agent)
-  deviceName   String?
-  browser      String?
-  os           String?
+  deviceName    String?
+  browser       String?
+  os            String?
   // Approximate location (derived at login time from IP geo-lookup)
-  country      String?
-  city         String?
+  country       String?
+  city          String?
   // Opaque device fingerprint (e.g. hash of UA + screen-res, never raw)
-  fingerprint  String?
+  fingerprint   String?
   // Updated each time a refresh token is consumed on this session
-  lastUsedAt   DateTime?
-  expiresAt    DateTime
-  isRevoked    Boolean   @default(false)
-  revokedAt    DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  lastUsedAt    DateTime?
+  expiresAt     DateTime
+  isRevoked     Boolean        @default(false)
+  revokedAt     DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   refreshTokens RefreshToken[]
 
   @@index([userId, isRevoked])
@@ -234,31 +234,31 @@ model RefreshToken {
 /// `onDelete: Cascade` (erasure destroys the trail) or `onDelete: SetNull`
 /// (erasure mutates an immutable row). `actorId` is a soft reference instead.
 model AuditEvent {
-  id              String   @id @default(uuid())
+  id String @id @default(uuid())
 
   // ── Actor: who caused the change ──
-  actorType       String   // USER, ADMIN, SYSTEM, WORKER, ANONYMOUS
-  actorId         String?  // opaque id; null for SYSTEM and ANONYMOUS actors
-  actorRole       String?  // role held at the time of the action, not now
+  actorType String // USER, ADMIN, SYSTEM, WORKER, ANONYMOUS
+  actorId   String? // opaque id; null for SYSTEM and ANONYMOUS actors
+  actorRole String? // role held at the time of the action, not now
 
   // ── Action and target: what changed ──
-  action          String   // e.g. "account.deactivated", "wallet.provisioned"
-  recordClass     String   // MUTABLE, ARCHIVABLE, DELETABLE, IMMUTABLE
-  targetType      String   // Prisma model name, e.g. "User", "Wallet"
-  targetId        String?  // primary key of the affected row
+  action      String // e.g. "account.deactivated", "wallet.provisioned"
+  recordClass String // MUTABLE, ARCHIVABLE, DELETABLE, IMMUTABLE
+  targetType  String // Prisma model name, e.g. "User", "Wallet"
+  targetId    String? // primary key of the affected row
 
   // ── Justification and correlation ──
-  reason          String?  // caller-supplied; required for ADMIN actors
-  requestId       String?  // x-request-id, correlates to request logs
-  correlationId   String?  // outbox event or job id for async changes
-  source          String?  // e.g. "api.account.deactivate", "worker.sweep"
+  reason        String? // caller-supplied; required for ADMIN actors
+  requestId     String? // x-request-id, correlates to request logs
+  correlationId String? // outbox event or job id for async changes
+  source        String? // e.g. "api.account.deactivate", "worker.sweep"
 
   // ── Safe context: redacted, hashed, coarsened ──
-  metadata        String?  // redacted JSON; never secrets, never raw PII
-  actorIpHash     String?  // keyed SHA-256 of the request IP, never the raw IP
-  userAgentFamily String?  // e.g. "Chrome", "Android"; never the raw UA
+  metadata        String? // redacted JSON; never secrets, never raw PII
+  actorIpHash     String? // keyed SHA-256 of the request IP, never the raw IP
+  userAgentFamily String? // e.g. "Chrome", "Android"; never the raw UA
 
-  occurredAt      DateTime @default(now())
+  occurredAt DateTime @default(now())
 
   @@index([targetType, targetId, occurredAt])
   @@index([actorType, actorId, occurredAt])
@@ -275,8 +275,8 @@ model AuditLog {
   id        String   @id @default(uuid())
   userId    String?
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  action    String   // "PASSWORD_RESET", "EMAIL_VERIFIED", "LOGIN", etc.
-  metadata  String?  // JSON string for additional details (without secrets)
+  action    String // "PASSWORD_RESET", "EMAIL_VERIFIED", "LOGIN", etc.
+  metadata  String? // JSON string for additional details (without secrets)
   ipAddress String?
   userAgent String?
   createdAt DateTime @default(now())
@@ -301,100 +301,100 @@ model VerificationToken {
 }
 
 model EmailDelivery {
-  id           String    @id @default(uuid())
-  userId       String
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  to           String
-  subject      String
-  body         String
-  type         String    @default("EMAIL_VERIFICATION")
-  status       String    @default("pending") // pending, sent, failed, dead-letter
-  error        String?
-  attemptCount Int       @default(0)
-  maxAttempts  Int       @default(5)
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  to            String
+  subject       String
+  body          String
+  type          String    @default("EMAIL_VERIFICATION")
+  status        String    @default("pending") // pending, sent, failed, dead-letter
+  error         String?
+  attemptCount  Int       @default(0)
+  maxAttempts   Int       @default(5)
   nextAttemptAt DateTime? @default(now())
   lastAttemptAt DateTime?
-  sentAt       DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  sentAt        DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@index([status, nextAttemptAt])
   @@map("email_deliveries")
 }
 
 model Module {
-  id              String         @id @default(uuid())
-  title           String
-  description     String
-  category        String
-  difficulty      String         // easy, medium, hard
+  id             String       @id @default(uuid())
+  title          String
+  description    String
+  category       String
+  difficulty     String // easy, medium, hard
   /// Reward expressed in whole-integer stroops (1 XLM = 10_000_000 stroops).
   /// Stored as bigint to eliminate binary floating-point error.
-  rewardStroops   BigInt         @default(0)
+  rewardStroops  BigInt       @default(0)
   /// ISO-4217 or Stellar asset code (e.g. "XLM", "USDC").
-  assetCode       String         @default("XLM")
+  assetCode      String       @default("XLM")
   /// Stellar issuer public key; NULL for the native XLM asset.
-  assetIssuer     String?
+  assetIssuer    String?
   /// Stellar network: "testnet" or "mainnet".
-  assetNetwork    String         @default("testnet")
+  assetNetwork   String       @default("testnet")
   /// Archive (soft delete). Withdrawn content is archived, never deleted:
   /// completions and credentials reference the module a learner actually took.
   /// Reads exclude archived rows by default — see src/audit/archive.ts.
-  archivedAt      DateTime?
-  archivedById    String?
-  archivedReason  String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  completions     Completion[]
-  credentials     Credential[]
+  archivedAt     DateTime?
+  archivedById   String?
+  archivedReason String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  completions    Completion[]
+  credentials    Credential[]
 
   @@index([archivedAt])
 }
 
 model Completion {
-  id              String         @id @default(uuid())
-  userId          String
-  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  moduleId        String
-  module          Module         @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  score           Float
-  completedAt     DateTime       @default(now())
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moduleId    String
+  module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  score       Float
+  completedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@unique([userId, moduleId])
 }
 
 model Credential {
-  id              String         @id @default(uuid())
-  userId          String
-  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  moduleId        String
-  module          Module         @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  onChainId       String?
-  issuedAt        DateTime       @default(now())
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moduleId  String
+  module    Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  onChainId String?
+  issuedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, moduleId])
 }
 
 model Transaction {
-  id              String         @id @default(uuid())
-  userId          String
-  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// Transaction amount expressed in whole-integer stroops (1 XLM = 10_000_000 stroops).
-  amountStroops   BigInt
+  amountStroops BigInt
   /// ISO-4217 or Stellar asset code (e.g. "XLM", "USDC").
-  assetCode       String         @default("XLM")
+  assetCode     String   @default("XLM")
   /// Stellar issuer public key; NULL for the native XLM asset.
-  assetIssuer     String?
+  assetIssuer   String?
   /// Stellar network: "testnet" or "mainnet".
-  assetNetwork    String         @default("testnet")
-  type            String         // reward, refund, transfer
-  status          String         @default("pending") // pending, completed, failed
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  assetNetwork  String   @default("testnet")
+  type          String // reward, refund, transfer
+  status        String   @default("pending") // pending, completed, failed
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 enum Role {
@@ -404,42 +404,40 @@ enum Role {
 }
 
 model ReferralCode {
-  id        String     @id @default(uuid())
-  code      String     @unique
-  userId    String     @unique
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String     @id @default(uuid())
+  code           String     @unique
+  userId         String     @unique
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// Archive (soft delete). Retiring a code archives it so the Referral rows
   /// pointing at it keep a valid referent. Reads exclude archived rows by
   /// default — see src/audit/archive.ts.
   archivedAt     DateTime?
   archivedById   String?
   archivedReason String?
-  createdAt DateTime   @default(now())
-  referrals Referral[]
+  createdAt      DateTime   @default(now())
+  referrals      Referral[]
 
   @@index([archivedAt])
   @@map("referral_codes")
 }
 
 model Referral {
-  id            String       @id @default(uuid())
-  referrerId    String
-  referrer      User         @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
-  referreeId    String       @unique
-  referree      User         @relation("Referree", fields: [referreeId], references: [id], onDelete: Cascade)
-  codeId        String
-  code          ReferralCode @relation(fields: [codeId], references: [id])
-  bonusPaid     Boolean      @default(false)
+  id                 String       @id @default(uuid())
+  referrerId         String
+  referrer           User         @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referreeId         String       @unique
+  referree           User         @relation("Referree", fields: [referreeId], references: [id], onDelete: Cascade)
+  codeId             String
+  code               ReferralCode @relation(fields: [codeId], references: [id])
+  bonusPaid          Boolean      @default(false)
   /// Bonus amount expressed in whole-integer stroops; NULL if no bonus has been granted.
   bonusAmountStroops BigInt?
-  bonusPaidAt   DateTime?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  bonusPaidAt        DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 
   @@map("referrals")
 }
-
-
 
 model SyncEvent {
   id              String   @id @default(uuid())
@@ -447,8 +445,8 @@ model SyncEvent {
   userId          String
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   deviceId        String
-  eventType       String   // progress, completion
-  payload         String   // JSON string
+  eventType       String // progress, completion
+  payload         String // JSON string
   clientTimestamp DateTime
   serverTimestamp DateTime @default(now())
   syncVersion     Int
@@ -460,40 +458,40 @@ model SyncEvent {
 }
 
 model WebhookEndpoint {
-  id          String            @id @default(uuid())
-  url         String
-  secret      String?
-  description String?
-  isActive    Boolean          @default(true)
-  events      String           // Comma-separated list of events: "module.completed,reward.issued"
+  id             String            @id @default(uuid())
+  url            String
+  secret         String?
+  description    String?
+  isActive       Boolean           @default(true)
+  events         String // Comma-separated list of events: "module.completed,reward.issued"
   /// Archive (soft delete), distinct from isActive: isActive pauses delivery,
   /// archiving retires the endpoint while its delivery history keeps a valid
   /// referent. Reads exclude archived rows by default — see src/audit/archive.ts.
   archivedAt     DateTime?
   archivedById   String?
   archivedReason String?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  deliveries  WebhookDelivery[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  deliveries     WebhookDelivery[]
 
   @@index([archivedAt])
 }
 
 model WebhookDelivery {
-  id             String          @id @default(uuid())
-  endpointId     String
-  endpoint       WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
-  eventType      String
-  payload        String          // JSON string
-  status         String          @default("pending") // pending, success, failed
-  statusCode     Int?
-  responseBody   String?
-  error          String?
-  attemptCount   Int             @default(0)
-  maxAttempts    Int             @default(5)
-  nextAttemptAt  DateTime?       @default(now())
-  lastAttemptAt  DateTime?
-  createdAt      DateTime        @default(now())
+  id            String          @id @default(uuid())
+  endpointId    String
+  endpoint      WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  eventType     String
+  payload       String // JSON string
+  status        String          @default("pending") // pending, success, failed
+  statusCode    Int?
+  responseBody  String?
+  error         String?
+  attemptCount  Int             @default(0)
+  maxAttempts   Int             @default(5)
+  nextAttemptAt DateTime?       @default(now())
+  lastAttemptAt DateTime?
+  createdAt     DateTime        @default(now())
 }
 
 model DeviceToken {
@@ -501,7 +499,7 @@ model DeviceToken {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   token     String   @unique
-  platform  String   // "ios", "android", "web"
+  platform  String // "ios", "android", "web"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -518,19 +516,19 @@ model NotificationPreference {
 }
 
 model NotificationLog {
-  id           String   @id @default(uuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type         String   // "reward", "quiz", "streak"
-  title        String
-  body         String
-  status       String   @default("pending") // pending, sent, failed, dead-letter
-  error        String?
-  attemptCount Int      @default(0)
-  maxAttempts  Int      @default(5)
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          String // "reward", "quiz", "streak"
+  title         String
+  body          String
+  status        String    @default("pending") // pending, sent, failed, dead-letter
+  error         String?
+  attemptCount  Int       @default(0)
+  maxAttempts   Int       @default(5)
   nextAttemptAt DateTime? @default(now())
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 model StellarFunding {
@@ -558,7 +556,7 @@ model DataExportRequest {
   userId        String
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   status        String    @default("pending") // pending, processing, ready, failed, expired
-  artifact      String?   // JSON export payload; nulled on expiry/purge
+  artifact      String? // JSON export payload; nulled on expiry/purge
   artifactBytes Int?
   error         String?
   attemptCount  Int       @default(0)
@@ -578,21 +576,21 @@ model DataExportRequest {
 }
 
 model OtpChallenge {
-  id           String    @id @default(uuid())
-  userId       String
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  phone        String
-  purpose      String    // LOGIN, PHONE_VERIFICATION
-  codeHash     String
-  status       String    @default("PENDING") // PENDING, CONSUMED, EXPIRED, REVOKED, LOCKED
-  attempts     Int       @default(0)
-  maxAttempts  Int       @default(5)
-  expiresAt    DateTime
-  consumedAt   DateTime?
-  requestIp    String?
-  deviceId     String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone       String
+  purpose     String // LOGIN, PHONE_VERIFICATION
+  codeHash    String
+  status      String    @default("PENDING") // PENDING, CONSUMED, EXPIRED, REVOKED, LOCKED
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(5)
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  requestIp   String?
+  deviceId    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([phone, purpose, status])
   @@index([userId, purpose, status])
@@ -678,28 +676,28 @@ model WalletProvisioningJob {
 }
 
 model Avatar {
-  id            String   @id @default(uuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  storageKey    String
-  originalName  String?
-  contentType   String   // declared MIME from upload intent
-  detectedMime  String?  // MIME after server-side sniffing (null before finalize)
-  originalBytes Int      @default(0)
-  status        String   @default("PENDING") // PENDING, PROCESSING, ACTIVE, FAILED
-  scanResult    String?  // clean, rejected, error
-  scanReason    String?
-  width         Int?
-  height        Int?
-  variantCount  Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  finalizedAt   DateTime?
-  replacedAt    DateTime?
-  replacedById  String?
-  replacedBy    Avatar?  @relation("AvatarReplacement", fields: [replacedById], references: [id])
-  replacements  Avatar[] @relation("AvatarReplacement")
-  variants      AvatarVariant[]
+  id             String          @id @default(uuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storageKey     String
+  originalName   String?
+  contentType    String // declared MIME from upload intent
+  detectedMime   String? // MIME after server-side sniffing (null before finalize)
+  originalBytes  Int             @default(0)
+  status         String          @default("PENDING") // PENDING, PROCESSING, ACTIVE, FAILED
+  scanResult     String? // clean, rejected, error
+  scanReason     String?
+  width          Int?
+  height         Int?
+  variantCount   Int             @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  finalizedAt    DateTime?
+  replacedAt     DateTime?
+  replacedById   String?
+  replacedBy     Avatar?         @relation("AvatarReplacement", fields: [replacedById], references: [id])
+  replacements   Avatar[]        @relation("AvatarReplacement")
+  variants       AvatarVariant[]
   /// Archive (soft delete), distinct from replacedAt: replacedAt records that a
   /// newer avatar superseded this one, archivedAt records that it was withdrawn
   /// (by the learner or by moderation). Reads exclude archived rows by default —
@@ -717,7 +715,7 @@ model AvatarVariant {
   id         String   @id @default(uuid())
   avatarId   String
   avatar     Avatar   @relation(fields: [avatarId], references: [id], onDelete: Cascade)
-  label      String   // original, thumb, medium
+  label      String // original, thumb, medium
   storageKey String
   bytes      Int      @default(0)
   width      Int?
@@ -744,27 +742,27 @@ model AvatarVariant {
 // - Event payloads are versioned and validated before delivery
 
 model OutboxEvent {
-  id                String     @id @default(uuid())
-  aggregateId       String     // UUID of the root aggregate (e.g. userId, walletId)
-  aggregateType     String     // e.g. "User", "Wallet", "Completion"
-  eventType         String     // e.g. "UserCreated", "WalletProvisioned", "RewardClaimed"
-  eventVersion      Int        @default(1) // Schema version for event payload
-  payload           String     // JSON event data; validated against eventVersion schema
-  
+  id            String @id @default(uuid())
+  aggregateId   String // UUID of the root aggregate (e.g. userId, walletId)
+  aggregateType String // e.g. "User", "Wallet", "Completion"
+  eventType     String // e.g. "UserCreated", "WalletProvisioned", "RewardClaimed"
+  eventVersion  Int    @default(1) // Schema version for event payload
+  payload       String // JSON event data; validated against eventVersion schema
+
   // Outbox status: tracks delivery to all job queues and notification channels
-  status            String     @default("PENDING") // PENDING, PROCESSING, PUBLISHED, DEAD_LETTER, ROLLED_BACK
-  publishedAt       DateTime?  // Set when all JobAttempts for this event succeed
-  
+  status      String    @default("PENDING") // PENDING, PROCESSING, PUBLISHED, DEAD_LETTER, ROLLED_BACK
+  publishedAt DateTime? // Set when all JobAttempts for this event succeed
+
   // Source context: helps trace event causation and multi-domain workflows
-  source            String?    // e.g. "api.reward.claim", "worker.wallet-provisioning", "sync.module-completion"
-  causedBy          String?    // Foreign key to OutboxEvent.id if this event was triggered by another
-  
+  source   String? // e.g. "api.reward.claim", "worker.wallet-provisioning", "sync.module-completion"
+  causedBy String? // Foreign key to OutboxEvent.id if this event was triggered by another
+
   // Audit trail
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relation to job attempts for this event
-  jobAttempts       JobAttempt[]
+  jobAttempts JobAttempt[]
 
   @@index([aggregateId, aggregateType])
   @@index([eventType, status])
@@ -775,40 +773,40 @@ model OutboxEvent {
 }
 
 model JobAttempt {
-  id                String     @id @default(uuid())
-  outboxEventId     String     // FK to OutboxEvent
-  outboxEvent       OutboxEvent @relation(fields: [outboxEventId], references: [id], onDelete: Cascade)
-  
+  id            String      @id @default(uuid())
+  outboxEventId String // FK to OutboxEvent
+  outboxEvent   OutboxEvent @relation(fields: [outboxEventId], references: [id], onDelete: Cascade)
+
   // Job identity: determines which worker processes this attempt
-  jobType           String     // e.g. "wallet.provision", "email.send", "reward.distribute", "notification.push"
-  jobName           String     // Human-readable identifier for monitoring
-  
+  jobType String // e.g. "wallet.provision", "email.send", "reward.distribute", "notification.push"
+  jobName String // Human-readable identifier for monitoring
+
   // Lease-based concurrency control: ensures only one worker processes this job at a time
-  status            String     @default("PENDING") // PENDING, LEASED, COMPLETED, FAILED, DEAD_LETTER, ROLLED_BACK
-  leaseToken        String?    @unique // Opaque token held by worker; null if not leased
-  leasedUntil       DateTime?  // Lease expiration; null if not leased
-  
+  status      String    @default("PENDING") // PENDING, LEASED, COMPLETED, FAILED, DEAD_LETTER, ROLLED_BACK
+  leaseToken  String?   @unique // Opaque token held by worker; null if not leased
+  leasedUntil DateTime? // Lease expiration; null if not leased
+
   // Retry configuration: exponential backoff, max attempts, dead-lettering
-  availableAt       DateTime   @default(now()) // When job becomes available to lease
-  attempt           Int        @default(0) // 0-indexed attempt number
-  maxAttempts       Int        @default(3) // Configurable per job type
-  backoffMultiplier Float      @default(2.0) // Exponential backoff factor
-  backoffBaseMs     Int        @default(1000) // Base delay in milliseconds
-  
+  availableAt       DateTime @default(now()) // When job becomes available to lease
+  attempt           Int      @default(0) // 0-indexed attempt number
+  maxAttempts       Int      @default(3) // Configurable per job type
+  backoffMultiplier Float    @default(2.0) // Exponential backoff factor
+  backoffBaseMs     Int      @default(1000) // Base delay in milliseconds
+
   // Failure tracking
-  lastError         String?    // Last failure reason or stack trace
-  lastAttemptAt     DateTime?  // Timestamp of most recent attempt
-  
+  lastError     String? // Last failure reason or stack trace
+  lastAttemptAt DateTime? // Timestamp of most recent attempt
+
   // Idempotent completion: prevents duplicate side effects from retries
   // If a job succeeds but worker crashes before releasing lease,
   // retry will see idempotencyKey in Completed entry and skip re-execution
-  idempotencyKey    String?    @unique // Optional; worker-defined for idempotent jobs
-  completedAt       DateTime?  // Set when job succeeds
-  result            String?    // JSON result payload (e.g. transaction hash)
-  
+  idempotencyKey String?   @unique // Optional; worker-defined for idempotent jobs
+  completedAt    DateTime? // Set when job succeeds
+  result         String? // JSON result payload (e.g. transaction hash)
+
   // Audit trail
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([outboxEventId, status])
   @@index([jobType, status])
@@ -831,11 +829,11 @@ model JobAttempt {
 // passed to ensure no in-flight attempts reference them.
 
 model RolledBackRecord {
-  id                String     @id @default(uuid())
-  recordType        String     // "OutboxEvent" or "JobAttempt"
-  recordId          String     // ID of OutboxEvent or JobAttempt that was rolled back
-  reason            String?    // Optional reason for rollback
-  createdAt         DateTime   @default(now())
+  id         String   @id @default(uuid())
+  recordType String // "OutboxEvent" or "JobAttempt"
+  recordId   String // ID of OutboxEvent or JobAttempt that was rolled back
+  reason     String? // Optional reason for rollback
+  createdAt  DateTime @default(now())
 
   @@index([recordType, recordId])
   @@index([createdAt]) // For periodic cleanup
@@ -843,14 +841,14 @@ model RolledBackRecord {
 }
 
 model QueueLease {
-  id           String    @id @default(uuid())
-  queueName    String    @unique
-  leaseToken   String?
-  leasedUntil  DateTime?
-  owner        String?
-  lastTickAt   DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id          String    @id @default(uuid())
+  queueName   String    @unique
+  leaseToken  String?
+  leasedUntil DateTime?
+  owner       String?
+  lastTickAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([leasedUntil])
   @@map("queue_leases")

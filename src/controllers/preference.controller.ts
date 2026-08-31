@@ -22,29 +22,50 @@ const isValidTimezone = (value: string): boolean => {
 
 const updatePreferencesSchema = z
   .object({
-    locale: z.enum(SUPPORTED_LOCALES, {
-      errorMap: () => ({ message: `Locale must be one of: ${SUPPORTED_LOCALES.join(', ')}` }),
-    }).optional(),
-    timezone: z.string().refine(isValidTimezone, { message: 'Invalid IANA timezone' }).optional(),
+    locale: z
+      .enum(SUPPORTED_LOCALES, {
+        errorMap: () => ({
+          message: `Locale must be one of: ${SUPPORTED_LOCALES.join(', ')}`,
+        }),
+      })
+      .optional(),
+    timezone: z
+      .string()
+      .refine(isValidTimezone, { message: 'Invalid IANA timezone' })
+      .optional(),
     lowDataMode: z.boolean().optional(),
     highContrast: z.boolean().optional(),
     reduceMotion: z.boolean().optional(),
     screenReaderOptimized: z.boolean().optional(),
-    textSize: z.enum(TEXT_SIZES, {
-      errorMap: () => ({ message: `Text size must be one of: ${TEXT_SIZES.join(', ')}` }),
-    }).optional(),
-    preferredDifficulty: z.enum(DIFFICULTY_LEVELS, {
-      errorMap: () => ({ message: `Difficulty must be one of: ${DIFFICULTY_LEVELS.join(', ')}` }),
-    }).optional(),
+    textSize: z
+      .enum(TEXT_SIZES, {
+        errorMap: () => ({
+          message: `Text size must be one of: ${TEXT_SIZES.join(', ')}`,
+        }),
+      })
+      .optional(),
+    preferredDifficulty: z
+      .enum(DIFFICULTY_LEVELS, {
+        errorMap: () => ({
+          message: `Difficulty must be one of: ${DIFFICULTY_LEVELS.join(', ')}`,
+        }),
+      })
+      .optional(),
     preferredCategories: z.array(z.string().min(1)).max(50).optional(),
-    profileVisibility: z.enum(PROFILE_VISIBILITIES, {
-      errorMap: () => ({ message: `Profile visibility must be one of: ${PROFILE_VISIBILITIES.join(', ')}` }),
-    }).optional(),
+    profileVisibility: z
+      .enum(PROFILE_VISIBILITIES, {
+        errorMap: () => ({
+          message: `Profile visibility must be one of: ${PROFILE_VISIBILITIES.join(', ')}`,
+        }),
+      })
+      .optional(),
     analyticsConsent: z.boolean().optional(),
     dataSharingConsent: z.boolean().optional(),
   })
   .strict()
-  .refine(data => Object.keys(data).length > 0, { message: 'At least one preference field is required' })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'At least one preference field is required',
+  })
 
 export class PreferenceController {
   /**
@@ -147,7 +168,10 @@ export class PreferenceController {
         return
       }
 
-      const preferences = await preferenceService.updatePreferences(userId, validation.data)
+      const preferences = await preferenceService.updatePreferences(
+        userId,
+        validation.data,
+      )
 
       res.status(200).json({
         message: 'Preferences updated successfully',

@@ -1,6 +1,11 @@
 import prisma from '../config/database'
 import { auditService } from './audit.service'
-import { SessionAuditAction, SessionView, RevokeOneResult, RevokeAllResult } from '../types/session.types'
+import {
+  SessionAuditAction,
+  SessionView,
+  RevokeOneResult,
+  RevokeAllResult,
+} from '../types/session.types'
 import type { AuditEntry } from '../types/account.types'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -33,7 +38,9 @@ export function redactIp(raw: string | null | undefined): string | null {
  * Truncate a fingerprint to its first 8 hex characters so it can be used
  * as a device-change signal without leaking the full device fingerprint.
  */
-export function redactFingerprint(raw: string | null | undefined): string | null {
+export function redactFingerprint(
+  raw: string | null | undefined,
+): string | null {
   if (!raw) return null
 
   return raw.slice(0, 8)
@@ -55,7 +62,7 @@ export function toSessionView(
     lastUsedAt: Date | null
     expiresAt: Date
   },
-  currentSessionId: string | null
+  currentSessionId: string | null,
 ): SessionView {
   return {
     id: session.id,
@@ -85,12 +92,12 @@ export class SessionService {
     userId: string,
     currentSessionId: string | null,
     page: number,
-    limit: number
+    limit: number,
   ): Promise<{ sessions: SessionView[]; total: number }> {
     const now = new Date()
     const skip = (page - 1) * limit
 
-    const [rows, total] = await prisma.$transaction([
+    const [rows, total] = (await prisma.$transaction([
       prisma.session.findMany({
         where: { userId, isRevoked: false, expiresAt: { gt: now } },
         orderBy: [
@@ -116,28 +123,31 @@ export class SessionService {
       prisma.session.count({
         where: { userId, isRevoked: false, expiresAt: { gt: now } },
       }),
-    ]) as [Array<{
-      id: string
-      deviceName: string | null
-      browser: string | null
-      os: string | null
-      country: string | null
-      city: string | null
-      createdAt: Date
-      lastUsedAt: Date | null
-      expiresAt: Date
-    }>, number]
+    ])) as [
+      Array<{
+        id: string
+        deviceName: string | null
+        browser: string | null
+        os: string | null
+        country: string | null
+        city: string | null
+        createdAt: Date
+        lastUsedAt: Date | null
+        expiresAt: Date
+      }>,
+      number,
+    ]
 
     // Sort so current session bubbles to the top within the page result set
     const sorted = currentSessionId
       ? [
-          ...rows.filter(s => s.id === currentSessionId),
-          ...rows.filter(s => s.id !== currentSessionId),
+          ...rows.filter((s) => s.id === currentSessionId),
+          ...rows.filter((s) => s.id !== currentSessionId),
         ]
       : rows
 
     return {
-      sessions: sorted.map(s => toSessionView(s, currentSessionId)),
+      sessions: sorted.map((s) => toSessionView(s, currentSessionId)),
       total,
     }
   }
@@ -171,7 +181,7 @@ export class SessionService {
     userId: string,
     sessionId: string,
     currentSessionId: string | null,
-    auditContext: Pick<AuditEntry, 'ipAddress' | 'userAgent'>
+    auditContext: Pick<AuditEntry, 'ipAddress' | 'userAgent'>,
   ): Promise<RevokeOneResult> {
     const session = await prisma.session.findUnique({
       where: { id: sessionId },
@@ -213,7 +223,7 @@ export class SessionService {
   async revokeAll(
     userId: string,
     currentSessionId: string | null,
-    auditContext: Pick<AuditEntry, 'ipAddress' | 'userAgent'>
+    auditContext: Pick<AuditEntry, 'ipAddress' | 'userAgent'>,
   ): Promise<RevokeAllResult> {
     const now = new Date()
 
@@ -234,7 +244,10 @@ export class SessionService {
       await auditService.record({
         userId,
         action: SessionAuditAction.SESSION_ALL_REVOKED,
-        metadata: { revokedCount: count, keptCurrentSession: !!currentSessionId },
+        metadata: {
+          revokedCount: count,
+          keptCurrentSession: !!currentSessionId,
+        },
         ...auditContext,
       })
     }

@@ -4,7 +4,10 @@ import type {
   OutboxEventHandlerContext,
   OutboxEventHandlerResult,
 } from '../lib/transactions/types'
-import { createOutboxService, OutboxService } from '../lib/transactions/outbox.service'
+import {
+  createOutboxService,
+  OutboxService,
+} from '../lib/transactions/outbox.service'
 import type { WalletProvisioningRepository } from '../services/wallet-provisioning.repository'
 
 export interface UserCreatedPayload {
@@ -36,10 +39,15 @@ export class UserCreatedHandler implements OutboxEventHandler {
     this.outbox = options.outboxService ?? createOutboxService(prisma)
   }
 
-  async handle(context: OutboxEventHandlerContext): Promise<OutboxEventHandlerResult> {
+  async handle(
+    context: OutboxEventHandlerContext,
+  ): Promise<OutboxEventHandlerResult> {
     const payload = context.payload as UserCreatedPayload
 
-    const wallet = await this.repository.reserveEligibleWallet(payload.userId, this.network)
+    const wallet = await this.repository.reserveEligibleWallet(
+      payload.userId,
+      this.network,
+    )
 
     const alreadyRequested = await this.prisma.outboxEvent.findFirst({
       where: {

@@ -121,36 +121,36 @@ Infrastructure ❌→ Any Domain
 
 ## Communication Matrix
 
-| Source Domain | Target Domain | Communication Type | Purpose |
-|---------------|---------------|-------------------|---------|
-| Identity | Shared/Messaging | Service Call | Email delivery |
-| Identity | Users | Domain Event | Profile init |
-| Identity | Referrals | Domain Event | Referral check |
-| Learning | Rewards | Domain Event | Trigger reward |
-| Learning | Credentials | Domain Event | Trigger credential |
-| Learning | Referrals | Domain Event | Bonus check |
-| Rewards | Blockchain Infra | Service Call | Payment |
-| Rewards | Notifications | Domain Event | Reward notification |
-| Credentials | Blockchain Infra | Service Call | On-chain store |
-| Credentials | Notifications | Domain Event | Credential notification |
-| Referrals | Rewards | Domain Event | Bonus eligible |
-| All | Shared Kernel | Direct Import | Config, errors, utils |
+| Source Domain | Target Domain    | Communication Type | Purpose                 |
+| ------------- | ---------------- | ------------------ | ----------------------- |
+| Identity      | Shared/Messaging | Service Call       | Email delivery          |
+| Identity      | Users            | Domain Event       | Profile init            |
+| Identity      | Referrals        | Domain Event       | Referral check          |
+| Learning      | Rewards          | Domain Event       | Trigger reward          |
+| Learning      | Credentials      | Domain Event       | Trigger credential      |
+| Learning      | Referrals        | Domain Event       | Bonus check             |
+| Rewards       | Blockchain Infra | Service Call       | Payment                 |
+| Rewards       | Notifications    | Domain Event       | Reward notification     |
+| Credentials   | Blockchain Infra | Service Call       | On-chain store          |
+| Credentials   | Notifications    | Domain Event       | Credential notification |
+| Referrals     | Rewards          | Domain Event       | Bonus eligible          |
+| All           | Shared Kernel    | Direct Import      | Config, errors, utils   |
 
 ---
 
 ## Domain Responsibilities Matrix
 
-| Domain | Core Responsibility | API Endpoints | Database Models | External Dependencies |
-|--------|-------------------|---------------|-----------------|---------------------|
-| **Identity** | Authentication, registration, verification | `/auth/register`, `/auth/login`, `/auth/verify-email`, `/auth/logout` | User, VerificationToken, EmailDelivery | None |
-| **Users** | Profile management, wallet addresses | `/users/me`, `/users/profile`, `/users/wallet`, `/users/:id` | User (read/update) | Identity (auth) |
-| **Learning** | Modules, completions, progress | `/modules`, `/modules/:id`, `/modules/:id/complete` | Module, Completion | Identity (auth) |
-| **Credentials** | Credential issuance, verification | `/credentials`, `/credentials/issue`, `/credentials/:id/verify` | Credential | Blockchain |
-| **Rewards** | Reward calculation, distribution, withdrawal | `/rewards/balance`, `/rewards/history`, `/rewards/withdraw`, `/rewards/claim` | Transaction | Blockchain |
-| **Referrals** | Referral tracking, code generation | `/referrals/code`, `/referrals/apply`, `/referrals/stats` | ReferralCode, Referral | None |
-| **Notifications** | Push notifications, device tokens | `/notifications/register-device`, `/notifications/preferences` | NotificationLog, DeviceToken, NotificationPreference | Firebase |
-| **Organizations** | Employer management | `/employer`, `/employer/:id` | (Future models) | None |
-| **Sync** | Client-server sync, idempotency | `/sync/events`, `/sync/status` | SyncEvent | None |
+| Domain            | Core Responsibility                          | API Endpoints                                                                 | Database Models                                      | External Dependencies |
+| ----------------- | -------------------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------- | --------------------- |
+| **Identity**      | Authentication, registration, verification   | `/auth/register`, `/auth/login`, `/auth/verify-email`, `/auth/logout`         | User, VerificationToken, EmailDelivery               | None                  |
+| **Users**         | Profile management, wallet addresses         | `/users/me`, `/users/profile`, `/users/wallet`, `/users/:id`                  | User (read/update)                                   | Identity (auth)       |
+| **Learning**      | Modules, completions, progress               | `/modules`, `/modules/:id`, `/modules/:id/complete`                           | Module, Completion                                   | Identity (auth)       |
+| **Credentials**   | Credential issuance, verification            | `/credentials`, `/credentials/issue`, `/credentials/:id/verify`               | Credential                                           | Blockchain            |
+| **Rewards**       | Reward calculation, distribution, withdrawal | `/rewards/balance`, `/rewards/history`, `/rewards/withdraw`, `/rewards/claim` | Transaction                                          | Blockchain            |
+| **Referrals**     | Referral tracking, code generation           | `/referrals/code`, `/referrals/apply`, `/referrals/stats`                     | ReferralCode, Referral                               | None                  |
+| **Notifications** | Push notifications, device tokens            | `/notifications/register-device`, `/notifications/preferences`                | NotificationLog, DeviceToken, NotificationPreference | Firebase              |
+| **Organizations** | Employer management                          | `/employer`, `/employer/:id`                                                  | (Future models)                                      | None                  |
+| **Sync**          | Client-server sync, idempotency              | `/sync/events`, `/sync/status`                                                | SyncEvent                                            | None                  |
 
 ---
 
@@ -244,14 +244,14 @@ src/
 
 ## Orchestration Ownership
 
-| Workflow | Owner Domain | Responsibility |
-|----------|-------------|----------------|
-| **User Registration** | Identity | Create user, generate token, queue email, publish event |
-| **Module Completion** | Learning | Record completion, publish event |
-| **Reward Distribution** | Rewards | Calculate, pay, record transaction (event handler) |
-| **Credential Issuance** | Credentials | Issue, store on-chain (event handler) |
-| **Referral Bonus** | Referrals | Check eligibility, publish event (event handler) |
-| **Notification Delivery** | Notifications | Queue, deliver, retry (event handler) |
+| Workflow                  | Owner Domain  | Responsibility                                          |
+| ------------------------- | ------------- | ------------------------------------------------------- |
+| **User Registration**     | Identity      | Create user, generate token, queue email, publish event |
+| **Module Completion**     | Learning      | Record completion, publish event                        |
+| **Reward Distribution**   | Rewards       | Calculate, pay, record transaction (event handler)      |
+| **Credential Issuance**   | Credentials   | Issue, store on-chain (event handler)                   |
+| **Referral Bonus**        | Referrals     | Check eligibility, publish event (event handler)        |
+| **Notification Delivery** | Notifications | Queue, deliver, retry (event handler)                   |
 
 ### Orchestration Rules
 
@@ -352,6 +352,7 @@ pnpm test integrations/architecture/  # Run boundary tests
 ```
 
 Tests verify:
+
 - No forbidden cross-domain imports
 - No circular dependencies
 - Infrastructure isolation
@@ -373,13 +374,13 @@ Tests verify:
 
 ## Key Metrics
 
-| Metric | Current | Target |
-|--------|---------|--------|
-| **Domain Boundaries** | 0 (flat structure) | 9 (enforced) |
+| Metric                     | Current                     | Target           |
+| -------------------------- | --------------------------- | ---------------- |
+| **Domain Boundaries**      | 0 (flat structure)          | 9 (enforced)     |
 | **Forbidden Dependencies** | Many (direct service calls) | 0 (event-driven) |
-| **Architecture Tests** | 0 | 5+ test suites |
-| **Domain Documentation** | Minimal | Complete |
-| **Circular Dependencies** | Unknown | 0 (tested) |
+| **Architecture Tests**     | 0                           | 5+ test suites   |
+| **Domain Documentation**   | Minimal                     | Complete         |
+| **Circular Dependencies**  | Unknown                     | 0 (tested)       |
 
 ---
 

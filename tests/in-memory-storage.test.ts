@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { InMemoryStorageProvider, sniffMimeType, extractImageDimensions } from '../src/services/storage/in-memory-storage'
+import {
+  InMemoryStorageProvider,
+  sniffMimeType,
+  extractImageDimensions,
+} from '../src/services/storage/in-memory-storage'
 
 describe('InMemoryStorageProvider', () => {
   let provider: InMemoryStorageProvider
@@ -56,7 +60,9 @@ describe('InMemoryStorageProvider', () => {
     })
 
     it('throws on missing key', async () => {
-      await expect(provider.readBytes('nonexistent')).rejects.toThrow('not found')
+      await expect(provider.readBytes('nonexistent')).rejects.toThrow(
+        'not found',
+      )
     })
   })
 
@@ -100,7 +106,9 @@ describe('InMemoryStorageProvider', () => {
 
 describe('sniffMimeType', () => {
   it('detects PNG', () => {
-    const buf = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00])
+    const buf = Buffer.from([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00,
+    ])
     expect(sniffMimeType(buf)).toBe('image/png')
   })
 
@@ -134,8 +142,14 @@ describe('extractImageDimensions', () => {
     // Build minimal PNG with 300×200 dimensions
     const buf = Buffer.alloc(64)
     // PNG signature (8 bytes) + IHDR length (4) + IHDR type (4) + data starts at 16
-    buf[0] = 0x89; buf[1] = 0x50; buf[2] = 0x4e; buf[3] = 0x47
-    buf[4] = 0x0d; buf[5] = 0x0a; buf[6] = 0x1a; buf[7] = 0x0a
+    buf[0] = 0x89
+    buf[1] = 0x50
+    buf[2] = 0x4e
+    buf[3] = 0x47
+    buf[4] = 0x0d
+    buf[5] = 0x0a
+    buf[6] = 0x1a
+    buf[7] = 0x0a
     buf.writeUInt32BE(300, 16) // width
     buf.writeUInt32BE(200, 20) // height
     const dims = extractImageDimensions(buf)
@@ -144,11 +158,13 @@ describe('extractImageDimensions', () => {
 
   it('extracts JPEG dimensions from SOF marker', () => {
     const buf = Buffer.alloc(64)
-    buf[0] = 0xff; buf[1] = 0xd8 // SOI
-    buf[2] = 0xff; buf[3] = 0xc0 // SOF0
+    buf[0] = 0xff
+    buf[1] = 0xd8 // SOI
+    buf[2] = 0xff
+    buf[3] = 0xc0 // SOF0
     buf.writeUInt16BE(17, 4) // segment length
-    buf.writeUInt8(8, 6)     // precision
-    buf.writeUInt16BE(50, 7)  // height
+    buf.writeUInt8(8, 6) // precision
+    buf.writeUInt16BE(50, 7) // height
     buf.writeUInt16BE(100, 9) // width
     const dims = extractImageDimensions(buf)
     expect(dims).toEqual({ width: 100, height: 50 })

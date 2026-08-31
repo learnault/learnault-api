@@ -12,20 +12,19 @@ const JWT_SECRET = 'test-secret-key'
 vi.stubEnv('JWT_SECRET', JWT_SECRET)
 
 // Dynamically import AFTER stubbing so the module-level guard sees the value
-const { authenticate, optionalAuthenticate, authorize } = await import(
-  '../../src/middleware/auth.middleware'
-)
+const { authenticate, optionalAuthenticate, authorize } =
+  await import('../../src/middleware/auth.middleware')
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-function makeToken (
+function makeToken(
   payload: Record<string, unknown>,
   expiresIn: string | number = '1h',
 ): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn } as jwt.SignOptions)
 }
 
-function makeMocks () {
+function makeMocks() {
   const req = { headers: {} } as Partial<Request>
   const res = {
     status: vi.fn().mockReturnThis(),
@@ -59,7 +58,9 @@ describe('authenticate', () => {
     authenticate(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(401)
-    expect(res.json).toHaveBeenCalledWith({ message: 'Authorization token required' })
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'Authorization token required',
+    })
     expect(next).not.toHaveBeenCalled()
   })
 
@@ -70,7 +71,9 @@ describe('authenticate', () => {
     authenticate(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(401)
-    expect(res.json).toHaveBeenCalledWith({ message: 'Authorization token required' })
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'Authorization token required',
+    })
     expect(next).not.toHaveBeenCalled()
   })
 
@@ -149,8 +152,8 @@ describe('optionalAuthenticate', () => {
 
 describe('authorize', () => {
   it('calls next() when user has a matching role', () => {
-    const { req, res, next } = makeMocks();
-    (req as any).user = { id: 'u1', email: 'a@b.com', role: 'learner' }
+    const { req, res, next } = makeMocks()
+    ;(req as any).user = { id: 'u1', email: 'a@b.com', role: 'learner' }
 
     authorize('learner')(req as Request, res as Response, next)
 
@@ -159,8 +162,8 @@ describe('authorize', () => {
   })
 
   it('calls next() when user role matches one of multiple allowed roles', () => {
-    const { req, res, next } = makeMocks();
-    (req as any).user = { id: 'u1', email: 'a@b.com', role: 'employer' }
+    const { req, res, next } = makeMocks()
+    ;(req as any).user = { id: 'u1', email: 'a@b.com', role: 'employer' }
 
     authorize('learner', 'employer')(req as Request, res as Response, next)
 
@@ -168,14 +171,16 @@ describe('authorize', () => {
   })
 
   it('returns 403 when user role is not in the allowed list', () => {
-    const { req, res, next } = makeMocks();
-    (req as any).user = { id: 'u1', email: 'a@b.com', role: 'learner' }
+    const { req, res, next } = makeMocks()
+    ;(req as any).user = { id: 'u1', email: 'a@b.com', role: 'learner' }
 
     authorize('employer')(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(403)
     expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ message: expect.stringContaining('Access denied') }),
+      expect.objectContaining({
+        message: expect.stringContaining('Access denied'),
+      }),
     )
     expect(next).not.toHaveBeenCalled()
   })
@@ -186,7 +191,9 @@ describe('authorize', () => {
     authorize('learner')(req as Request, res as Response, next)
 
     expect(res.status).toHaveBeenCalledWith(401)
-    expect(res.json).toHaveBeenCalledWith({ message: 'Authentication required' })
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'Authentication required',
+    })
     expect(next).not.toHaveBeenCalled()
   })
 })

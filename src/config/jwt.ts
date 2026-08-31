@@ -31,7 +31,7 @@ function loadActiveSecret(): string {
 
   throw new Error(
     'JWT_SECRET environment variable is required (NODE_ENV != test). ' +
-    'Refusing to start with an insecure fallback secret.'
+      'Refusing to start with an insecure fallback secret.',
   )
 }
 
@@ -60,8 +60,8 @@ const ACTIVE_SECRET = loadActiveSecret()
 const RETIRED_KEYS = loadRetiredKeys()
 
 export interface AccessTokenClaims extends JWTPayload {
-  id: string;
-  role: string;
+  id: string
+  role: string
 }
 
 /** Reads the unverified `kid` header so we know which key to check against. */
@@ -73,7 +73,9 @@ function readKeyId(token: string): string | undefined {
   }
 
   try {
-    const header = JSON.parse(Buffer.from(headerSegment, 'base64url').toString('utf8'))
+    const header = JSON.parse(
+      Buffer.from(headerSegment, 'base64url').toString('utf8'),
+    )
 
     return typeof header.kid === 'string' ? header.kid : undefined
   } catch {
@@ -87,7 +89,7 @@ function readKeyId(token: string): string | undefined {
  */
 export function issueAccessToken(
   claims: AccessTokenClaims,
-  options: Omit<SignOptions, 'algorithm' | 'expiresIn' | 'keyid'> = {}
+  options: Omit<SignOptions, 'algorithm' | 'expiresIn' | 'keyid'> = {},
 ): string {
   return signToken(claims, ACTIVE_SECRET, {
     ...options,
@@ -105,9 +107,13 @@ export function issueAccessToken(
  * change), and always pins algorithm/issuer/audience — a token that used a
  * different algorithm or was minted for another audience is rejected.
  */
-export function verifyAccessToken(token: string, options: VerifyOptions = {}): AccessTokenClaims {
+export function verifyAccessToken(
+  token: string,
+  options: VerifyOptions = {},
+): AccessTokenClaims {
   const kid = readKeyId(token)
-  const secret = !kid || kid === ACTIVE_KEY_ID ? ACTIVE_SECRET : RETIRED_KEYS.get(kid)
+  const secret =
+    !kid || kid === ACTIVE_KEY_ID ? ACTIVE_SECRET : RETIRED_KEYS.get(kid)
 
   if (!secret) {
     // Same error type jwt.verify() itself throws for a bad signature, so

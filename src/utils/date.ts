@@ -1,6 +1,6 @@
 export interface FormatDateOptions extends Intl.DateTimeFormatOptions {
-  locale?: string;
-  timeZone?: string;
+  locale?: string
+  timeZone?: string
 }
 
 /**
@@ -12,13 +12,14 @@ export interface FormatDateOptions extends Intl.DateTimeFormatOptions {
  */
 export function formatDate(
   date: Date | string | number,
-  opts: FormatDateOptions = {}
+  opts: FormatDateOptions = {},
 ): string {
   const { locale = 'en-US', timeZone, ...rest } = opts
-  const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date
+  const d =
+    typeof date === 'string' || typeof date === 'number' ? new Date(date) : date
   const formatter = new Intl.DateTimeFormat(locale, { timeZone, ...rest })
-  
-return formatter.format(d)
+
+  return formatter.format(d)
 }
 
 /**

@@ -18,7 +18,7 @@ import {
 async function forwardedArgs(
   model: string | undefined,
   operation: string,
-  args: unknown
+  args: unknown,
 ): Promise<Record<string, unknown>> {
   const query = vi.fn().mockResolvedValue(null)
   await excludeArchivedFromReads({ model, operation, args, query })
@@ -52,9 +52,11 @@ describe('archive semantics', () => {
 
   describe('default exclusion', () => {
     it('hides archived rows from findMany on an archivable model', async () => {
-      expect(await forwardedArgs('Module', 'findMany', { where: { category: 'stellar' } })).toEqual(
-        { where: { category: 'stellar', archivedAt: null } }
-      )
+      expect(
+        await forwardedArgs('Module', 'findMany', {
+          where: { category: 'stellar' },
+        }),
+      ).toEqual({ where: { category: 'stellar', archivedAt: null } })
     })
 
     it('adds the filter when there is no where clause at all', async () => {
@@ -69,14 +71,18 @@ describe('archive semantics', () => {
       })
     })
 
-    it.each(['findFirst', 'findFirstOrThrow', 'findMany', 'count', 'aggregate', 'groupBy'])(
-      'filters %s',
-      async (operation) => {
-        const args = await forwardedArgs('Module', operation, {})
+    it.each([
+      'findFirst',
+      'findFirstOrThrow',
+      'findMany',
+      'count',
+      'aggregate',
+      'groupBy',
+    ])('filters %s', async (operation) => {
+      const args = await forwardedArgs('Module', operation, {})
 
-        expect(args.where).toEqual({ archivedAt: null })
-      }
-    )
+      expect(args.where).toEqual({ archivedAt: null })
+    })
 
     it('preserves other arguments while injecting the filter', async () => {
       const args = await forwardedArgs('Module', 'findMany', {
@@ -97,7 +103,11 @@ describe('archive semantics', () => {
   describe('exemptions', () => {
     it('leaves non-archivable models alone', async () => {
       // Injecting archivedAt here would reference a column that does not exist.
-      expect(await forwardedArgs('User', 'findMany', { where: { status: 'ACTIVE' } })).toEqual({
+      expect(
+        await forwardedArgs('User', 'findMany', {
+          where: { status: 'ACTIVE' },
+        }),
+      ).toEqual({
         where: { status: 'ACTIVE' },
       })
     })
@@ -105,28 +115,42 @@ describe('archive semantics', () => {
     it('leaves findUnique alone, so a point lookup by id still resolves', async () => {
       // A silent filter here would turn a found row into null and read as
       // "deleted" to code that has the id in hand.
-      expect(await forwardedArgs('Module', 'findUnique', { where: { id: 'm-1' } })).toEqual({
+      expect(
+        await forwardedArgs('Module', 'findUnique', { where: { id: 'm-1' } }),
+      ).toEqual({
         where: { id: 'm-1' },
       })
     })
 
     it('leaves writes alone, so archive and restore can see their own row', async () => {
-      for (const operation of ['update', 'updateMany', 'delete', 'deleteMany', 'upsert']) {
-        expect(await forwardedArgs('Module', operation, { where: { id: 'm-1' } })).toEqual({
+      for (const operation of [
+        'update',
+        'updateMany',
+        'delete',
+        'deleteMany',
+        'upsert',
+      ]) {
+        expect(
+          await forwardedArgs('Module', operation, { where: { id: 'm-1' } }),
+        ).toEqual({
           where: { id: 'm-1' },
         })
       }
     })
 
     it('leaves raw and model-less operations alone', async () => {
-      expect(await forwardedArgs(undefined, 'findMany', { where: { id: 'x' } })).toEqual({
+      expect(
+        await forwardedArgs(undefined, 'findMany', { where: { id: 'x' } }),
+      ).toEqual({
         where: { id: 'x' },
       })
     })
 
     it('stands down when the caller filters on archivedAt explicitly', async () => {
       expect(
-        await forwardedArgs('Module', 'findMany', { where: { archivedAt: { not: null } } })
+        await forwardedArgs('Module', 'findMany', {
+          where: { archivedAt: { not: null } },
+        }),
       ).toEqual({ where: { archivedAt: { not: null } } })
     })
 
@@ -141,9 +165,13 @@ describe('archive semantics', () => {
     })
 
     it('stands down when archivedAt appears inside a combinator', async () => {
-      const where = { OR: [{ archivedAt: null }, { archivedAt: { gt: new Date(0) } }] }
+      const where = {
+        OR: [{ archivedAt: null }, { archivedAt: { gt: new Date(0) } }],
+      }
 
-      expect(await forwardedArgs('Module', 'findMany', { where })).toEqual({ where })
+      expect(await forwardedArgs('Module', 'findMany', { where })).toEqual({
+        where,
+      })
     })
   })
 
@@ -156,13 +184,22 @@ describe('archive semantics', () => {
       expect(mentionsArchivedAt({ archivedAt: undefined })).toBe(true)
     })
 
-    it.each(['AND', 'OR', 'NOT'])('detects the key nested under %s', (combinator) => {
-      expect(mentionsArchivedAt({ [combinator]: [{ archivedAt: null }] })).toBe(true)
-      expect(mentionsArchivedAt({ [combinator]: { archivedAt: null } })).toBe(true)
-    })
+    it.each(['AND', 'OR', 'NOT'])(
+      'detects the key nested under %s',
+      (combinator) => {
+        expect(
+          mentionsArchivedAt({ [combinator]: [{ archivedAt: null }] }),
+        ).toBe(true)
+        expect(mentionsArchivedAt({ [combinator]: { archivedAt: null } })).toBe(
+          true,
+        )
+      },
+    )
 
     it('returns false for an unrelated clause', () => {
-      expect(mentionsArchivedAt({ status: 'ACTIVE', AND: [{ title: 'x' }] })).toBe(false)
+      expect(
+        mentionsArchivedAt({ status: 'ACTIVE', AND: [{ title: 'x' }] }),
+      ).toBe(false)
     })
 
     it('returns false for empty and non-object input', () => {
@@ -250,7 +287,10 @@ describe('archive semantics', () => {
   describe('archivedPurgeCutoff', () => {
     it('subtracts the retention window', () => {
       expect(
-        archivedPurgeCutoff(365, new Date('2026-08-24T00:00:00.000Z'))?.toISOString()
+        archivedPurgeCutoff(
+          365,
+          new Date('2026-08-24T00:00:00.000Z'),
+        )?.toISOString(),
       ).toBe('2025-08-24T00:00:00.000Z')
     })
 
