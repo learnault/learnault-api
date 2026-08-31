@@ -235,7 +235,7 @@ describe('CredentialController', () => {
           description: 'Learn JS fundamentals',
           category: 'Programming',
           difficulty: 'easy',
-          reward: 100,
+          rewardStroops: 1_000_000_000n,
         },
       }
 

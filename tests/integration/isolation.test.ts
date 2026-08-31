@@ -48,7 +48,7 @@ describe.runIf(dbAvailable)('Database isolation', () => {
     expect(user.username).toBe(userData.username)
     expect(user.role).toBe('LEARNER')
 
-    await prisma!.user.delete({ where: { id: user.id } })
+    await prisma!.user.deleteMany({ where: { id: user.id } })
   })
 
   it('factory creates a persisted user', async () => {
@@ -56,7 +56,7 @@ describe.runIf(dbAvailable)('Database isolation', () => {
     expect(user.id).toBeDefined()
     expect(user.email).toMatch(/^test_.+@example\.com$/)
 
-    await prisma!.user.delete({ where: { id: user.id } })
+    await prisma!.user.deleteMany({ where: { id: user.id } })
   })
 
   it('does not leak records across test cases', async () => {

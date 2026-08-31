@@ -81,7 +81,7 @@ function mockUserData() {
   vi.mocked(prisma.transaction.findMany).mockResolvedValue([
     {
       id: 't1',
-      amount: 10,
+      amountStroops: 100_000_000n,
       type: 'reward',
       status: 'completed',
       createdAt: new Date(),
