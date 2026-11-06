@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 
 describe('Phase 1: Identity, Profile & Wallet Integration Test Suite', () => {
-  const MOCK_WALLET = 'GBBMX6N7VTRD235V4G2M3QXZK4Y7H5N2P4R7K9W1L3M5N7P9'
+  const MOCK_WALLET = 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN7'
   const MOCK_USER_ID = 'usr_phase1_live_001'
 
   beforeEach(() => {
