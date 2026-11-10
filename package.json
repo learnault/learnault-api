@@ -20,10 +20,10 @@
   "author": "Learnault Contributors",
   "scripts": {
     "predev": "prisma generate",
-    "dev": "nodemon",
+    "dev": "node init && nodemon",
     "prebuild": "prisma generate",
-    "build": "tsc",
-    "start": "node dist/server.js",
+    "build": "node init && tsc",
+    "start": "node init && node dist/server.js",
     "lint": "eslint .",
     "test": "vitest",
     "test:watch": "vitest",
